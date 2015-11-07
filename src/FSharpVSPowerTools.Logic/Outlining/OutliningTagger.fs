@@ -108,6 +108,55 @@ type OutliningTagger
         | Some _, emptyTree when emptyTree.Range.IsEmpty -> false 
         | Some _, _ -> true
 
+    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
+
+    let outliningEnabled scope =
+        let options = outliningOptions.Value
+        match scope with
+        | Scope.Open                  -> options.OpensEnabled
+        | Scope.Module                -> options.ModulesEnabled
+        | Scope.HashDirective         -> options.HashDirectivesEnabled
+        | Scope.Attribute             -> options.AttributesEnabled
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesEnabled
+        | Scope.Member                -> options.MembersEnabled
+        | Scope.LetOrUse              -> options.LetOrUseEnabled 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled
+        | Scope.ArrayOrList           -> options.CollectionsEnabled
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesEnabled
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsEnabled
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda
+        | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate () =
@@ -122,7 +171,12 @@ type OutliningTagger
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast
-                let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
+                let scopedSpans = 
+                    ast 
+                    |> getOutliningRanges 
+                    |> Seq.filter (fun x -> outliningEnabled x.Scope)
+                    |> Seq.choose (fromScopeRange snapshot)
+                    |> Array.ofSeq
                 do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
                 triggerUpdate scopedSpans
         }
@@ -165,9 +219,6 @@ type OutliningTagger
 
 
     let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
-
-    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
-
 
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
@@ -277,55 +328,6 @@ type OutliningTagger
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
         | _ -> false
-
-    let outliningEnabled scope =
-        let options = outliningOptions.Value
-        match scope with
-        | Scope.Open                  -> options.OpensEnabled
-        | Scope.Module                -> options.ModulesEnabled
-        | Scope.HashDirective         -> options.HashDirectivesEnabled
-        | Scope.Attribute             -> options.AttributesEnabled
-        | Scope.Interface             
-        | Scope.TypeExtension         
-        | Scope.Type                  -> options.TypesEnabled
-        | Scope.Member                -> options.MembersEnabled
-        | Scope.LetOrUse              -> options.LetOrUseEnabled 
-        | Scope.Match                 
-        | Scope.MatchClause           
-        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
-        | Scope.IfThenElse            
-        | Scope.ThenInIfThenElse      
-        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
-        | Scope.TryWith               
-        | Scope.TryInTryWith          
-        | Scope.WithInTryWith         
-        | Scope.TryFinally            
-        | Scope.TryInTryFinally       
-        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled
-        | Scope.ArrayOrList           -> options.CollectionsEnabled
-        | Scope.CompExpr               
-        | Scope.ObjExpr                
-        | Scope.Quote                  
-        | Scope.Record                 
-        | Scope.Tuple                  
-        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
-        | Scope.CompExprInternal       
-        | Scope.LetOrUseBang           
-        | Scope.YieldOrReturn          
-        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
-        | Scope.UnionCase              
-        | Scope.EnumCase               
-        | Scope.RecordField            
-        | Scope.SimpleType             
-        | Scope.RecordDefn             
-        | Scope.UnionDefn             -> options.SimpleTypesEnabled
-        | Scope.For                   
-        | Scope.While                 -> options.LoopsEnabled
-//        | Scope.Namespace             ->
-//        | Scope.Do                    -> 
-//        | Scope.Lambda
-        | _ -> true
-
 
     // outlined regions that should be collapsed by default will make use of
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
@@ -447,7 +449,6 @@ type OutliningTagger
                                         ScopeSpan (s.Scope, s.Collapse, s.SnapSpan.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive)))
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
-            |> Seq.filter (fun s -> outliningEnabled s.Scope)
             |> Seq.choose createTagSpan
 
 
