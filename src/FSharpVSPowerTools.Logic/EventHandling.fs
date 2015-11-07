@@ -14,7 +14,7 @@ module ViewChange =
     let layoutEvent (view: ITextView) = 
         view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
     
-    let viewportHeightEvent (view: ITextView) = 
+    let viewportHeightEvent (view: ITextView) =  
         view.ViewportHeightChanged |> Event.map (fun _ -> ())
 
     let caretEvent (view: ITextView) = 
@@ -64,8 +64,12 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                     startNewTimer()
                     do! awaitPauseAfterChange()
                 protectUpdate() }
-       // Go ahead and synchronously get the first bit of info for the original rendering
-       protectUpdate()
+       // Go ahead and get the first bit of info for the original rendering
+       let uiContext = SynchronizationContext.Current
+       Async.StartInThreadPoolSafe <| async {
+           do! Async.SwitchToContext uiContext
+           protectUpdate()
+       }
        Async.StartInThreadPoolSafe (computation, tokenSource.Token)
 
     /// Skip all timer events in order to test events instantaneously
