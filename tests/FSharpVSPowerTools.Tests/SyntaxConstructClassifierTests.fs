@@ -60,7 +60,7 @@ module SyntaxConstructClassifierTests =
     let ``should return a single operator symbol if the code doesn't contain any other symbols``() = 
         let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> 
@@ -80,7 +80,7 @@ module Module1 =
     let x = ()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
         let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
@@ -116,7 +116,7 @@ let internal f() = ()
         // If not, type checking fails with some weird errors
         dummyFileName <- fileName
         File.WriteAllText(dummyFileName, "")
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
 
         // first event is raised when "fast computable" spans (without Unused declarations and opens) are ready
@@ -150,7 +150,7 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
         let projectFileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fs"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ -> 
             let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList

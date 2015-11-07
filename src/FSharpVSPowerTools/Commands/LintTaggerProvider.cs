@@ -44,7 +44,7 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
-        readonly OpenDocumentsTracker _openDocumentTracker;
+        readonly IOpenDocumentsTracker _openDocumentTracker;
         static readonly Type serviceType = typeof(LintTagger);
 
         [ImportingConstructor]
@@ -53,7 +53,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            OpenDocumentsTracker openDocumentTracker)
+            IOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;

@@ -49,7 +49,7 @@ let f () = List.iter (fun _ -> ())
         let buffer = createMockTextBuffer content fileName
         let view = helper.GetView(buffer)
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetActiveDocument(fileName, content)
         let tagger = helper.GetTagger(buffer, view)
 
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout

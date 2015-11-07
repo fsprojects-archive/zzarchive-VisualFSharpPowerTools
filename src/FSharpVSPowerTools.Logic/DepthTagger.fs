@@ -30,7 +30,7 @@ type DepthTagger
          serviceProvider: System.IServiceProvider, 
          projectFactory: ProjectFactory, 
          languageService: VSLanguageService,
-         openDocumentsTracker: OpenDocumentsTracker
+         openDocumentsTracker: IOpenDocumentsTracker
      ) as self =
     // computed periodically on a background thread
     let lastResults = Atom []

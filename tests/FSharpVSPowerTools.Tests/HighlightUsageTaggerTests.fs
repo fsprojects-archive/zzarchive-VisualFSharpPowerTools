@@ -54,7 +54,7 @@ x
 """     
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName)        
+        helper.SetActiveDocument(fileName, content)        
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -72,7 +72,7 @@ x
 """
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetActiveDocument(fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -93,7 +93,7 @@ module GenericClass =
     let _ = Type1<_,_>.Member1()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -114,7 +114,7 @@ type SampleAttribute () =
 type Class () = class end
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -135,7 +135,7 @@ type SampleAttribute () =
 type Class () = class end
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -153,7 +153,7 @@ type Class () = class end
 do printfn "Hello world!"
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -174,7 +174,7 @@ let _ = Project.GetSample()
         let projectFileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fs"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)        
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -198,7 +198,7 @@ module Test =
         let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
         File.WriteAllText (fileName, content)
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let view = helper.GetView(buffer)
         view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore
         let tagger = helper.GetTagger(buffer, view)        

@@ -19,7 +19,7 @@ type LintTagger(textDocument: ITextDocument,
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
                 projectFactory: ProjectFactory,
-                openDocumentsTracker: OpenDocumentsTracker) as self =
+                openDocumentsTracker: IOpenDocumentsTracker) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer

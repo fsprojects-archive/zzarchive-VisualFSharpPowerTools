@@ -23,7 +23,8 @@ type UnionPatternMatchCaseGenerator
          vsLanguageService: VSLanguageService,
          serviceProvider: IServiceProvider,
          projectFactory: ProjectFactory,
-         defaultBody: string) as self =
+         defaultBody: string,
+         openDocumentTracker: IOpenDocumentsTracker) as self =
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: ISuggestion list = []
@@ -82,7 +83,8 @@ type UnionPatternMatchCaseGenerator
                     suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
-                        let vsDocument = VSDocument(doc, point.Snapshot)
+                        let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
+                        let vsDocument = VSDocument(source, doc, point.Snapshot)
                         let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
                             tryFindUnionDefinitionFromPos codeGenService project point vsDocument
                         // Recheck cursor position to ensure it's still in new word

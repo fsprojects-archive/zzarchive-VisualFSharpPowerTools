@@ -42,7 +42,7 @@ type T() =
     member x.M = ()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
@@ -65,7 +65,7 @@ namespace global
 type Hoge () =
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let tagger = helper.GetTagger(buffer)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 

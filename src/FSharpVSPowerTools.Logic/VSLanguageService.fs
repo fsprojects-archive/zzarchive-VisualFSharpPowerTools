@@ -56,7 +56,7 @@ type VSLanguageService
     [<ImportingConstructor>] 
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker,
+     openDocumentsTracker: IOpenDocumentsTracker,
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
@@ -227,21 +227,24 @@ type VSLanguageService
             return symbol, results
         }
 
-    member __.CreateLexer (snapshot, args) =
-        let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-        
-        let getLineStr line =
-            let lineNumber = line - lineStart
-            snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-        
-        let source = snapshot.GetText()
-        
-        { new LexerBase() with
-            member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
-                Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
-            member __.TokenizeLine line =
-                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer)
-            member __.LineCount = lineEnd + 1 }
+    member __.CreateLexer (fileName, snapshot, args) =
+        maybe {
+            let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            
+            let getLineStr line =
+                let lineNumber = line - lineStart
+                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
+            
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
+            
+            return 
+                { new LexerBase() with
+                    member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
+                        Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
+                    member __.TokenizeLine line =
+                        Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer)
+                    member __.LineCount = lineEnd + 1 }
+        }
 
     member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
                                             checkForUnusedOpens: bool, profiler: Profiler) = 

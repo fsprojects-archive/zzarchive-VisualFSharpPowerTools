@@ -4,6 +4,7 @@ open TestUtilities.Mocks
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.Text.Editor
 
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
@@ -43,7 +44,7 @@ type VsTestBase() =
     let textBufferUndoManagerProvider = Mocks.createTextBufferUndoManagerProvider()
 
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
-    let openDocumentsTracker = OpenDocumentsTracker(documentFactoryService)
+    let openDocumentsTracker = Mocks.OpenDocumentTrackerStub()
     let fileSystem = FileSystem(openDocumentsTracker)
     let vsLanguageService = VSLanguageService(vsEditorAdaptersFactoryService, fsharpLanguageService, 
                                               openDocumentsTracker, fileSystem, serviceProvider, SkipLexCache = true)
@@ -61,7 +62,7 @@ type VsTestBase() =
     member __.FSharpLanguageService = fsharpLanguageService
     member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
     member __.DocumentFactoryService = documentFactoryService
-    member __.OpenDocumentsTracker = openDocumentsTracker
+    member __.OpenDocumentsTracker = openDocumentsTracker :> IOpenDocumentsTracker
     member __.FileSystem = fileSystem
     member __.VsLanguageService = vsLanguageService
     member __.ProjectFactory = projectFactory
@@ -75,15 +76,16 @@ type VsTestBase() =
     member __.AddProject(project: IProjectProvider) = 
         dte.AddProject(project.ProjectFileName, project)
 
-    member __.SetActiveDocument(filePath: string) = 
-        dte.SetActiveDocument(filePath)
+    member __.SetActiveDocument(filePath: string, content: string) = 
+        dte.SetActiveDocument filePath
+        openDocumentsTracker.SetActiveDocumentContent content
 
-    member x.SetUpProjectAndCurrentDocument(project: IProjectProvider, filePath: string) =
+    member x.SetUpProjectAndCurrentDocument(project: IProjectProvider, filePath: string, content: string) =
         match project with
         | :? ExternalProjectProvider as p ->
-            x.AddProject(p)
-            for p' in p.ReferencedProjects do x.AddProject(p')
+            x.AddProject p
+            for p' in p.ReferencedProjects do x.AddProject p'
         | _ ->
             // Assume that this kind of project provider doesn't have referenced projects
-            x.AddProject(project)
-        x.SetActiveDocument(filePath)
+            x.AddProject project
+        x.SetActiveDocument (filePath, content)
