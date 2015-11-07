@@ -40,24 +40,26 @@ namespace FSharpVSPowerTools
     [TagType(typeof(LintTag))]
     public class LintTaggerProvider : IViewTaggerProvider
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
-        private readonly ProjectFactory _projectFactory;
-        private readonly VSLanguageService _fsharpVsLanguageService;
-
-        private static readonly Type serviceType = typeof(LintTagger);
+        readonly IServiceProvider _serviceProvider;
+        readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        readonly ProjectFactory _projectFactory;
+        readonly VSLanguageService _fsharpVsLanguageService;
+        readonly OpenDocumentsTracker _openDocumentTracker;
+        static readonly Type serviceType = typeof(LintTagger);
 
         [ImportingConstructor]
         public LintTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+            VSLanguageService fsharpVsLanguageService,
+            OpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _openDocumentTracker = openDocumentTracker;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -71,7 +73,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
-                    () => new LintTagger(doc, _fsharpVsLanguageService, _serviceProvider, _projectFactory) as ITagger<T>);
+                    () => new LintTagger(doc, _fsharpVsLanguageService, _serviceProvider, _projectFactory, _openDocumentTracker) as ITagger<T>);
             }
 
             return null;

@@ -56,7 +56,7 @@ type XmlDocFilter
                             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                             let! document = dte.GetCurrentDocument filename
                             let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
-                            let! parseResults = languageService.ParseFileInProject (filename, wpfTextView.TextSnapshot.GetText(), project) |> liftAsync
+                            let! parseResults = languageService.ParseFileInProject (filename, project)
                             let! xmlDocables = XmlDocParser.getXmlDocables (wpfTextView.TextSnapshot.GetText(), parseResults.ParseTree) |> liftAsync
                             let xmlDocablesBelowThisLine = 
                                 // +1 because looking below current line for e.g. a 'member'

@@ -42,25 +42,21 @@ type ImplementInterface
     let buffer = view.TextBuffer
 
     let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
-        async {
+        asyncMaybe {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let column = point.Position - point.GetContainingLine().Start.Position
-            let source = point.Snapshot.GetText()
-            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, source, project)
+            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, project)
             let pos = Pos.fromZ line column
-            let data =
-                ast.ParseTree
-                |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)
-                |> Option.map (fun iface -> 
-                    let tokens = vsLanguageService.TokenizeLine(buffer, project.CompilerOptions, line) 
-                    let endPosOfWidth =
-                        tokens 
-                        |> List.tryPick (fun (t: FSharpTokenInfo) ->
-                                if t.CharClass = FSharpTokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
-                                    Some (Pos.fromZ line (t.RightColumn + 1))
-                                else None)
-                    { InterfaceData = iface; EndPosOfWith = endPosOfWidth; Tokens = tokens })
-            return data
+            let! input = ast.ParseTree
+            let! iface = InterfaceStubGenerator.tryFindInterfaceDeclaration pos input
+            let! tokens = vsLanguageService.TokenizeLine(doc.FullName, buffer, project.CompilerOptions, line) 
+            let endPosOfWidth =
+                tokens 
+                |> List.tryPick (fun (t: FSharpTokenInfo) ->
+                        if t.CharClass = FSharpTokenCharKind.Keyword && t.LeftColumn >= column && t.TokenName = "WITH" then
+                            Some (Pos.fromZ line (t.RightColumn + 1))
+                        else None)
+            return { InterfaceData = iface; EndPosOfWith = endPosOfWidth; Tokens = tokens } 
         }
 
     let hasSameStartPos (r1: range) (r2: range) = r1.Start = r2.Start
@@ -161,7 +157,7 @@ type ImplementInterface
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, symbol = vsLanguageService.GetSymbol(point, project) 
+                    let! word, symbol = vsLanguageService.GetSymbol(point, doc.FullName, project) 
                     return point, doc, project, word, symbol
                 }
 

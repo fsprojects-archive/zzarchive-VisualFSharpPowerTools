@@ -25,10 +25,10 @@ type IRange =
     abstract EndColumn: int
 
 type ICodeGenerationService<'Project, 'Pos, 'Range> =
-    abstract TokenizeLine: 'Project * IDocument * int<Line1> -> FSharpTokenInfo list
+    abstract TokenizeLine: 'Project * IDocument * int<Line1> -> FSharpTokenInfo list option
     abstract GetSymbolAtPosition: 'Project * IDocument * pos:'Pos -> option<'Range * Symbol>
     abstract GetSymbolAndUseAtPositionOfKind: 'Project * IDocument * 'Pos * SymbolKind -> Async<option<'Range * Symbol * FSharpSymbolUse>>
-    abstract ParseFileInProject: IDocument * 'Project -> Async<FSharpParseFileResults>
+    abstract ParseFileInProject: IDocument * 'Project -> Async<FSharpParseFileResults option>
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
 
@@ -99,9 +99,10 @@ module internal Utils =
             
         let lineIdxAndTokenSeq = seq {
             for lineIdx = range.StartLine to range.EndLine do
-                yield!
-                    codeGenService.TokenizeLine(project, document, (lineIdx * 1<Line1>))
-                    |> List.map (fun tokenInfo -> lineIdx * 1<Line1>, tokenInfo)
+              match codeGenService.TokenizeLine(project, document, (lineIdx * 1<Line1>)) 
+                    |> Option.map (List.map (fun tokenInfo -> lineIdx * 1<Line1>, tokenInfo)) with
+              | Some xs -> yield! xs
+              | None -> ()
         }
 
         lineIdxAndTokenSeq

@@ -95,7 +95,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             
             asyncMaybe {
                 let! currentRequest, doc, project = res
-                match vsLanguageService.GetSymbol(currentRequest, project) with
+                match vsLanguageService.GetSymbol(currentRequest, doc.FullName, project) with
                 | Some (newWord, symbol) ->
                     // If this is the same word we currently have, we're done (e.g. caret moved within a word).
                     match currentWord with

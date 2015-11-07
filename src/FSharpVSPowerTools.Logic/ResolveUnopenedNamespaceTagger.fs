@@ -112,7 +112,7 @@ type UnopenedNamespaceResolver
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol(point, project) 
+                    let! word, _ = vsLanguageService.GetSymbol(point, doc.FullName, project) 
                     return point, doc, project, word
                 }
             match res with
@@ -126,7 +126,7 @@ type UnopenedNamespaceResolver
                     suggestions <- []
                     let uiContext = SynchronizationContext.Current
                     asyncMaybe {
-                        let! newWord, sym = vsLanguageService.GetSymbol (point, project)
+                        let! newWord, sym = vsLanguageService.GetSymbol (point, doc.FullName, project)
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
                         if not (point.InSpan newWord) then return! None
@@ -137,13 +137,11 @@ type UnopenedNamespaceResolver
                             match res with
                             | Some _ -> return! None
                             | None ->
-                                let! checkResults = 
-                                    vsLanguageService.ParseFileInProject (doc.FullName, newWord.Snapshot.GetText(), project) |> liftAsync
-
+                                let! checkResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
                                 let pos = codeGenService.ExtractFSharpPos point
                                 let! parseTree = checkResults.ParseTree
                                 let! entityKind = ParsedInput.getEntityKind parseTree pos
-                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, newWord.Snapshot.GetText(), project)
+                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, project)
 
                                 //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 

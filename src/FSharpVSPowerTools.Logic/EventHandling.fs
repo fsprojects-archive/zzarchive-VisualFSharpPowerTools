@@ -3,7 +3,6 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.FSharp.Compiler.Range
 open System.Threading
 open System.Windows.Threading
 open FSharpVSPowerTools
@@ -65,9 +64,9 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                     startNewTimer()
                     do! awaitPauseAfterChange()
                 protectUpdate() }
-       Async.StartImmediateSafe(computation, tokenSource.Token)
        // Go ahead and synchronously get the first bit of info for the original rendering
        protectUpdate()
+       Async.StartInThreadPoolSafe (computation, tokenSource.Token)
 
     /// Skip all timer events in order to test events instantaneously
     static member internal SkipTimerDelay 

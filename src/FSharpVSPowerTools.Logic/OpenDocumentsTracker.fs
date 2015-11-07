@@ -12,6 +12,7 @@ type OpenDocument =
       Snapshot: ITextSnapshot 
       Encoding: Encoding
       LastChangeTime: DateTime }
+    member x.Text = lazy (x.Snapshot.GetText())
     static member Create document snapshot encoding = 
         { Document = document; Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
 
@@ -52,5 +53,6 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
         Seq.map f openDocuments
 
     member __.TryFindOpenDocument path = Map.tryFind path openDocuments
+    member __.TryGetDocumentText path = openDocuments |> Map.tryFind path |> Option.map (fun x -> x.Text.Value)
     member __.DocumentChanged = documentChanged.Publish
     member __.DocumentClosed = documentClosed.Publish

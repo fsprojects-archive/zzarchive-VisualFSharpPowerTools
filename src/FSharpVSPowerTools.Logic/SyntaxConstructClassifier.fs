@@ -164,32 +164,34 @@ type SyntaxConstructClassifier
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs span)
 
-    let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
-        let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
-            vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)
-
-        return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> async {
-            let qualifyOpenDeclarations line endCol idents = async {
-                let lineStr = getTextLineOneBased (line - 1)
-                let! tooltip =
-                    vsLanguageService.GetOpenDeclarationTooltip(
-                        line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, source)
-                return
-                    match tooltip with
-                    | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                    | None -> []
-            }
-
-            let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
-            return
-                (entities
-                 |> Option.map
-                     (Seq.groupBy (fun e -> e.FullName)
-                      >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                      >> Dict.ofSeq),
-                openDecls)
+    let getOpenDeclarations filePath project ast getTextLineOneBased (pf: Profiler) = 
+        async {
+            let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
+                vsLanguageService.GetAllEntities(filePath, project)
+            
+            return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> 
+                async {
+                  let qualifyOpenDeclarations line endCol idents = async {
+                      let lineStr = getTextLineOneBased (line - 1)
+                      let! tooltip =
+                          vsLanguageService.GetOpenDeclarationTooltip(
+                              line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath)
+                      return
+                          match tooltip with
+                          | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                          | None -> []
+                  }
+                  
+                  let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
+                  return
+                      (entities
+                       |> Option.map
+                           (Seq.groupBy (fun e -> e.FullName)
+                            >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                            >> Dict.ofSeq),
+                      openDecls)
+                }
         }
-    }
 
     let uiContext = SynchronizationContext.Current
 
@@ -277,7 +279,7 @@ type SyntaxConstructClassifier
 
                 let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
+                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf)
 
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
 
@@ -291,14 +293,14 @@ type SyntaxConstructClassifier
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                 let! checkResults = pf.Time "parseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
                      
                 let! ast = checkResults.GetUntypedAst()
                 do! checkAst "Slow stage" ast
 
                 let! entities, openDecls =
                     if includeUnusedOpens() then
-                        getOpenDeclarations (snapshot.GetText()) project (checkResults.GetUntypedAst()) getTextLineOneBased pf
+                        getOpenDeclarations textDocument.FilePath project (checkResults.GetUntypedAst()) getTextLineOneBased pf
                     else async { return None, [] }
                     |> liftAsync
 
@@ -389,8 +391,7 @@ type SyntaxConstructClassifier
                 let pf = Profiler()
 
                 let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
-                    |> liftAsync
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, currentProject)
 
                 let! ast = checkResults.GetUntypedAst()
                 do! checkAst "Fast stage" ast
@@ -399,7 +400,6 @@ type SyntaxConstructClassifier
                 let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
                         snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
-                    |> liftAsync
 
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 

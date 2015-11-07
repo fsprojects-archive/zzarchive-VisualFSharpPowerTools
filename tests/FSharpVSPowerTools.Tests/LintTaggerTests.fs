@@ -2,7 +2,6 @@
 
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Linting
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -14,7 +13,8 @@ type LintTaggerHelper() =
                             fsharpVsLanguageService = base.VsLanguageService,
                             serviceProvider = base.ServiceProvider,
                             projectFactory = base.ProjectFactory,
-                            textDocumentFactoryService = base.DocumentFactoryService)
+                            textDocumentFactoryService = base.DocumentFactoryService,
+                            openDocumentTracker = base.OpenDocumentsTracker)
 
     member __.GetView(buffer) =
         createMockTextView buffer

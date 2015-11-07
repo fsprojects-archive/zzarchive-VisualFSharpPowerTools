@@ -15,7 +15,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
 
-type QuickInfoViewModel() as self =
+type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
     let quickInfo = self.Factory.Backing(<@@ self.QuickInfo @@>, "")
     member __.QuickInfo
@@ -97,23 +97,23 @@ type QuickInfoMargin (textDocument: ITextDocument,
         match buffer.GetSnapshotPoint caretPos, currentWord with
         | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
         | Some point, _ ->
-            let project =
+            let projectAndDoc =
                 maybe {
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
-                    return project }
+                    return project, doc }
             asyncMaybe {
-                let! project = project
+                let! project, doc = projectAndDoc
                 let! tooltip, newWord =
                     asyncMaybe {
-                        let! newWord, longIdent = vsLanguageService.GetSymbol (point, project)
+                        let! newWord, longIdent = vsLanguageService.GetSymbol (point, doc.FullName, project)
                         let lineStr = point.GetContainingLine().GetText()
                         let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
                         let! (FSharpToolTipText tooltip) =
                             vsLanguageService.GetOpenDeclarationTooltip(
                                 longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project,
-                                textDocument.FilePath, newWord.Snapshot.GetText())
+                                textDocument.FilePath)
                         let! tooltip =
                             tooltip
                             |> List.tryHead
@@ -123,8 +123,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                                 | _ -> None)
                         return Some tooltip, newWord
                     }
-                let! checkResults =
-                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, buffer.CurrentSnapshot.GetText(), project) |> liftAsync
+                let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
                 let! errors =
                     asyncMaybe {
                         let! errors = checkResults.GetErrors()

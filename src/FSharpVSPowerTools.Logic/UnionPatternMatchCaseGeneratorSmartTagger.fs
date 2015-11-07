@@ -66,7 +66,7 @@ type UnionPatternMatchCaseGenerator
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol(point, project) 
+                    let! word, _ = vsLanguageService.GetSymbol(point, doc.FullName, project) 
                     return point, doc, project, word
                 }
 

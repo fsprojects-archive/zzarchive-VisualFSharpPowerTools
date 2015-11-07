@@ -29,7 +29,8 @@ type DepthTagger
          buffer: ITextBuffer, 
          serviceProvider: System.IServiceProvider, 
          projectFactory: ProjectFactory, 
-         languageService: VSLanguageService
+         languageService: VSLanguageService,
+         openDocumentsTracker: OpenDocumentsTracker
      ) as self =
     // computed periodically on a background thread
     let lastResults = Atom []
@@ -41,11 +42,11 @@ type DepthTagger
         let uiContext = SynchronizationContext.Current
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let source = snapshot.GetText()
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! document = dte.GetCurrentDocument doc.FilePath
             let! project = projectFactory.CreateForDocument buffer document
-            let! parseResults = languageService.ParseFileInProject (doc.FilePath, source, project) |> liftAsync
+            let! parseResults = languageService.ParseFileInProject (doc.FilePath, project)
+            let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath
             let! ranges = DepthParser.getNonoverlappingDepthRanges (source, parseResults.ParseTree) |> liftAsync
             let newResults = 
                 ranges 

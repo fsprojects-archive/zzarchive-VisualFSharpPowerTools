@@ -7,7 +7,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 open FSharpLint.Framework.Configuration
@@ -19,7 +18,8 @@ type LintTag(tooltip) =
 type LintTagger(textDocument: ITextDocument,
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
-                projectFactory: ProjectFactory) as self =
+                projectFactory: ProjectFactory,
+                openDocumentsTracker: OpenDocumentsTracker) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer
@@ -49,11 +49,10 @@ type LintTagger(textDocument: ITextDocument,
 
         asyncMaybe {
             let! doc, project = result
-            let source = buffer.CurrentSnapshot.GetText()
-            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
+            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
-
             let config, shouldFileBeIgnored = lintData.Value
+            let! source = openDocumentsTracker.TryGetDocumentText doc.FullName
 
             if not shouldFileBeIgnored then
                 let res = 

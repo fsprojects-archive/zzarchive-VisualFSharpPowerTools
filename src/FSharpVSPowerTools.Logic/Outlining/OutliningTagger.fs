@@ -164,10 +164,9 @@ type OutliningTagger
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot
-            let source = snapshot.GetText ()
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
-            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
+            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast

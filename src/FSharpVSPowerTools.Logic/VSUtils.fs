@@ -503,9 +503,6 @@ type IServiceProvider with
             let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
             Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
         else None      
-        
-           
-
 
 let isSourceExtension ext =
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
@@ -522,7 +519,7 @@ let listFSharpProjectsInSolution (dte: DTE) =
         elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
         else []  
         
-    and handleProjectItems (items: ProjectItems) = 
+    and handleProjectItems (items: ProjectItems) =
         [ for pi in items do
                 yield! handleProject pi.SubProject ]
 
