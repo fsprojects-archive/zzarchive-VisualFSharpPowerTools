@@ -82,6 +82,9 @@ namespace FSharpVSPowerTools
                     // Ensure that first tags have been computed.
                     var tags = outliningTagger.GetTags(new NormalizedSnapshotSpanCollection(fullSpan));
                     var outliningManager = _outliningManagerService.GetOutliningManager(textView);
+                    // Keep the outlining manager in the lifetime of the text view.
+                    // This prevents the outlining manager being disposed while it should still be used.
+                    textView.Properties.GetOrCreateSingletonProperty(() => outliningManager);
                     if (outliningManager != null)
                     {
                         outliningManager.CollapseAll(fullSpan, match: c => c.Tag.IsDefaultCollapsed);
