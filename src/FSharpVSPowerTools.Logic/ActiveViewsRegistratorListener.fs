@@ -9,6 +9,6 @@ open Microsoft.VisualStudio.Utilities
 [<TextViewRole(PredefinedTextViewRoles.Interactive)>]
 type ActiveViewRegistratorListener() = 
     [<Import; DefaultValue>]
-    val mutable openDocumentsTracker: OpenDocumentsTracker
+    val mutable openDocumentsTracker: IOpenDocumentsTracker
     interface IWpfTextViewCreationListener with
         member x.TextViewCreated(view) = x.openDocumentsTracker.RegisterView(view)

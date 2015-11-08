@@ -9,6 +9,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Editor
@@ -229,3 +230,16 @@ let createVsEditorAdaptersFactoryService() =
         .Setup(fun x -> <@ x.GetViewAdapter (any()) @>)
         .Returns(vsTextView)
         .Create()
+
+type OpenDocumentTrackerStub() =
+    let mutable content: string = null
+    let documentChanged = Event<_>()
+    let documentClosed = Event<_>()
+    member __.SetActiveDocumentContent newContent = content <- newContent
+    interface IOpenDocumentsTracker with
+        member __.RegisterView _ = ()
+        member __.MapOpenDocuments _ = notimpl
+        member __.TryFindOpenDocument _ = None
+        member __.TryGetDocumentText _ = Some content
+        member __.DocumentChanged = documentChanged.Publish
+        member __.DocumentClosed = documentClosed.Publish

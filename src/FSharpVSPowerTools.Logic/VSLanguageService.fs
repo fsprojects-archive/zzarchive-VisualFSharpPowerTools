@@ -15,6 +15,7 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools.AssemblyContentProvider
+open FSharpVSPowerTools.AsyncMaybe
 
 type FilePath = string
 
@@ -55,7 +56,7 @@ type VSLanguageService
     [<ImportingConstructor>] 
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
-     openDocumentsTracker: OpenDocumentsTracker,
+     openDocumentsTracker: IOpenDocumentsTracker,
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
@@ -104,45 +105,50 @@ type VSLanguageService
         | Some doc ->
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
 
-    let getSymbolUsing kind (point: SnapshotPoint) (projectProvider: IProjectProvider) =
-        let source = point.Snapshot.GetText()
-        let line = point.Snapshot.GetLineNumberFromPosition point.Position
-        let col = point.Position - point.GetContainingLine().Start.Position
-        let lineStr = point.GetContainingLine().GetText()
-        let args = projectProvider.CompilerOptions
-        
-        let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-            let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-            let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-            SnapshotSpan(snapshot, startPos, endPos - startPos)
-                                
-        Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
-        |> Option.map (fun symbol -> snapshotSpanFromRange point.Snapshot symbol.Range, symbol)
+    let getSymbolUsing kind (point: SnapshotPoint) fileName (projectProvider: IProjectProvider) =
+        maybe {
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
+            let line = point.Snapshot.GetLineNumberFromPosition point.Position
+            let col = point.Position - point.GetContainingLine().Start.Position
+            let lineStr = point.GetContainingLine().GetText()
+            let args = projectProvider.CompilerOptions
+            
+            let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+                let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+                let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+                SnapshotSpan(snapshot, startPos, endPos - startPos)
+                                    
+            let! symbol = Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
+            return snapshotSpanFromRange point.Snapshot symbol.Range, symbol
+        }
 
     let entityCache = EntityCache()
 
-    member __.GetSymbol(point, projectProvider) =
-        getSymbolUsing SymbolLookupKind.Fuzzy point projectProvider
+    member __.GetSymbol(point, fileName, projectProvider) =
+        getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
 
-    member __.GetLongIdentSymbol(point, projectProvider) =
-        getSymbolUsing SymbolLookupKind.ByLongIdent point projectProvider
+    member __.GetLongIdentSymbol(point, fileName, projectProvider) =
+        getSymbolUsing SymbolLookupKind.ByLongIdent point fileName projectProvider
 
-    member __.TokenizeLine(textBuffer: ITextBuffer, args: string[], line) =
-        let snapshot = textBuffer.CurrentSnapshot
-        let source = snapshot.GetText()
-        let lineStr = snapshot.GetLineFromLineNumber(line).GetText()
-        Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
-
-    member __.ParseFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
-        async {
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            return! instance.ParseFileInProject(opts, currentFile, source) 
+    member __.TokenizeLine(fileName: string, textBuffer: ITextBuffer, args: string[], line) =
+        maybe {
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
+            let lineStr = textBuffer.CurrentSnapshot.GetLineFromLineNumber(line).GetText()
+            return Lexer.tokenizeLine source args line lineStr (buildQueryLexState textBuffer)
         }
 
-    member __.ParseAndCheckFileInProject (currentFile: string, source, projectProvider: IProjectProvider) =
-        async {
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) 
+    member __.ParseFileInProject (fileName, projectProvider: IProjectProvider) =
+        asyncMaybe {
+            let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
+            return! instance.ParseFileInProject(opts, fileName, source) |> liftAsync
+        }
+
+    member __.ParseAndCheckFileInProject (currentFile: string, projectProvider: IProjectProvider) =
+        asyncMaybe {
+            let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
+            let! source = openDocumentsTracker.TryGetDocumentText currentFile
+            return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) |> liftAsync
         }
 
     member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
@@ -156,12 +162,12 @@ type VSLanguageService
             ct)        
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
-        async {
+        asyncMaybe {
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
-            try                 
+            try
                 let (_, _, endLine, endCol) = word.ToRange()
-                let source = word.Snapshot.GetText()
+                let! source = openDocumentsTracker.TryGetDocumentText currentFile
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = currentProject.TargetFramework
                 let args = currentProject.CompilerOptions
@@ -170,30 +176,28 @@ type VSLanguageService
                       (word.GetText()) endLine endCol framework (String.concat " " args)
             
                 reportProgress progress (Reporting Resource.findSymbolUseCurrentProject)
-                let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance
+                let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance |> liftAsync
                 reportProgress progress (Reporting Resource.findSymbolUseOtherProjects)
                 let! projectsToCheckOptions = 
                     projectsToCheck 
                     |> List.toArray
                     |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
+                    |> liftAsync
 
                 reportProgress progress (Reporting Resource.findSymbolUseAllProjects)
 
                 let newReportProgress projectName index length = 
                     reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
                 
-                let! res =
+                let! symbol, lastIdent, refs =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
                         (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
                          currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, Some newReportProgress)
-                return 
-                    res 
-                    |> Option.map (fun (symbol, lastIdent, refs) -> 
-                        symbol, lastIdent, filterSymbolUsesDuplicates refs)
+                return symbol, lastIdent, filterSymbolUsesDuplicates refs
             with e ->
                 debug "[Language Service] %O exception occurs while finding usages." e
                 Logging.logExceptionWithContext(e, "Exception occurs while finding usages.")
-                return None }
+                return! None }
 
     member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
@@ -211,41 +215,44 @@ type VSLanguageService
         }
 
     member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
-        async {
+        asyncMaybe {
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             let (_, _, endLine, _) = word.ToRange()
-            let source = word.Snapshot.GetText()
+            let! source = openDocumentsTracker.TryGetDocumentText currentFile
             let currentLine = word.Start.GetContainingLine().GetText()
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale)
+            let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
+            let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale) |> liftAsync
             let! symbol = results.GetSymbolUseAtLocation (endLine+1, symbol.RightColumn, currentLine, [symbol.Text])
-            return symbol |> Option.map (fun s -> s, results)
+            return symbol, results
         }
 
-    member __.CreateLexer (snapshot, args) =
-        let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-        
-        let getLineStr line =
-            let lineNumber = line - lineStart
-            snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-        
-        let source = snapshot.GetText()
-        
-        { new LexerBase() with
-            member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
-                Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
-            member __.TokenizeLine line =
-                Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer)
-            member __.LineCount = lineEnd + 1 }
+    member __.CreateLexer (fileName, snapshot, args) =
+        maybe {
+            let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            
+            let getLineStr line =
+                let lineNumber = line - lineStart
+                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
+            
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
+            
+            return 
+                { new LexerBase() with
+                    member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
+                        Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
+                    member __.TokenizeLine line =
+                        Lexer.tokenizeLine source args line (getLineStr line) (buildQueryLexState snapshot.TextBuffer)
+                    member __.LineCount = lineEnd + 1 }
+        }
 
     member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
                                             checkForUnusedOpens: bool, profiler: Profiler) = 
-        async {
+        asyncMaybe {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
-            let source = snapshot.GetText() 
-            return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens, profiler)
+            let! source = openDocumentsTracker.TryGetDocumentText currentFile
+            return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens, profiler) |> liftAsync
         }
 
     member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale,
@@ -283,34 +290,32 @@ type VSLanguageService
             return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
         }
 
-     member __.GetAllEntities (fileName, source, project: IProjectProvider) =
-        async { 
-            let! opts = project.GetProjectCheckerOptions instance
+     member __.GetAllEntities (fileName, project: IProjectProvider) =
+        asyncMaybe { 
+            let! opts = project.GetProjectCheckerOptions instance |> liftAsync
+            let! source = openDocumentsTracker.TryGetDocumentText fileName
             try 
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source, entityCache.Locking)
             with e ->
                 debug "[Language Service] GetAllSymbols raises an exception: %O" e
                 Logging.logExceptionWithContext(e, "GetAllSymbols raises an exception.")
-                return None
+                return! None
         }
 
     member __.GetLoadDirectiveFileNameAtCursor (fileName, view: Microsoft.VisualStudio.Text.Editor.ITextView, project) =
-        async {
-            let source = view.TextBuffer.CurrentSnapshot.GetText()
-            let! parseResult = __.ParseFileInProject(fileName, source, project)
-            return maybe {
-                let! pos = view.PosAtCaretPosition()
-                let! ast = parseResult.ParseTree
-                let! result = UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast
-                return result
-            }
+        asyncMaybe {
+            let! parseResult = __.ParseFileInProject(fileName, project)
+            let! pos = view.PosAtCaretPosition()
+            let! ast = parseResult.ParseTree
+            return! UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast
         }
 
-    member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file, source) =
-        async {
-            let! opts = project.GetProjectCheckerOptions instance
+    member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file) =
+        asyncMaybe {    
+            let! source = openDocumentsTracker.TryGetDocumentText file
+            let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             try return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
-            with _ -> return None
+            with _ -> return! None
         }
 
     member __.InvalidateProject (projectProvider: IProjectProvider) = 

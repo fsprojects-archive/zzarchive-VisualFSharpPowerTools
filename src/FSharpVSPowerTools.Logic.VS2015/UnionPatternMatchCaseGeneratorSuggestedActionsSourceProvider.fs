@@ -33,6 +33,9 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
     val mutable ProjectFactory: ProjectFactory
 
+    [<Import; DefaultValue>]
+    val mutable OpenDocumentsTracker: IOpenDocumentsTracker
+
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
             if textView.TextBuffer <> buffer then null
@@ -50,7 +53,8 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider() =
                                   doc, textView,
                                   x.UndoHistoryRegistry.RegisterHistory(buffer),
                                   x.FSharpVsLanguageService, x.ServiceProvider,
-                                  x.ProjectFactory, Setting.getDefaultMemberBody codeGenOptions)
+                                  x.ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  x.OpenDocumentsTracker)
                     
                         new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null

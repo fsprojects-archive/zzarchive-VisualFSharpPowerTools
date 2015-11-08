@@ -1,6 +1,5 @@
 ﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 
-open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -36,10 +35,10 @@ with
 
 type CodeGenerationTestService(languageService: LanguageService, compilerOptions: string[]) =
     interface ICodeGenerationService<FSharpProjectOptions, pos, Range> with
-        member __.TokenizeLine(_project, document: IDocument, line1: int<Line1>): FSharpTokenInfo list = 
+        member __.TokenizeLine(_project, document: IDocument, line1: int<Line1>): FSharpTokenInfo list option = 
                 let line0 = int line1 - 1 
                 let line = document.GetLineText1(line1)
-                Lexer.tokenizeLine (document.GetText()) compilerOptions line0 line Lexer.queryLexState
+                Lexer.tokenizeLine (document.GetText()) compilerOptions line0 line Lexer.queryLexState |> Some
         
         member __.GetSymbolAtPosition(_project, snapshot, pos) =
             let lineText = snapshot.GetLineText0 pos.Line0
@@ -72,7 +71,7 @@ type CodeGenerationTestService(languageService: LanguageService, compilerOptions
             }
 
         member __.ParseFileInProject(snapshot, projectOptions) =
-            languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText())
+            languageService.ParseFileInProject(projectOptions, snapshot.FullName, snapshot.GetText()) |> AsyncMaybe.liftAsync
 
         member __.ExtractFSharpPos(pos) = pos
 

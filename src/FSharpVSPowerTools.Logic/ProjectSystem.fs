@@ -5,7 +5,7 @@ open System.Reflection
 open Microsoft.FSharp.Reflection
 open FSharpVSPowerTools
 
-module Reflection = 
+module internal Reflection = 
     // Various flags configurations for Reflection
     let staticFlags = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static
     let instanceFlags = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Instance

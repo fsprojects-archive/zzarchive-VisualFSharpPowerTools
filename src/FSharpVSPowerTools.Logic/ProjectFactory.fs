@@ -43,7 +43,7 @@ type private ProjectUniqueName = string
 type ProjectFactory
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-     openDocumentsTracker: OpenDocumentsTracker,
+     openDocumentsTracker: IOpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events

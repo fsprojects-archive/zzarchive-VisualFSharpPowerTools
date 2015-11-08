@@ -25,7 +25,6 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
 open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
@@ -48,9 +47,7 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! _range, symbolAtPos = codeGenService.GetSymbolAtPosition(projectOptions, document, caretPos)
         let! _range, _symbol, symbolUse = 
             codeGenService.GetSymbolAndUseAtPositionOfKind(projectOptions, document, caretPos, symbolAtPos.Kind)
-        let! parseResults =
-            codeGenService.ParseFileInProject(document, projectOptions)
-            |> liftAsync
+        let! parseResults = codeGenService.ParseFileInProject(document, projectOptions)
         let! parseTree = parseResults.ParseTree
         let getXmlDocBySignature = 
             let xmlFile = symbolUse.Symbol.Assembly.FileName |> Option.map (fun fileName -> Path.ChangeExtension(fileName, ".xml"))

@@ -15,34 +15,49 @@ namespace FSharpVSPowerTools {
         {
             OpensEnabled = true;
             OpensCollapsedByDefault = true;
+
             ModulesEnabled = true;
             ModulesCollapsedByDefault = false;
+            
             HashDirectivesEnabled = true;
             HashDirectivesCollapsedByDefault = true;
+            
             TypesEnabled = true;
             TypesCollapsedByDefault = false;
+            
             SimpleTypesEnabled = true;
             SimpleTypesCollapsedByDefault = false;
+
             TypeExpressionsEnabled = true;
             TypeExpressionsCollapsedByDefault = false;
+            
             MembersEnabled = true;
             MembersCollapsedByDefault = false;
+            
             LetOrUseEnabled = true;
             LetOrUseCollapsedByDefault = false;
-            CollectionsEnabled = true;
+
+            CollectionsEnabled = false;
             CollectionsCollapsedByDefault = false;
-            PatternMatchesEnabled = true;
+
+            PatternMatchesEnabled = false;
             PatternMatchesCollapsedByDefault = false;
-            TryWithFinallyEnabled = true;
+
+            TryWithFinallyEnabled = false;
             TryWithFinallyCollapsedByDefault = false;
-            IfThenElseEnabled = true;
+
+            IfThenElseEnabled = false;
             IfThenElseCollapsedByDefault = false;
-            CExpressionMembersEnabled = true;
+
+            CExpressionMembersEnabled = false;
             CExpressionMembersCollapsedByDefault = false;
-            LoopsEnabled = true;
+
+            LoopsEnabled = false;
             LoopsCollapsedByDefault = false;
-            AttributesEnabled = true;
+
+            AttributesEnabled = false;
             AttributesCollapsedByDefault = false;
+            
             TooltipZoomLevel = 80;
         }
 

@@ -1,8 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Linting
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -55,7 +53,7 @@ type Color =
         let buffer = createMockTextBuffer content fileName
         let view = helper.GetView(buffer)
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName)
+        helper.SetActiveDocument(fileName, content)
         let tagger = helper.GetTagger(buffer, view)
 
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout

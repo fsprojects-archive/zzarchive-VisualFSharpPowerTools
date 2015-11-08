@@ -434,13 +434,10 @@ let shouldGenerateUnionPatternMatchCases (patMatchExpr: PatternMatchExpr) (entit
     caseCount > 0 && writtenCaseCount < caseCount
 
 let tryFindPatternMatchExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
-    async {
-        let! parseResults =
-            codeGenService.ParseFileInProject(document, project)
-        
-        return
-            parseResults.ParseTree
-            |> Option.bind (tryFindPatternMatchExprInParsedInput (codeGenService.ExtractFSharpPos(pos)))
+    asyncMaybe {
+        let! parseResults = codeGenService.ParseFileInProject(document, project)
+        let! input = parseResults.ParseTree
+        return! tryFindPatternMatchExprInParsedInput (codeGenService.ExtractFSharpPos pos) input
     }
 
 let tryFindBarTokenLPosInRange
