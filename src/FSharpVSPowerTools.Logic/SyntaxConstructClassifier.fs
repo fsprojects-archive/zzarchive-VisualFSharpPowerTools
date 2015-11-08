@@ -108,15 +108,6 @@ type SyntaxConstructClassifier
     let unusedDeclarationChanged = Event<_,_>()
     let unusedDeclarationState = Atom None
 
-    let newCancellationToken (currentToken: Atom<CancellationTokenSource option>) =
-        let newToken = new CancellationTokenSource()
-        currentToken.Swap (fun _ -> Some newToken)
-        |> Option.iter (fun oldToken ->
-            oldToken.Cancel()
-            oldToken.Dispose())
-        |> ignore
-        newToken
-
     let disposeCancellationToken (currentToken: Atom<CancellationTokenSource option>) =
         currentToken.Value
         |> Option.iter (fun token ->
@@ -355,7 +346,6 @@ type SyntaxConstructClassifier
                 | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> async.Return()
                 | SlowStage.NoData (isUpdating = true) -> async.Return()
                 | _ ->
-                    let _cancelToken = newCancellationToken slowStageCancellationToken
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
