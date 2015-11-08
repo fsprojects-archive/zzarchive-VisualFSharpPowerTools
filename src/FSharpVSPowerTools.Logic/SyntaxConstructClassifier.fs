@@ -355,7 +355,7 @@ type SyntaxConstructClassifier
                 | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> async.Return()
                 | SlowStage.NoData (isUpdating = true) -> async.Return()
                 | _ ->
-                    let cancelToken = newCancellationToken slowStageCancellationToken
+                    let _cancelToken = newCancellationToken slowStageCancellationToken
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
