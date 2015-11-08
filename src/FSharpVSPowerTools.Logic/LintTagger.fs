@@ -40,15 +40,10 @@ type LintTagger(textDocument: ITextDocument,
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                             
-    let updateAtCaretPosition () =
-        let uiContext = SynchronizationContext.Current
-        let result = maybe {
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        asyncMaybe {
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc 
-            return doc, project }
-
-        asyncMaybe {
-            let! doc, project = result
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
             let config, shouldFileBeIgnored = lintData.Value
@@ -92,10 +87,8 @@ type LintTagger(textDocument: ITextDocument,
                 let spans = spans |> Option.getOrElse []
                 wordSpans <- spans
                 let span = buffer.CurrentSnapshot.FullSpan
-                do! Async.SwitchToContext uiContext
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
+                do! callInUIContext <| fun _ -> tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
             })
-        |> Async.StartInThreadPoolSafe
 
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, updateAtCaretPosition)
 

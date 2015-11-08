@@ -74,7 +74,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                     else str
                 | None -> ""
             | None, None -> ""  // if there are no results the panel will be empty        
-        
+
         model.QuickInfo <- currentInfo
 
     // helper function in the form required by mapNonEmptyLines
@@ -92,59 +92,62 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | Some _ -> flatstr + "."
 
 
-    let updateAtCaretPosition () =
-        let caretPos = view.Caret.Position
-        match buffer.GetSnapshotPoint caretPos, currentWord with
-        | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-        | Some point, _ ->
-            let projectAndDoc =
-                maybe {
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                    let! project = projectFactory.CreateForDocument buffer doc
-                    return project, doc }
-            asyncMaybe {
-                let! project, doc = projectAndDoc
-                let! tooltip, newWord =
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        async {
+            let caretPos = view.Caret.Position
+            match buffer.GetSnapshotPoint caretPos, currentWord with
+            | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
+            | Some point, _ ->
+                let projectAndDoc =
+                    maybe {
+                        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                        let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                        let! project = projectFactory.CreateForDocument buffer doc
+                        return project, doc }
+                let! res = 
                     asyncMaybe {
-                        let! newWord, longIdent = vsLanguageService.GetSymbol (point, doc.FullName, project)
-                        let lineStr = point.GetContainingLine().GetText()
-                        let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
-                        let! (FSharpToolTipText tooltip) =
-                            vsLanguageService.GetOpenDeclarationTooltip(
-                                longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project,
-                                textDocument.FilePath)
-                        let! tooltip =
-                            tooltip
-                            |> List.tryHead
-                            |> Option.bind (function
-                                | FSharpToolTipElement.Single (s, _) -> Some s
-                                | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
-                                | _ -> None)
-                        return Some tooltip, newWord
+                        let! project, doc = projectAndDoc
+                        let! tooltip, newWord =
+                            asyncMaybe {
+                                let! newWord, longIdent = vsLanguageService.GetSymbol (point, doc.FullName, project)
+                                let lineStr = point.GetContainingLine().GetText()
+                                let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
+                                let! (FSharpToolTipText tooltip) =
+                                    vsLanguageService.GetOpenDeclarationTooltip(
+                                        longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project,
+                                        textDocument.FilePath)
+                                let! tooltip =
+                                    tooltip
+                                    |> List.tryHead
+                                    |> Option.bind (function
+                                        | FSharpToolTipElement.Single (s, _) -> Some s
+                                        | FSharpToolTipElement.Group ((s, _) :: _) -> Some s
+                                        | _ -> None)
+                                return Some tooltip, newWord
+                            }
+                        let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
+                        let! errors =
+                            asyncMaybe {
+                                let! errors = checkResults.GetErrors()
+                                do! (if Array.isEmpty errors then None else Some())
+                                return!
+                                    seq { for e in errors do
+                                            if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
+                                                match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
+                                                | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
+                                                | _ -> () }
+                                    |> Seq.groupBy fst
+                                    |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
+                                    |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> Seq.distinct |> List.ofSeq)
+                                    |> Seq.toArray
+                                    |> function [||] -> None | es -> Some es
+                            } |> Async.map Some
+                        return tooltip, errors, Some newWord
                     }
-                let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
-                let! errors =
-                    asyncMaybe {
-                        let! errors = checkResults.GetErrors()
-                        do! (if Array.isEmpty errors then None else Some())
-                        return!
-                            seq { for e in errors do
-                                    if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
-                                        match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
-                                        | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
-                                        | _ -> () }
-                            |> Seq.groupBy fst
-                            |> Seq.sortBy (fun (severity, _) -> if severity = FSharpErrorSeverity.Error then 0 else 1)
-                            |> Seq.map (fun (s, es) -> s, es |> Seq.map snd |> Seq.distinct |> List.ofSeq)
-                            |> Seq.toArray
-                            |> function [||] -> None | es -> Some es
-                    } |> Async.map Some
-                return tooltip, errors, Some newWord
-            }
-            |> Async.map (Option.getOrElse (None, None, None) >> updateQuickInfo)
-            |> Async.StartInThreadPoolSafe
-        | None, _ -> updateQuickInfo (None, None, None)
+                let res = res |> Option.getOrElse (None, None, None) 
+                return! callInUIContext (fun () -> updateQuickInfo res)
+            | None, _ -> return updateQuickInfo (None, None, None)
+        } |> Async.Ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, updateAtCaretPosition)
 

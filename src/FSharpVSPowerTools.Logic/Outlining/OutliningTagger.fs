@@ -16,6 +16,7 @@ open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
 open FSharpVSPowerTools.UntypedAstUtils
+open AsyncMaybe
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
@@ -159,8 +160,7 @@ type OutliningTagger
         | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
-    let doUpdate () =
-        let uiContext = SynchronizationContext.Current
+    let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot
@@ -176,12 +176,9 @@ type OutliningTagger
                     |> Seq.filter (fun x -> outliningEnabled x.Scope)
                     |> Seq.choose (fromScopeRange snapshot)
                     |> Array.ofSeq
-                do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
-                triggerUpdate scopedSpans
+                do! callInUIContext (fun _ -> triggerUpdate scopedSpans) |> liftAsync
         }
         |> Async.Ignore
-        |> Async.StartInThreadPoolSafe
-
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged
     let docEventListener =

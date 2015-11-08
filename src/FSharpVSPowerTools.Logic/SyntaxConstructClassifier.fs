@@ -104,9 +104,7 @@ type SyntaxConstructClassifier
     let classificationChanged = Event<_,_>()
     let fastState = Atom FastStage.NoData
     let slowState = Atom (SlowStage.NoData false)
-    let fastStageCancellationToken = Atom None
     let slowStageCancellationToken = Atom None
-
     let unusedDeclarationChanged = Event<_,_>()
     let unusedDeclarationState = Atom None
 
@@ -271,7 +269,7 @@ type SyntaxConstructClassifier
             |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
             |> Seq.toArray
             
-    let updateUnusedDeclarations() =
+    let updateUnusedDeclarations (CallInUIContext callInUIContext) =
         let worker (project, snapshot) =
             asyncMaybe {
                 let pf = Profiler()
@@ -329,7 +327,8 @@ type SyntaxConstructClassifier
                 debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
                 Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result)
-                triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
+                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateUnusedDeclarations" 
+                    |> liftAsync
 
                 // Switch back to UI thread before firing events
                 do! Async.SwitchToContext(uiContext) |> liftAsync
@@ -348,23 +347,22 @@ type SyntaxConstructClassifier
         match getCurrentProject(), getCurrentSnapshot() with
         | Some project, Some snapshot ->
             match fastState.Value, slowState.Value with
-            | (FastStage.NoData | FastStage.Updating _), _ -> ()
-            | _, SlowStage.NoData (isUpdating = true) -> ()
+            | (FastStage.NoData | FastStage.Updating _), _ -> async.Return()
+            | _, SlowStage.NoData (isUpdating = true) -> async.Return()
             | FastStage.Data _, slowStage ->
                 match slowStage with
-                | SlowStage.Data { IsUpdating = true } -> ()
-                | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
-                | SlowStage.NoData (isUpdating = true) -> ()
+                | SlowStage.Data { IsUpdating = true } -> async.Return()
+                | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> async.Return()
+                | SlowStage.NoData (isUpdating = true) -> async.Return()
                 | _ ->
                     let cancelToken = newCancellationToken slowStageCancellationToken
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
-                    Async.StartInThreadPoolSafe(worker (project, snapshot), cancelToken.Token)
-        | _ -> ()
+                    worker (project, snapshot)
+        | _ -> async.Return()
 
-    let updateSyntaxConstructClassifiers force = 
-        let cancelToken = newCancellationToken fastStageCancellationToken
+    let updateSyntaxConstructClassifiers force ((CallInUIContext callInUIContext) as ciuc) = 
         let snapshot = getCurrentSnapshot()
         let needUpdate =
             match snapshot, force, fastState.Value with
@@ -384,7 +382,7 @@ type SyntaxConstructClassifier
                 Updating (oldData, snapshot)) |> ignore)
 
         if needUpdate then
-            let worker = asyncMaybe {
+            asyncMaybe {
                 let! currentProject = getCurrentProject()
                 let! snapshot = snapshot
                 debug "[SyntaxConstructClassifier] - Effective update"
@@ -451,19 +449,20 @@ type SyntaxConstructClassifier
                           Spans = spans
                           SingleSymbolsProjects = singleSymbolsProjects }) |> ignore
 
-                triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
+                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers" 
+                    |> liftAsync
 
                 if isSlowStageEnabled() then
                     if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
-                        updateUnusedDeclarations()
+                        do! updateUnusedDeclarations ciuc |> liftAsync
                     else
                         let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject |> liftAsync
                         vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                 pf.Stop()
                 Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
-            }
-            Async.StartInThreadPoolSafe (Async.Ignore worker, cancelToken.Token)
+            } |> Async.Ignore
+        else async.Return ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
@@ -475,13 +474,14 @@ type SyntaxConstructClassifier
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
                 debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers..."
                         builtProjectFileName
-                updateSyntaxConstructClassifiers true
+                let callInUIContext = CallInUIContext.FromCurrentThread()
+                updateSyntaxConstructClassifiers true callInUIContext |> Async.StartInThreadPoolSafe
         } |> ignore)
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
 
     let docEventListener =
-        new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
+        new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, updateSyntaxConstructClassifiers false)
 
     let projectCheckedSubscription =
         // project check results needed for Unused Declarations only.
@@ -503,7 +503,8 @@ type SyntaxConstructClassifier
                     | None ->
                         // all the needed projects have been checked in background, let's calculate
                         // Slow Stage (unused symbols and opens)
-                        updateUnusedDeclarations()
+                        let ctx = CallInUIContext.FromCurrentThread()
+                        updateUnusedDeclarations ctx |> Async.StartInThreadPoolSafe
                 | _ -> ()))
         else None
 
@@ -534,7 +535,8 @@ type SyntaxConstructClassifier
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
                 // If not yet schedule an action, do it now.
-                updateSyntaxConstructClassifiers false
+                let callInUIContext = CallInUIContext.FromCurrentThread()
+                updateSyntaxConstructClassifiers false callInUIContext |> Async.StartInThreadPoolSafe
             [||]
         | FastStage.Updating _ -> [||]
 
@@ -565,6 +567,5 @@ type SyntaxConstructClassifier
         member __.Dispose() =
             projectCheckedSubscription |> Option.iter (fun sub -> sub.Dispose())
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
-            disposeCancellationToken fastStageCancellationToken
             disposeCancellationToken slowStageCancellationToken
             (docEventListener :> IDisposable).Dispose()

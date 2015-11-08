@@ -24,8 +24,8 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
     let mutable markerData = Unchecked.defaultof<_>
     let markerBrush = SolidColorBrush(Color.FromRgb(255uy, 165uy, 0uy))
 
-    let updateDisplay () = 
-        protect <| fun _ ->
+    let updateDisplay (CallInUIContext callInUIContext) =
+        callInUIContext <| fun _ ->
             if not textView.IsClosed then
                 let buffer = textView.TextBuffer
                 let span = buffer.CurrentSnapshot.FullSpan
@@ -70,22 +70,16 @@ type UnusedDeclarationMargin(textView: IWpfTextView,
                     children.Add(marker) |> ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.viewportHeightEvent textView; ViewChange.tagsEvent tagAggregator], 
-                                   200us, updateDisplay)
+                                                      200us, updateDisplay)
 
     interface IWpfTextViewMargin with
-        member __.Enabled = 
-            true
+        member __.Enabled = true
         
         member x.GetTextViewMargin(marginName: string): ITextViewMargin = 
-            if marginName = Constants.fsharpUnusedDeclarationMargin then
-                x :> _
-            else null
+            if marginName = Constants.fsharpUnusedDeclarationMargin then x :> _ else null
         
-        member x.MarginSize: float = 
-            x.ActualHeight
-        
-        member x.VisualElement: FrameworkElement = 
-            x :> _
+        member x.MarginSize: float = x.ActualHeight
+        member x.VisualElement: FrameworkElement = x :> _
 
         member __.Dispose() = 
             (docEventListener :> IDisposable).Dispose()

@@ -49,7 +49,7 @@ type UnionPatternMatchCaseGenerator
 
         transaction.Complete()
 
-    let getSuggestions snapshot (patMatchExpr, entity, insertionParams) =
+    let getSuggestions (patMatchExpr, entity, insertionParams, snapshot) =
         [
             { new ISuggestion with
                   member __.Invoke() = handleGenerateUnionPatternMatchCases snapshot patMatchExpr insertionParams entity
@@ -57,54 +57,40 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
-    let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
-        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
-        | (Some _ | None), _ ->
-            let res =
-                maybe {
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        async {
+            match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+            | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> return ()
+            | (Some _ | None), _ ->
+                let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol(point, doc.FullName, project) 
-                    return point, doc, project, word
-                }
+                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 
+                    
+                    do! match currentWord with
+                        | None -> Some()
+                        | Some oldWord -> 
+                            if word <> oldWord then Some()
+                            else None
 
-            match res with
-            | Some (point, doc, project, newWord) ->
-                let wordChanged = 
-                    match currentWord with
-                    | None -> true
-                    | Some oldWord -> newWord <> oldWord
-
-                if wordChanged then
-                    currentWord <- Some newWord
+                    currentWord <- Some word
                     suggestions <- []
-                    let uiContext = SynchronizationContext.Current
-                    asyncMaybe {
-                        let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
-                        let vsDocument = VSDocument(source, doc, point.Snapshot)
-                        let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
-                            tryFindUnionDefinitionFromPos codeGenService project point vsDocument
-                        // Recheck cursor position to ensure it's still in new word
-                        let! point = buffer.GetSnapshotPoint view.Caret.Position
-                        if point.InSpan symbolRange && shouldGenerateUnionPatternMatchCases patMatchExpr unionTypeDefinition then
-                            return! Some(patMatchExpr, unionTypeDefinition, insertionPos)
-                        else
-                            return! None
-                    }
-                    |> Async.bind (fun result -> 
-                        async {
-                            // Switch back to UI thread before firing events
-                            do! Async.SwitchToContext uiContext
-                            suggestions <- result |> Option.map (getSuggestions newWord.Snapshot) |> Option.getOrElse []
-                            changed.Trigger self
-                        })
-                    |> Async.StartInThreadPoolSafe
-            | None -> 
-                currentWord <- None
-                changed.Trigger self
+                    let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
+                    let vsDocument = VSDocument(source, doc, point.Snapshot)
+                    let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
+                        tryFindUnionDefinitionFromPos codeGenService project point vsDocument
+                    // Recheck cursor position to ensure it's still in new word
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position
+                    if point.InSpan symbolRange && shouldGenerateUnionPatternMatchCases patMatchExpr unionTypeDefinition then
+                        return! Some(patMatchExpr, unionTypeDefinition, insertionPos, word.Snapshot)
+                    else
+                        return! None
+                } 
+                suggestions <- result |> Option.map getSuggestions |> Option.getOrElse []
+                do! callInUIContext <| fun _ -> changed.Trigger self
+        }
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       500us, updateAtCaretPosition)

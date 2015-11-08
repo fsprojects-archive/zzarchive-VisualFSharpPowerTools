@@ -108,7 +108,7 @@ type ImplementInterface
                 buffer.Insert(currentPos + 5, stub + new String(' ', startColumn)) |> ignore
             transaction.Complete()
 
-    let getSuggestions (word: SnapshotSpan) (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults) =
+    let getSuggestions (state: InterfaceState, displayContext, entity, results: ParseAndCheckResults, word: SnapshotSpan) =
         if InterfaceStubGenerator.hasNoInterfaceMember entity then []
         else
             let membersAndRanges = InterfaceStubGenerator.getMemberNameAndRanges state.InterfaceData
@@ -147,60 +147,47 @@ type ImplementInterface
                   createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
-    let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
-        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
-        | (Some _ | None), _ ->
-            let res =
-                maybe {
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        async {
+            match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+            | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> return ()
+            | (Some _ | None), _ ->
+                let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, symbol = vsLanguageService.GetSymbol(point, doc.FullName, project) 
-                    return point, doc, project, word, symbol
-                }
+                    let! word, symbol = vsLanguageService.GetSymbol (point, doc.FullName, project) 
+                    
+                    do! match currentWord with
+                        | None -> Some()
+                        | Some oldWord -> 
+                            if word <> oldWord then Some()
+                            else None
 
-            match res with
-            | Some (point, doc, project, newWord, symbol) ->
-                let wordChanged = 
-                    match currentWord with
-                    | None -> true
-                    | Some oldWord -> newWord <> oldWord
-                if wordChanged then
-                    currentWord <- Some newWord
+                    currentWord <- Some word
                     suggestions <- []
-                    let uiContext = SynchronizationContext.Current
-                    asyncMaybe {
-                        match symbol.Kind with
-                        | SymbolKind.Ident ->
-                            let! interfaceState = queryInterfaceState point doc project
-                            let! (fsSymbolUse, results) = 
-                                vsLanguageService.GetFSharpSymbolUse (newWord, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
-                            // Recheck cursor position to ensure it's still in new word
-                            let! point = buffer.GetSnapshotPoint view.Caret.Position
-                            return!
-                                (match fsSymbolUse.Symbol with
-                                | :? FSharpEntity as entity when point.InSpan newWord ->
-                                    // The entity might correspond to another symbol so we check for symbol text and start ranges as well
-                                    if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
-                                        && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
-                                        Some (interfaceState, fsSymbolUse.DisplayContext, entity, results)
-                                    else None
-                                | _ -> None)
-                        | _ -> return! None
-                    } 
-                    |> Async.bind (fun result -> 
-                        async {
-                            // Switch back to UI thread before firing events
-                            do! Async.SwitchToContext uiContext
-                            suggestions <- result |> Option.map (getSuggestions newWord) |> Option.getOrElse []
-                            changed.Trigger self
-                        })
-                    |> Async.StartInThreadPoolSafe
-            | None -> 
-                currentWord <- None 
-                changed.Trigger self
+                    match symbol.Kind with
+                    | SymbolKind.Ident ->
+                        let! interfaceState = queryInterfaceState point doc project
+                        let! (fsSymbolUse, results) = 
+                            vsLanguageService.GetFSharpSymbolUse (word, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                        // Recheck cursor position to ensure it's still in new word
+                        let! point = buffer.GetSnapshotPoint view.Caret.Position
+                        return!
+                            match fsSymbolUse.Symbol with
+                            | :? FSharpEntity as entity when point.InSpan word ->
+                                // The entity might correspond to another symbol so we check for symbol text and start ranges as well
+                                if InterfaceStubGenerator.isInterface entity && entity.DisplayName = symbol.Text 
+                                    && hasSameStartPos fsSymbolUse.RangeAlternate interfaceState.InterfaceData.Range then
+                                    Some (interfaceState, fsSymbolUse.DisplayContext, entity, results, word)
+                                else None
+                            | _ -> None
+                    | _ -> return! None
+                } 
+                suggestions <- result |> Option.map getSuggestions |> Option.getOrElse []
+                do! callInUIContext <| fun _ -> changed.Trigger self
+        }
 
     let docEventListener = 
         new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 500us, updateAtCaretPosition)

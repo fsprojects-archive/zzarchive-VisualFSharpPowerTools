@@ -102,94 +102,81 @@ type UnopenedNamespaceResolver
         | [], [] -> []
         | _ -> [ openNamespaceActions; qualifySymbolActions ]
 
-    let updateAtCaretPosition() =
-        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
-        | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> ()
-        | (Some _ | None), _ ->
-            let res =
-                maybe {
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        async {
+            match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+            | Some point, Some word when word.Snapshot = view.TextSnapshot && point.InSpan word -> return ()
+            | (Some _ | None), _ ->
+                let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
                     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                    let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol(point, doc.FullName, project) 
-                    return point, doc, project, word
-                }
-            match res with
-            | Some (point, doc, project, newWord) ->
-                let wordChanged = 
-                    match currentWord with
-                    | None -> true
-                    | Some oldWord -> newWord <> oldWord
-                if wordChanged then
-                    currentWord <- Some newWord
-                    suggestions <- []
-                    let uiContext = SynchronizationContext.Current
-                    asyncMaybe {
-                        let! newWord, sym = vsLanguageService.GetSymbol (point, doc.FullName, project)
-                        // Recheck cursor position to ensure it's still in new word
-                        let! point = buffer.GetSnapshotPoint view.Caret.Position
-                        if not (point.InSpan newWord) then return! None
-                        else
-                            let! res = 
-                                vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
-                            
-                            match res with
-                            | Some _ -> return! None
-                            | None ->
-                                let! checkResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
-                                let pos = codeGenService.ExtractFSharpPos point
-                                let! parseTree = checkResults.ParseTree
-                                let! entityKind = ParsedInput.getEntityKind parseTree pos
-                                let! entities = vsLanguageService.GetAllEntities (doc.FullName, project)
-
-                                //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
-
-                                let isAttribute = entityKind = EntityKind.Attribute
-                                let entities =
-                                    entities |> List.filter (fun e ->
-                                        match entityKind, e.Kind with
-                                        | EntityKind.Attribute, EntityKind.Attribute 
-                                        | EntityKind.Type, (EntityKind.Type | EntityKind.Attribute)
-                                        | EntityKind.FunctionOrValue _, _ -> true 
-                                        | EntityKind.Attribute, _
-                                        | _, EntityKind.Module _
-                                        | EntityKind.Module _, _
-                                        | EntityKind.Type, _ -> false)
-
-                                let entities = 
-                                    entities
-                                    |> List.map (fun e -> 
-                                         [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.CleanedIdents
-                                           if isAttribute then
-                                               let lastIdent = e.CleanedIdents.[e.CleanedIdents.Length - 1]
-                                               if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
-                                                   yield 
-                                                       e.TopRequireQualifiedAccessParent, 
-                                                       e.AutoOpenParent,
-                                                       e.Namespace,
-                                                       e.CleanedIdents 
-                                                       |> Array.replace (e.CleanedIdents.Length - 1) (lastIdent.Substring(0, lastIdent.Length - 9)) ])
-                                    |> List.concat
-
-                                debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
-                                
-                                let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn)
-                                let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
-                                return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList |> getSuggestions newWord 
-                    }
-                    |> Async.bind (fun result -> 
-                        async {
-                            // Switch back to UI thread before firing events
-                            do! Async.SwitchToContext uiContext
-                            suggestions <- result |> Option.getOrElse []
-                            changed.Trigger self
-                        })
-                    |> Async.StartInThreadPoolSafe
+                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 
                     
-            | None -> 
-                currentWord <- None 
-                changed.Trigger self
+                    do! match currentWord with
+                        | None -> Some()
+                        | Some oldWord -> 
+                            if word <> oldWord then Some()
+                            else None
+
+                    currentWord <- Some word
+                    suggestions <- []
+                    let! newWord, sym = vsLanguageService.GetSymbol (point, doc.FullName, project)
+                        // Recheck cursor position to ensure it's still in new word
+                    let! point = buffer.GetSnapshotPoint view.Caret.Position
+                    if not (point.InSpan newWord) then return! None
+                    else
+                        let! res = 
+                            vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
+                        
+                        match res with
+                        | Some _ -> return! None
+                        | None ->
+                            let! checkResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
+                            let pos = codeGenService.ExtractFSharpPos point
+                            let! parseTree = checkResults.ParseTree
+                            let! entityKind = ParsedInput.getEntityKind parseTree pos
+                            let! entities = vsLanguageService.GetAllEntities (doc.FullName, project)
+
+                            //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
+
+                            let isAttribute = entityKind = EntityKind.Attribute
+                            let entities =
+                                entities |> List.filter (fun e ->
+                                    match entityKind, e.Kind with
+                                    | EntityKind.Attribute, EntityKind.Attribute 
+                                    | EntityKind.Type, (EntityKind.Type | EntityKind.Attribute)
+                                    | EntityKind.FunctionOrValue _, _ -> true 
+                                    | EntityKind.Attribute, _
+                                    | _, EntityKind.Module _
+                                    | EntityKind.Module _, _
+                                    | EntityKind.Type, _ -> false)
+
+                            let entities = 
+                                entities
+                                |> List.map (fun e -> 
+                                     [ yield e.TopRequireQualifiedAccessParent, e.AutoOpenParent, e.Namespace, e.CleanedIdents
+                                       if isAttribute then
+                                           let lastIdent = e.CleanedIdents.[e.CleanedIdents.Length - 1]
+                                           if e.Kind = EntityKind.Attribute && lastIdent.EndsWith "Attribute" then
+                                               yield 
+                                                   e.TopRequireQualifiedAccessParent, 
+                                                   e.AutoOpenParent,
+                                                   e.Namespace,
+                                                   e.CleanedIdents 
+                                                   |> Array.replace (e.CleanedIdents.Length - 1) (lastIdent.Substring(0, lastIdent.Length - 9)) ])
+                                |> List.concat
+
+                            debug "[ResolveUnopenedNamespaceSmartTagger] %d entities found" (List.length entities)
+                            
+                            let! idents = UntypedAstUtils.getLongIdentAt parseTree (Range.mkPos pos.Line sym.RightColumn)
+                            let createEntity = ParsedInput.tryFindInsertionContext pos.Line parseTree idents
+                            return entities |> Seq.map createEntity |> Seq.concat |> Seq.toList |> getSuggestions newWord 
+                } 
+                suggestions <- result |> Option.getOrElse []
+                do! callInUIContext <| fun _ -> changed.Trigger self
+        }
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 
                                                       100us, updateAtCaretPosition)

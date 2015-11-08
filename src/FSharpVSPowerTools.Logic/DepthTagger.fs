@@ -38,8 +38,7 @@ type DepthTagger
     let mutable state = None
     let tagsChanged = Event<_,_>()
     
-    let refreshTags() = 
-        let uiContext = SynchronizationContext.Current
+    let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
@@ -70,11 +69,10 @@ type DepthTagger
             lastResults.Swap (fun _ -> newResults) |> ignore
             debug "[DepthTagger] Firing tags changed"
             // Switch back to UI thread before firing events
-            do! Async.SwitchToContext(uiContext) |> liftAsync
-            tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))
-        } 
-        |> Async.Ignore |> Async.StartInThreadPoolSafe
-    
+            return! callInUIContext (fun _ ->
+                tagsChanged.Trigger (self, SnapshotSpanEventArgs (SnapshotSpan (snapshot, 0, snapshot.Length)))) |> liftAsync
+        } |> Async.Ignore
+   
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, refreshTags) 
     
     let getTags (spans: NormalizedSnapshotSpanCollection) = 
