@@ -45,8 +45,7 @@ namespace FSharpVSPowerTools
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
         readonly IOpenDocumentsTracker _openDocumentTracker;
-        static readonly Type serviceType = typeof(LintTagger);
-
+    
         [ImportingConstructor]
         public LintTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
@@ -72,7 +71,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return buffer.Properties.GetOrCreateSingletonProperty(serviceType, 
+                return buffer.Properties.GetOrCreateSingletonProperty(
                     () => new LintTagger(doc, _fsharpVsLanguageService, _serviceProvider, _projectFactory, _openDocumentTracker) as ITagger<T>);
             }
 
