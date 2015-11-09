@@ -437,8 +437,6 @@ namespace FSharpVSPowerTools
         private readonly ProjectFactory _projectFactory;
         private readonly IServiceProvider _serviceProvider;
 
-        private static readonly Type serviceType = typeof(SyntaxConstructClassifier);
-
         [ImportingConstructor]
         public SyntaxConstructClassifierProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
@@ -477,7 +475,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
+                return buffer.Properties.GetOrCreateSingletonProperty(
                     () => new SyntaxConstructClassifier(doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
                                     _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
             }

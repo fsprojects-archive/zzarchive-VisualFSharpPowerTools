@@ -23,8 +23,6 @@ namespace FSharpVSPowerTools
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
 
-        private static readonly Type serviceType = typeof(HighlightUsageTagger);
-
         [ImportingConstructor]
         public HighlightUsageTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
@@ -49,7 +47,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return buffer.Properties.GetOrCreateSingletonProperty(serviceType,
+                return buffer.Properties.GetOrCreateSingletonProperty(
                     () => new HighlightUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory) as ITagger<T>);
             }
 
