@@ -8,7 +8,6 @@ open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
-open System.Threading
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
 open System.Windows

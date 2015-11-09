@@ -325,15 +325,7 @@ type SyntaxConstructClassifier
                 do! Async.SwitchToContext(uiContext) |> liftAsync
                 unusedDeclarationState.Swap(fun _ -> Some (snapshot, notUsedSpans |> Map.toArray |> Array.map fst)) |> ignore
                 triggerUnusedDeclarationChanged snapshot
-            } 
-            |> Async.map (fun _ ->
-                // no matter what's happend in `worker`, we should reset `IsUpdating` flag to `false`
-                // in order to prevent Slow stage to stop working as it would think that a previous 
-                // `worker` is still running.
-                 slowState.Swap (function
-                    | SlowStage.NoData _ -> SlowStage.NoData false
-                    | SlowStage.Data x -> SlowStage.Data { x with IsUpdating = false })
-                |> ignore)
+            } |> Async.Ignore
 
         match getCurrentProject(), getCurrentSnapshot() with
         | Some project, Some snapshot ->
@@ -349,7 +341,17 @@ type SyntaxConstructClassifier
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
-                    worker (project, snapshot)
+                    async {
+                        try do! worker (project, snapshot)
+                        finally
+                            // no matter what's happend in `worker`, we should reset `IsUpdating` flag to `false`
+                            // in order to prevent Slow stage to stop working as it would think that a previous 
+                            // `worker` is still running.
+                            slowState.Swap (function
+                               | SlowStage.NoData _ -> SlowStage.NoData false
+                               | SlowStage.Data x -> SlowStage.Data { x with IsUpdating = false })
+                            |> ignore
+                    }
         | _ -> async.Return()
 
     let updateSyntaxConstructClassifiers force ((CallInUIContext callInUIContext) as ciuc) = 
