@@ -13,7 +13,7 @@ module Prelude =
     let inline debug msg = Printf.kprintf Debug.WriteLine msg
     let inline fail msg = Printf.kprintf Debug.Fail msg
     let inline isNull v = match v with | null -> true | _ -> false
-    let inline isNotNull v = v |> (not << isNull)
+    let inline isNotNull v = not (isNull v)
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
     
 
@@ -23,7 +23,7 @@ module Null =
     let inline fill defaultValue x = 
         if isNull x then null else defaultValue
 
-    let inline fillWith (genDefaultValue: unit -> 'a) x = 
+    let inline fillWith (genDefaultValue: unit -> 'T) x = 
         if isNull x then null else genDefaultValue ()
 
 
@@ -59,7 +59,7 @@ module List =
         loop [] xs
 
     /// Fold over the list passing the index and element at that index to a folding function
-    let foldi (folder:'State -> int -> 'T -> 'State) (state:'State) (xs:'T list) =        
+    let foldi (folder: 'State -> int -> 'T -> 'State) (state: 'State) (xs: 'T list) =
         match xs with 
         | [] -> state
         | _ -> 
@@ -104,18 +104,18 @@ module Array =
     /// Optimized arrays equality. ~100x faster than `array1 = array2` on strings.
     /// ~2x faster for floats
     /// ~0.8x slower for ints
-    let inline areEqual (x: 'a[]) (y: 'a[]) =
-        match x, y with
+    let inline areEqual (xs: 'T []) (ys: 'T []) =
+        match xs, ys with
         | null, null -> true
         | [||], [||] -> true
         | null, _ | _, null -> false
-        | _ when x.Length <> y.Length -> false
+        | _ when xs.Length <> ys.Length -> false
         | _ ->
             let mutable break' = false
             let mutable i = 0
             let mutable result = true
-            while i < x.Length && not break' do
-                if x.[i] <> y.[i] then 
+            while i < xs.Length && not break' do
+                if xs.[i] <> ys.[i] then 
                     break' <- true
                     result <- false
                 i <- i + 1
@@ -123,11 +123,11 @@ module Array =
 
     /// check if subArray is found in the wholeArray starting 
     /// at the provided index
-    let inline isSubArray (subArray:'a []) (wholeArray:'a []) index = 
+    let inline isSubArray (subArray: 'T []) (wholeArray:'T []) index = 
         if isNull subArray || isNull wholeArray then false
         elif subArray.Length = 0 then true
         elif subArray.Length > wholeArray.Length then false
-        elif subArray.Length = wholeArray.Length then areEqual subArray wholeArray else        
+        elif subArray.Length = wholeArray.Length then areEqual subArray wholeArray else
         let rec loop subidx idx =
             if subidx = subArray.Length then true 
             elif subArray.[subidx] = wholeArray.[idx] then loop (subidx+1) (idx+1) 
@@ -136,7 +136,7 @@ module Array =
 
 
     /// Returns true if one array has another as its subset from index 0.
-    let startsWith (prefix: _ []) (whole: _ []) =        
+    let startsWith (prefix: _ []) (whole: _ []) =
         isSubArray prefix whole 0
             
 
@@ -154,9 +154,10 @@ module Array =
         res
 
     
-    let head (array:'T []) =
+    let head (array: 'T []) =
          checkNonNull "array" array
          if array.Length = 0 then invalidArg "array" "cannot get the head of an empty array"
+         array.[0]
 
 
     /// Returns all heads of a given array.
@@ -170,7 +171,7 @@ module Array =
 
 
     /// Fold over the array passing the index and element at that index to a folding function
-    let foldi (folder : 'State -> int -> 'T -> 'State) (state : 'State) (array : 'T[]) =
+    let foldi (folder: 'State -> int -> 'T -> 'State) (state: 'State) (array: 'T []) =
         checkNonNull "array" array
         if array.Length = 0 then state else
         let folder = OptimizedClosures.FSharpFunc<_,_,_,_>.Adapt folder
@@ -182,23 +183,23 @@ module Array =
 
 
     /// Get the first element of the array or None if the Array is null or empty
-    let tryHead array =        
+    let tryHead array =
         match array with
         | null | [||] -> None
-        | arr  -> Some arr.[0]    
+        | arr  -> Some arr.[0]
 
 
     /// Get the last element of the array or None if the Array is null or empty
     let tryLast array =
         match array with
         | null | [||] -> None
-        | arr  -> Some arr.[arr.Length-1]        
+        | arr  -> Some arr.[arr.Length-1]
 
 
     /// Returns an array that contains no duplicate entries according to generic hash and
     /// equality comparisons on the entries.
     /// If an element occurs multiple times in the array then the later occurrences are discarded.
-    let distinct (array:'T[]) =
+    let distinct (array: 'T []) =
         checkNonNull "array" array
         if array.Length = 0 then [||] else
         let temp = Array.zeroCreate array.Length
@@ -211,7 +212,7 @@ module Array =
         temp.[0..i-1]
 
 
-    let distinctBy keyf (array:'T[]) =
+    let distinctBy keyf (array:'T []) =
         checkNonNull "array" array
         if array.Length = 0 then [||] else
         let temp = Array.zeroCreate array.Length
@@ -224,9 +225,9 @@ module Array =
         temp.[0..i-1]
 
     /// pass an array byref to reverse it in place
-    let revInPlace (array: 'a[] byref ) =
+    let revInPlace (array: 'T []) =
         checkNonNull "array" array
-        if areEqual array [||] then () else        
+        if areEqual array [||] then () else
         let arrlen, revlen = array.Length-1, array.Length/2 - 1
         for idx in 0 .. revlen do
             let t1 = array.[idx] 
@@ -237,7 +238,7 @@ module Array =
 
     /// Return an array of elements that preceded the first element that failed
     /// to satisfy the predicate
-    let takeWhile predicate (array: 'T[]) =
+    let takeWhile predicate (array: 'T []) =
         checkNonNull "array" array
         if array.Length = 0 then [||] else
         let mutable count = 0
@@ -248,7 +249,7 @@ module Array =
 
     /// Return an array of elements that begin at the first element that failed
     /// to satisfy the predicate
-    let skipWhile predicate (array: 'T[]) =
+    let skipWhile predicate (array: 'T []) =
         checkNonNull "array" array
         if array.Length = 0 then [||] else
         let mutable count = 0
@@ -258,7 +259,7 @@ module Array =
 
 
     /// Map all elements of the array that satisfy the predicate
-    let filterMap predicate mapfn (array: 'T[])  =
+    let filterMap predicate mapfn (array: 'T [])  =
         checkNonNull "array" array
         if array.Length = 0 then [||] else
         let result = Array.zeroCreate array.Length
@@ -271,7 +272,7 @@ module Array =
         result.[0..count-1]
 
 
-    let groupBy (keyfn:'T->'Key) (array: 'T[]) =
+    let groupBy (keyfn:'T->'Key) (array: 'T []) =
         checkNonNull "array" array
         let dict = Dictionary<'Key,ResizeArray<'T>> HashIdentity.Structural
         // Build the groupings
@@ -563,7 +564,7 @@ type AsyncMaybeBuilder () =
     member __.Using (resource : ('T :> IDisposable), body : _ -> Async<_ option>) : Async<_ option> =
         try body resource
         finally 
-            if resource <> null then resource.Dispose ()
+            if isNotNull resource then resource.Dispose ()
 
     [<DebuggerStepThrough>]
     member x.While (guard, body : Async<_ option>) : Async<_ option> =
@@ -732,10 +733,10 @@ module String =
         match str with
         | null -> null, None
         | _ ->
-            let mutable charr = str.ToCharArray() 
-            Array.revInPlace &charr
-            let mutable  digits = Array.takeWhile Char.IsDigit charr
-            Array.revInPlace &digits            
+            let charr = str.ToCharArray() 
+            Array.revInPlace charr
+            let digits = Array.takeWhile Char.IsDigit charr
+            Array.revInPlace digits
             String digits
             |> function
                | "" -> str, None
@@ -745,8 +746,8 @@ module String =
     /// return null if the string is null
     let trim (value: string) = if isNull value then null else value.Trim()
     
-    /// Splits a string into substrings based on the strings in the array seperators
-    let split options (separator: string[]) (value: string) = 
+    /// Splits a string into substrings based on the strings in the array separators
+    let split options (separator: string []) (value: string) = 
         if isNull value  then null else value.Split(separator, options)
 
     let (|StartsWith|_|) pattern value =
@@ -816,7 +817,7 @@ open System.Text
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module StringBuilder =
     /// Pipelining function for appending a string to a stringbuilder
-    let inline append   (str:string) (sb:StringBuilder) = sb.Append str
+    let inline append (str:string) (sb:StringBuilder) = sb.Append str
 
     /// Pipelining function for appending a string with a '\n' to a stringbuilder
     let inline appendLine (str:string) (sb:StringBuilder) = sb.AppendLine str
@@ -870,6 +871,6 @@ type Profiler() =
              |> Seq.sortBy (fun (_, t) -> -t)
              |> Seq.fold (fun (acc: StringBuilder) (msg, t) -> 
                  acc.AppendLine (sprintf "%s, %O" msg t)) (StringBuilder())
-             |> fun sb -> string sb)
+             |> string)
 
     

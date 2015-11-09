@@ -610,8 +610,8 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     else acc) []
     idents
     |> List.rev
-    |> List.concat
-    |> List.map (fun ident -> ident.idText)
+    |> Seq.concat
+    |> Seq.map (fun ident -> ident.idText)
     |> String.concat "."
 
 
@@ -716,7 +716,7 @@ module HashDirectiveInfo =
         )
 
 
-/// Set of visitor utilies, designed for the express purpose of fetching ranges
+/// Set of visitor utilities, designed for the express purpose of fetching ranges
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
     [<RequireQualifiedAccess>]
@@ -749,7 +749,7 @@ module Outlining =
 
     /// Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside
     /// some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions
-    /// following a binding or the the right hand side of a pattern, e.g. `let x = ...`
+    /// following a binding or the right hand side of a pattern, e.g. `let x = ...`
     type Collapse =
         | Below = 0
         | Same = 1
@@ -860,7 +860,7 @@ module Outlining =
                 yield! parseMatchClauses clauses
             | SynExpr.App (atomicFlag,isInfix,funcExpr,argExpr,r) ->
                 // seq exprs, custom operators, etc
-                if ExprAtomicFlag.NonAtomic=atomicFlag && isInfix=false
+                if ExprAtomicFlag.NonAtomic=atomicFlag && (not isInfix)
                    && (function | SynExpr.Ident _ -> true | _ -> false) funcExpr
                    // if the argExrp is a computation expression another match will handle the outlining
                    // these cases must be removed to prevent creating unnecessary tags for the same scope
@@ -965,10 +965,10 @@ module Outlining =
 
     and private parseMatchClauses = Seq.collect parseMatchClause
 
-    and private parseAttributes (attrs:SynAttributes) =
+    and private parseAttributes (attrs: SynAttributes) =
         seq{
-            let attrListRange  =
-                if attrs.Length = 0 then Seq.empty else
+            let attrListRange =
+                if List.isEmpty attrs then Seq.empty else
                 rcheck Scope.Attribute Collapse.Same  <| Range.startToEnd (attrs.[0].Range) (attrs.[attrs.Length-1].ArgExpr.Range)
             match  attrs with
             | [] -> ()
