@@ -134,6 +134,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         walkExpr e2
         e1 |> Option.iter walkExpr
 
+    and walkSimplePats = function
+        | SynSimplePats.SimplePats (pats, _) -> List.iter walkSimplePat pats
+        | SynSimplePats.Typed (pats, ty, _) -> 
+            walkSimplePats pats
+            walkType ty
+
     and walkExpr = function
         | SynExpr.Paren (e, _, _, _)
         | SynExpr.Quote (_, _, e, _, _)
@@ -145,11 +151,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.YieldOrReturn (_, e, _)
         | SynExpr.ArrayOrListOfSeqExpr (_, e, _)
         | SynExpr.CompExpr (_, _, e, _)
-        | SynExpr.Lambda (_, _, _, e, _)
         | SynExpr.Do (e, _)
         | SynExpr.Assert (e, _)
         | SynExpr.Lazy (e, _)
         | SynExpr.YieldOrReturnFrom (_, e, _) -> walkExpr e
+        | SynExpr.Lambda (_, _, pats, e, _) ->
+            walkSimplePats pats
+            walkExpr e
         | SynExpr.New (_, t, e, _)
         | SynExpr.TypeTest (e, t, _)
         | SynExpr.Upcast (e, t, _)

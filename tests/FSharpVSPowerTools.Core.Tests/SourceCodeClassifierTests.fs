@@ -1496,6 +1496,17 @@ module Module =
     => [ 3, []]
 
 [<Test>]
+let ``open declaration is not marked as unused if a symbol defined in it is used in type do block``() =
+    """
+open System.IO.Compression
+
+type OutliningHint() as self =
+    do self.E.Add (fun (e: GZipStream) -> ()) 
+    member __.E: IEvent<_> = Unchecked.defaultof<_> 
+"""
+    => [ 2, []]
+
+[<Test>]
 let ``should not mark open declaration with global prefix``() =
     """
 module Module =
