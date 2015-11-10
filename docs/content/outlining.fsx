@@ -9,13 +9,19 @@ Outlining
 
 Support for outlining of common code blocks in F# programs.
 
-![Outlining](img/outlining.png)
+![Outlining](img/outlining.gif)
 
 included support for
- * Modules
- * Discriminated Unions
- * functions
- * member functions
- * interface implementation
+
+- Modules
+- Discriminated Unions
+- Functions
+- Members
+- Interface implementation
+- etc.
+
+Specific constructs can be configured to enable and collapse by default in the Outlining options dialog.
+
+![Outlining](img/outlining_options.png)
 
 *)
