@@ -23,9 +23,10 @@ type XmlDocFilter
      (
         textView: IVsTextView, 
         wpfTextView: IWpfTextView, 
-        filename: string, 
+        fileName: string, 
         projectFactory: ProjectFactory,
         languageService: VSLanguageService,
+        openDocumentsTracker: IOpenDocumentsTracker,
         serviceProvider: System.IServiceProvider
      ) as self =
     
@@ -54,10 +55,11 @@ type XmlDocFilter
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
                             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                            let! document = dte.GetCurrentDocument filename
+                            let! document = dte.GetCurrentDocument fileName
                             let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
-                            let! parseResults = languageService.ParseFileInProject (filename, project)
-                            let! xmlDocables = XmlDocParser.getXmlDocables (wpfTextView.TextSnapshot.GetText(), parseResults.ParseTree) |> liftAsync
+                            let! parseResults = languageService.ParseFileInProject (fileName, project)
+                            let! source = openDocumentsTracker.TryGetDocumentText document.FullName
+                            let! xmlDocables = XmlDocParser.getXmlDocables (source, parseResults.ParseTree) |> liftAsync
                             let xmlDocablesBelowThisLine = 
                                 // +1 because looking below current line for e.g. a 'member'
                                 xmlDocables |> List.filter (fun (XmlDocable(line,_indent,_paramNames)) -> line = curLineNum+1) 
@@ -78,10 +80,10 @@ type XmlDocFilter
                                 // move the caret to between the summary tags
                                 let lastLine = wpfTextView.Caret.Position.BufferPosition.GetContainingLine()
                                 let middleSummaryLine = wpfTextView.TextSnapshot.GetLineFromLineNumber(lastLine.LineNumber - 1 - paramNames.Length)
-                                let _newCaret = wpfTextView.Caret.MoveTo(wpfTextView.GetTextViewLineContainingBufferPosition(middleSummaryLine.Start))
-                                ()
+                                wpfTextView.Caret.MoveTo(wpfTextView.GetTextViewLineContainingBufferPosition(middleSummaryLine.Start)) |> ignore
                         } 
-                        |> Async.Ignore |> Async.StartImmediateSafe
+                        |> Async.Ignore 
+                        |> Async.StartImmediateSafe
                     | Some _ | None -> ()
                 | _ -> ()
             passThruToEditor.Exec(&pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut)

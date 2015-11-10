@@ -22,8 +22,8 @@ let createMockTextBuffer content fileName =
 let createMockTextView buffer =
     MockTextView(buffer)
 
-let internal createVirtualProject(buffer, fileName) =
-    VirtualProjectProvider(buffer, fileName, VisualStudioVersion.VS2013)
+let createVirtualProject(buffer: ITextBuffer, fileName) =
+    VirtualProjectProvider(buffer.CurrentSnapshot.GetText(), fileName, VisualStudioVersion.VS2013) :> IProjectProvider
 
 /// Tests that the specified condition is true.
 /// If not, calls Assert.Fail with a formatted string.
