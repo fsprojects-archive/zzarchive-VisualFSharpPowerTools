@@ -7,6 +7,7 @@ NUGET
     FSharp.Compiler.Service (1.4.2)
     FSharp.Management (0.3.0)
     FSharp.ViewModule.Core (0.9.9.1)
+    FSharpLint (0.2.7)
     FSharpLint.Core (0.0.13-beta)
       FSharp.Compiler.Service (>= 1.4.0.6)
     FsXaml.Wpf (0.9.9)

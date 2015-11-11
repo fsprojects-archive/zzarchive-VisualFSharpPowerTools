@@ -360,4 +360,7 @@
       </ItemGroup>
     </When>
   </Choose>
+  <Import Project="..\..\packages\FSharpLint\build\FSharpLint.targets" Condition="Exists('..\..\packages\FSharpLint\build\FSharpLint.targets')" Label="Paket" />
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
 </Project>

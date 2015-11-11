@@ -4,6 +4,7 @@ nuget FSharp.Compiler.Service
 nuget Fantomas
 nuget Expression.Blend.Sdk
 nuget FSharp.ViewModule.Core
+nuget FSharpLint
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 nuget FSharpLint.Core prerelease
