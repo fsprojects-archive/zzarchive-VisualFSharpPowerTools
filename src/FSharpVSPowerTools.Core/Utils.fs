@@ -690,6 +690,32 @@ module Pervasive =
     /// Path.Combine
     let (</>) path1 path2 = Path.Combine (path1, path2)
 
+    
+    type System.Collections.Generic.List<'a> with
+        member inline x.Iter action =
+            for idx in 0..x.Count-1 do action x.[idx]
+
+
+    type IDictionary<'k,'v> with //'key,'value when 'key:equality> with
+        [<CustomOperation "add">]
+        ///<summary>    Add the key and value to the dictionary if not already present
+        ///<para/>      overwrite the value for the key if the key is present
+        ///</summary>
+        member self.AddOp (_,(key,value)) =
+            if self.ContainsKey key then self.[key] <- value
+            else self.Add (key,value)
+
+        [<CustomOperation "tryAdd">]
+        ///<summary>    Add the key and value to the dictionary if not already present
+        ///<para/>      If the key is present don't add
+        ///</summary>
+        member self.TryAddOp (key,value) =
+            if self.ContainsKey key then () else
+            self.Add (key,value)
+
+        member __.Yield (_) = ()
+        member __.Zero () = ()
+
 [<RequireQualifiedAccess>]
 module Dict = 
     open System.Collections.Generic
