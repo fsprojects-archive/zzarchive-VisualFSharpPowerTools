@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="FSharpVSPowerTools.Pure.68b42cfe-c752-4094-8dba-ed48aa81cac8" Version="2.1.3" Language="en-US" Publisher="fsharp.org" />
+    <DisplayName>Pure F# Power Tools</DisplayName>
+    <Description xml:space="preserve">A collection of additional commands for F# in Visual Studio</Description>
+    <MoreInfo>https://github.com/fsprojects/VisualFSharpPowerTools</MoreInfo>
+    <License>LICENSE.txt</License>
+    <GettingStartedGuide>http://fsprojects.github.io/VisualFSharpPowerTools/</GettingStartedGuide>
+    <ReleaseNotes>https://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md</ReleaseNotes>
+    <Icon>logo.png</Icon>
+    <PreviewImage>preview.png</PreviewImage>
+    <Tags>fsharp, f#, power tools, editing, formatting, navigation, highlighting, refactoring</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[12.0,13.0)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[13.0,15.0)" />
+  </Installation>
+  <Dependencies>
+    <Dependency d:Source="Installed" Id="FSharp.Editor" DisplayName="Microsoft Visual FSharp Editor Extensions" Version="[12.0,15.0)" d:InstallSource="Download" Location="http://www.microsoft.com/en-us/download/details.aspx?id=48179" />
+  </Dependencies>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+    <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Core" Path="|FSharpVSPowerTools.Core|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" Path="|FSharpVSPowerTools.Logic.VS2013|" d:ProjectName="%CurrentProject%.Logic.VS2013" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%.Logic.VS2015" Path="|FSharpVSPowerTools.Logic.VS2015|" />
+  </Assets>
+</PackageManifest>
