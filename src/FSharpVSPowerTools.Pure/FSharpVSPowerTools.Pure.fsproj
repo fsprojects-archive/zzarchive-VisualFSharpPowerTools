@@ -361,6 +361,33 @@
     </When>
   </Choose>
   <Import Project="..\..\packages\FSharpLint\build\FSharpLint.targets" Condition="Exists('..\..\packages\FSharpLint\build\FSharpLint.targets')" Label="Paket" />
+  <ItemGroup>
+    <Reference Include="FParsec">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FParsec.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FParsecCS">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Application">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Framework">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Framework.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Rules">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Rules.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+  </ItemGroup>
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
 </Project>
