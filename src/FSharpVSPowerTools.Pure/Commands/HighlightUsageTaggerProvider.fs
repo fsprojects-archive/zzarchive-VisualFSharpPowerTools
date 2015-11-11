@@ -21,7 +21,7 @@ type HighlightUsageTaggerProvider [<ImportingConstructor>]
         serviceProvider : IServiceProvider,
         textDocumentFactoryService      :   ITextDocumentFactoryService           ,
         projectFactory                  :   ProjectFactory                        ,
-        vsLanguageService               :   VSLanguageService                     ) as self =
+        vsLanguageService               :   VSLanguageService                     ) =
 
     interface IViewTaggerProvider with
         member __.CreateTagger (textView, buffer) = 
