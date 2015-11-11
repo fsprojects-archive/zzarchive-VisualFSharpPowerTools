@@ -94,8 +94,18 @@ type IOutliningOptions =
 [<AutoOpen>]
 module Utils =
     type System.IServiceProvider with
+        /// Use the service provider to get an MEF service via its Interface type
         member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
+        ///  Use the service provider to get an MEF Visual Studio service
+        ///  and cast it to its Interface type e.g.
+        ///  `.GetService<IVsTextManager, SVsTextManager>()`
         member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
+        /// Try to use the service provider to get an MEF service via its Interface type
+        member x.TryGetService<'T>() =  x.GetService<'T>() |> Option.ofNull
+        ///  Try to use the service provider to get an MEF Visual Studio service
+        ///  and cast it to its Interface type e.g.
+        ///  `.GetService<IVsTextManager, SVsTextManager>()`
+        member x.TryGetService<'T, 'S>() =  x.GetService<'T,'S>() |> Option.ofNull
 
 [<RequireQualifiedAccess>]
 module Setting =
@@ -104,11 +114,20 @@ module Setting =
     let getGeneralOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGeneralOptions>()
 
+    let tryGetGeneralOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.TryGetService<IGeneralOptions>()
+
     let getFormattingOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IFormattingOptions>()
 
+    let tryGetFormattingOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.TryGetService<IFormattingOptions>()
+
     let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<ICodeGenerationOptions>()
+
+    let tryGetCodeGenerationOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.TryGetService<ICodeGenerationOptions>()
 
     let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
         match codeGenOptions.CodeGenerationOptions with
@@ -122,6 +141,9 @@ module Setting =
 
     let getGlobalOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IGlobalOptions>()
+
+    let tryGetGlobalOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.TryGetService<IGlobalOptions>()
         
     let getLintOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<ILintOptions>()
