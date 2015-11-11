@@ -114,8 +114,7 @@
   -->
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
-    <Compile Include="PowerToolsCommandsPackage.fs" />
-    <Compile Include="Commands\OutliningTaggerProvider.fs" />
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Commands\SyntaxConstructClassifierProvider.fs" />
     <Compile Include="Commands\StandardCommandDispatcher.fs" />
     <Compile Include="Commands\CodeFormattingHookHelper.fs" />
@@ -135,8 +134,8 @@
     <Compile Include="Commands\GoToDefinitionFilterProvider.fs" />
     <Compile Include="Commands\FindReferenceFilterProvider.fs" />
     <Compile Include="Commands\DepthColorizerManager.fs" />
+    <Compile Include="Commands\OutliningTaggerProvider.fs" />
     <None Include="Resources\Images.png" />
-    <Compile Include="Resources\AssemblyInfo.fs" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
@@ -144,6 +143,7 @@
       <ManifestResourceName>PowerToolsCommandsPackage</ManifestResourceName>
     </EmbeddedResource>
     <Content Include="Resources\Package.ico" />
+    <Compile Include="PowerToolsCommandsPackage.fs" />
     <None Include="paket.references" />
     <Content Include="..\..\LICENSE.txt">
       <Link>LICENSE.txt</Link>
