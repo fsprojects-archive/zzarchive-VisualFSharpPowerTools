@@ -120,6 +120,22 @@
     <Compile Include="Commands\StandardCommandDispatcher.fs" />
     <Compile Include="Commands\CodeFormattingHookHelper.fs" />
     <Compile Include="Commands\QuickInfoMarginProvider.fs" />
+    <Compile Include="Commands\XmlDocCommandFilterProvider.fs" />
+    <Compile Include="Commands\UnusedDeclarationMarginProvider.fs" />
+    <Compile Include="Commands\HighlightUsageTaggerProvider.fs" />
+    <Compile Include="Commands\ImplementInterfaceSmartTaggerProvider.fs" />
+    <Compile Include="Commands\LintQuickInfoProvider.fs" />
+    <Compile Include="Commands\LintTaggerProvider.fs" />
+    <Compile Include="Commands\RecordStubGeneratorSmartTaggerProvider.fs" />
+    <Compile Include="Commands\RenameCommandFilterProvider.fs" />
+    <Compile Include="Commands\ResolveUnopenedNamespaceSmartTaggerProvider.fs" />
+    <Compile Include="Commands\TaskListCommentFilterProvider.fs" />
+    <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.fs" />
+    <Compile Include="Commands\HighlightUsageFilterProvider.fs" />
+    <Compile Include="Commands\GoToDefinitionFilterProvider.fs" />
+    <Compile Include="Commands\FindReferenceFilterProvider.fs" />
+    <Compile Include="Commands\DepthColorizerManager.fs" />
+    <None Include="Resources\Images.png" />
     <Compile Include="Resources\AssemblyInfo.fs" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -128,7 +144,6 @@
       <ManifestResourceName>PowerToolsCommandsPackage</ManifestResourceName>
     </EmbeddedResource>
     <Content Include="Resources\Package.ico" />
-    <None Include="Resources\Images.png" />
     <None Include="paket.references" />
     <Content Include="..\..\LICENSE.txt">
       <Link>LICENSE.txt</Link>
