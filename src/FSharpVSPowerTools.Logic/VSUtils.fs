@@ -21,6 +21,10 @@ type String with
         if   index < 0 then self elif index > self.Length then "" else self.Substring index
 
 
+//========================
+// BUFFERS AND SNAPSHOTS
+//========================
+
 open System.Diagnostics
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
@@ -182,6 +186,10 @@ type ITextView with
           let! line, col = x.GetCaretPosition()
           return Microsoft.FSharp.Compiler.Range.mkPos (line+1) (col+1)
         }
+
+//====================
+// LANGUAGE SERVICES 
+//====================
 
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
@@ -462,6 +470,24 @@ let time label f =
     debug "%s took: %i ms" label sw.ElapsedMilliseconds
     result
 
+//=============================
+// VISUAL STUDIO MEF SERVICES
+//=============================
+
+type ITextDocumentFactoryService with
+
+    member docService.TryDocumentFromBuffer (textBuffer:ITextBuffer) =
+        let mutable doc = Unchecked.defaultof<ITextDocument>
+        match docService.TryGetTextDocument (textBuffer,&doc) with
+        | true -> Some doc
+        | false -> None
+
+
+type IVsEditorAdaptersFactoryService with
+
+    member inline adapter.TryGetViewAdapter wpfTextView =
+        adapter.GetViewAdapter wpfTextView |> Option.ofNull
+
 type IServiceProvider with
     /// Go to exact location in a given file.
     member serviceProvider.NavigateTo (fileName, startRow, startCol, endRow, endCol) =
@@ -516,6 +542,47 @@ type IServiceProvider with
             Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
         else None      
 
+    member serviceProvider.GetDocumentFromBuffer (textBuffer:ITextBuffer) =
+        maybe{
+            let! documentService = serviceProvider.TryGetService<ITextDocumentFactoryService>()
+            let mutable doc = Unchecked.defaultof<ITextDocument>
+            return! 
+                match documentService.TryGetTextDocument ( textBuffer, &doc) with
+                | false -> None
+                | true -> Some doc
+        }
+
+
+    member serviceProvider.GetViewAndDocumentFromBuffer (textBuffer:ITextBuffer) =
+        maybe{
+            let! doc = serviceProvider.GetDocumentFromBuffer textBuffer
+            let! view = serviceProvider.GetWPFTextViewOfDocument doc.FilePath
+            return view, doc
+        }
+
+
+    member serviceProvider.GetActiveViewAndDocument () =
+        maybe {
+            let documentService     = serviceProvider.GetService<ITextDocumentFactoryService>()
+            let dte                 = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
+            let! doc = dte.GetActiveDocument ()
+            let! wpfview =
+                let mutable hierarchy   = Unchecked.defaultof<_>
+                let mutable itemId      = Unchecked.defaultof<_>
+                let mutable windowFrame = Unchecked.defaultof<_>
+                if VsShellUtilities.IsDocumentOpen
+                   (serviceProvider, doc.FullName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
+                    let vsTextView      = VsShellUtilities.GetTextView windowFrame 
+                    let componentModel  = serviceProvider.GetService<IComponentModel, SComponentModel>()
+                    let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
+                    Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
+                else None            
+            let! doc = 
+                let mutable doc = Unchecked.defaultof<ITextDocument>
+                if documentService.TryGetTextDocument (wpfview.TextBuffer, &doc) then Some doc else None
+            return wpfview, doc
+        }
+
 let isSourceExtension ext =
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
     || String.Equals (ext, ".fsscript", StringComparison.OrdinalIgnoreCase) 
@@ -537,3 +604,9 @@ let listFSharpProjectsInSolution (dte: DTE) =
 
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]
+
+//===============
+// OLE COMMANDS
+//===============
+
+let inline nativeintToChar nint = Marshal.GetObjectForNativeVariant nint :?> uint16 |> char
