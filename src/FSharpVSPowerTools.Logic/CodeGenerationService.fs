@@ -6,11 +6,11 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.ProjectSystem
 
-type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
+type VSDocument(source: string, doc: EnvDTE.Document, snapshot: ITextSnapshot) =
     interface IDocument with
         member __.FullName = doc.FullName
         member __.LineCount = snapshot.LineCount
-        member __.GetText() = snapshot.GetText()
+        member __.GetText() = source
         member __.GetLineText0(line0) =
             snapshot.GetLineFromLineNumber(int line0).GetText()
 
@@ -19,11 +19,11 @@ type VSDocument(doc: EnvDTE.Document, snapshot: ITextSnapshot) =
         
 type CodeGenerationService(languageService: VSLanguageService, textBuffer: ITextBuffer) =
     interface ICodeGenerationService<IProjectProvider, SnapshotPoint, SnapshotSpan> with
-        member __.TokenizeLine(project: IProjectProvider, _document: IDocument, line1: int<Line1>): FSharpTokenInfo list = 
-            languageService.TokenizeLine(textBuffer, project.CompilerOptions, int line1 - 1)
+        member __.TokenizeLine(project: IProjectProvider, document: IDocument, line1: int<Line1>): FSharpTokenInfo list option = 
+            languageService.TokenizeLine(document.FullName, textBuffer, project.CompilerOptions, int line1 - 1)
         
-        member __.GetSymbolAtPosition(project, _document, pos) =
-            languageService.GetSymbol(pos, project)
+        member __.GetSymbolAtPosition(project, document, pos) =
+            languageService.GetSymbol(pos, document.FullName, project)
         
         member x.GetSymbolAndUseAtPositionOfKind(project, document, pos, kind) =
             asyncMaybe {
@@ -38,8 +38,7 @@ type CodeGenerationService(languageService: VSLanguageService, textBuffer: IText
                     return! None
             }
 
-        member __.ParseFileInProject(document, project) =
-            languageService.ParseFileInProject(document.FullName, document.GetText(), project)
+        member __.ParseFileInProject(document, project) = languageService.ParseFileInProject(document.FullName, project)
         
         member __.ExtractFSharpPos(pos) =
             let line = pos.Snapshot.GetLineNumberFromPosition pos.Position

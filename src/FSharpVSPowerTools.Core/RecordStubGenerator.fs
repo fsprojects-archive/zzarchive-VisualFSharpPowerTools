@@ -490,11 +490,11 @@ let private tryFindRecordBindingInParsedInput (pos: pos) (parsedInput: ParsedInp
     | ParsedInput.ImplFile input -> walkImplFileInput input
 
 let tryFindRecordExprInBufferAtPos (codeGenService: ICodeGenerationService<'Project, 'Pos, 'Range>) project (pos: 'Pos) document =
-    async {
+    asyncMaybe {
         let! parseResults =
             codeGenService.ParseFileInProject(document, project)
         
-        return
+        return!
             parseResults.ParseTree
             |> Option.bind (tryFindRecordBindingInParsedInput (codeGenService.ExtractFSharpPos(pos)))
     }

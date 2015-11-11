@@ -22,10 +22,7 @@ type Category =
 
 type CategorizedColumnSpan<'T> =
     { Category: Category
-      WordSpan: WordSpan
-      /// Snapshot for which the span was created.
-      /// None if the right Snapshot is maintained separately
-      Snapshot: 'T option }
+      WordSpan: WordSpan }
 
 module private QuotationCategorizer =
     let private categorize (lexer: LexerBase) ranges =
@@ -39,8 +36,7 @@ module private QuotationCategorizer =
                         WordSpan = { SymbolKind = SymbolKind.Other
                                      Line = r.StartLine
                                      StartCol = r.StartColumn
-                                     EndCol = r.EndColumn }
-                        Snapshot = None } ]
+                                     EndCol = r.EndColumn }} ]
             else
                 [r.StartLine..r.EndLine]
                 |> Seq.choose (fun line ->
@@ -68,8 +64,7 @@ module private QuotationCategorizer =
                                WordSpan = { SymbolKind = SymbolKind.Other
                                             Line = line
                                             StartCol = minCol
-                                            EndCol = maxCol }
-                               Snapshot = None }))
+                                            EndCol = maxCol }}))
 
     let getCategories ast lexer = UntypedAstUtils.getQuotationRanges ast |> categorize lexer
 
@@ -102,9 +97,8 @@ module private StringCategorizers =
                           { SymbolKind = SymbolKind.Other
                             Line = line
                             StartCol = startColumn + m.Index
-                            EndCol = startColumn + m.Index + m.Length }
-                        Snapshot = None }
-                  category :: acc  
+                            EndCol = startColumn + m.Index + m.Length }}
+                  category :: acc
                 ) [])
          
     module EscapedChars =
@@ -133,8 +127,7 @@ module private OperatorCategorizer =
             |> Array.choose (fun (_, span) -> 
                 if span.SymbolKind = SymbolKind.Operator then
                     Some { Category = Category.Operator
-                           WordSpan = span
-                           Snapshot = None }
+                           WordSpan = span }
                 else None)
 
         let spansBasedOnLexer =
@@ -165,8 +158,7 @@ module private OperatorCategorizer =
                             { SymbolKind = SymbolKind.Operator
                               Line = line + 1
                               StartCol = lCol
-                              EndCol = rCol }
-                          Snapshot = None })
+                              EndCol = rCol }})
                 acc.AddRange(operatorTokens)
                 acc) (ResizeArray())
 
@@ -306,8 +298,7 @@ module SourceCodeClassifier =
                     else Some { Category = 
                                     if not symbolUse.IsUsed then Category.Unused 
                                     else getCategory symbolUse.SymbolUse
-                                WordSpan = span' 
-                                Snapshot = None }
+                                WordSpan = span' }
         
                 categorizedSpan)
             |> Seq.groupBy (fun span -> span.WordSpan)
@@ -316,16 +307,15 @@ module SourceCodeClassifier =
                     | [span] -> span
                     | spans -> 
                         spans 
-                        |> List.sortBy (fun span -> 
+                        |> List.minBy (fun span -> 
                             match span.Category with
                             | Category.Other -> 3
                             | Category.Unused -> 2
                             | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
-                            | _ -> 1)
-                        |> List.head)
+                            | _ -> 1))
             |> Seq.distinct
 
-//        debug "LongIdents by line:"  
+//        debug "LongIdents by line:"
 //        longIdentsByEndPos 
 //        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
 //        |> Seq.iter (debug "%A")
@@ -353,15 +343,13 @@ module SourceCodeClassifier =
                   WordSpan = { SymbolKind = SymbolKind.Other
                                Line = decl.DeclarationRange.StartLine 
                                StartCol = decl.DeclarationRange.StartColumn
-                               EndCol = decl.DeclarationRange.EndColumn }
-                  Snapshot = None })
+                               EndCol = decl.DeclarationRange.EndColumn }})
     
-        let printfSpecifiersRanges =        
+        let printfSpecifiersRanges =
             checkResults.GetFormatSpecifierLocations()
             |> Option.map (fun ranges ->
                  ranges |> Array.map (fun r -> 
-                    { Snapshot = None
-                      Category = Category.Printf
+                    { Category = Category.Printf
                       WordSpan = 
                         { SymbolKind = SymbolKind.Other
                           Line = r.StartLine

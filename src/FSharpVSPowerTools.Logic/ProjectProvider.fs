@@ -175,9 +175,8 @@ type internal ProjectProvider(project: Project,
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
 /// A standalone project provider in order to represent script files
-type internal VirtualProjectProvider (buffer: ITextBuffer, filePath: string, vsVersion) = 
-    do Debug.Assert (isNotNull filePath && isNotNull buffer, "FilePath and Buffer should not be null.")
-    let source = buffer.CurrentSnapshot.GetText()
+type internal VirtualProjectProvider (source: string, filePath: string, vsVersion) = 
+    do Debug.Assert (isNotNull filePath && isNotNull source, "FilePath and source should not be null.")
     let compilerVersion = 
         match vsVersion with
         | VisualStudioVersion.VS2012 -> FSharpCompilerVersion.FSharp_3_0

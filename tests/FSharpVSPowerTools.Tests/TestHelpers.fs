@@ -22,8 +22,8 @@ let createMockTextBuffer content fileName =
 let createMockTextView buffer =
     MockTextView(buffer)
 
-let internal createVirtualProject(buffer, fileName) =
-    VirtualProjectProvider(buffer, fileName, VisualStudioVersion.VS2013)
+let createVirtualProject(buffer: ITextBuffer, fileName) =
+    VirtualProjectProvider(buffer.CurrentSnapshot.GetText(), fileName, VisualStudioVersion.VS2013) :> IProjectProvider
 
 /// Tests that the specified condition is true.
 /// If not, calls Assert.Fail with a formatted string.
@@ -70,14 +70,14 @@ let snapshotPoint (snapshot: ITextSnapshot) line (column: int) =
     SnapshotPoint(snapshot, line.Start.Position + column)
 
 let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate =
-    let task =
+    let task() =
         event
         |> Async.AwaitEvent
         |> Async.StartAsTask
     let sw = System.Diagnostics.Stopwatch()
     sw.Start()
     triggerEvent()
-    match task.Wait(TimeSpan.FromMilliseconds(float timeout)) with
+    match task().Wait(TimeSpan.FromMilliseconds(float timeout)) with
     | true ->         
         sw.Stop()
         Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))

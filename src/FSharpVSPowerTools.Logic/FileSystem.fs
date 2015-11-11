@@ -8,13 +8,13 @@ open System.ComponentModel.Composition
 type Version = int
 
 [<Export>]
-type FileSystem [<ImportingConstructor>] (openDocumentsTracker: OpenDocumentsTracker) =
+type FileSystem [<ImportingConstructor>] (openDocumentsTracker: IOpenDocumentsTracker) =
     static let defaultFileSystem = Shim.FileSystem
 
     let getOpenDocContent (fileName: string) =
         openDocumentsTracker.TryFindOpenDocument fileName
         |> Option.map (fun doc -> 
-            let content = doc.Snapshot.GetText() 
+            let content = doc.Text.Value 
             content |> doc.Encoding.GetBytes)
 
     interface IFileSystem with

@@ -134,6 +134,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         walkExpr e2
         e1 |> Option.iter walkExpr
 
+    and walkSimplePats = function
+        | SynSimplePats.SimplePats (pats, _) -> List.iter walkSimplePat pats
+        | SynSimplePats.Typed (pats, ty, _) -> 
+            walkSimplePats pats
+            walkType ty
+
     and walkExpr = function
         | SynExpr.Paren (e, _, _, _)
         | SynExpr.Quote (_, _, e, _, _)
@@ -145,11 +151,13 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynExpr.YieldOrReturn (_, e, _)
         | SynExpr.ArrayOrListOfSeqExpr (_, e, _)
         | SynExpr.CompExpr (_, _, e, _)
-        | SynExpr.Lambda (_, _, _, e, _)
         | SynExpr.Do (e, _)
         | SynExpr.Assert (e, _)
         | SynExpr.Lazy (e, _)
         | SynExpr.YieldOrReturnFrom (_, e, _) -> walkExpr e
+        | SynExpr.Lambda (_, _, pats, e, _) ->
+            walkSimplePats pats
+            walkExpr e
         | SynExpr.New (_, t, e, _)
         | SynExpr.TypeTest (e, t, _)
         | SynExpr.Upcast (e, t, _)
@@ -610,8 +618,8 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     else acc) []
     idents
     |> List.rev
-    |> List.concat
-    |> List.map (fun ident -> ident.idText)
+    |> Seq.concat
+    |> Seq.map (fun ident -> ident.idText)
     |> String.concat "."
 
 
@@ -716,13 +724,13 @@ module HashDirectiveInfo =
         )
 
 
-/// Set of visitor utilies, designed for the express purpose of fetching ranges
+/// Set of visitor utilities, designed for the express purpose of fetching ranges
 /// from an untyped AST for the purposes of outlining.
 module Outlining =
     [<RequireQualifiedAccess>]
     module private Range =
         /// Create a range starting at the end of r1 and finishing at the end of r2
-        let inline endToEnd   (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End   r2.End
+        let inline endToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.End   r2.End
 
         /// Create a range beginning at the start of r1 and finishing at the end of r2
         let inline startToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.Start r2.End
@@ -747,14 +755,12 @@ module Outlining =
         let inline ofAttributes (attrs:SynAttributes) =
             match attrs with | [] -> range () | _  -> startToEnd attrs.[0].Range attrs.[List.length attrs - 1].ArgExpr.Range
 
-
-    ///  Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside
-    ///  some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions
-    ///  following a binding or the the right hand side of a pattern, e.g. `let x = ...`
+    /// Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside
+    /// some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions
+    /// following a binding or the right hand side of a pattern, e.g. `let x = ...`
     type Collapse =
         | Below = 0
         | Same = 1
-
 
     type Scope =
         | Open = 0
@@ -802,15 +808,16 @@ module Outlining =
         | RecordDefn = 41
         | UnionDefn = 42
 
-    type [< NoComparison; Struct >] ScopeRange (scope:Scope, collapse:Collapse, r:range) =
-            member __.Scope = scope
-            member __.Collapse = collapse
-            member __.Range = r
-
+    [<NoComparison; Struct>]
+    type ScopeRange (scope:Scope, collapse:Collapse, r:range) =
+        member __.Scope = scope
+        member __.Collapse = collapse
+        member __.Range = r
 
     // Only yield a range that spans 2 or more lines
-    let inline private rcheck scope collapse (r:range) =
-        seq { if r.StartLine <> r.EndLine then yield ScopeRange (scope, collapse, r)}
+    let inline private rcheck scope collapse (r: range) =
+        seq { if r.StartLine <> r.EndLine then 
+                yield ScopeRange (scope, collapse, r) }
 
     let rec private parseExpr expression =
         seq {
@@ -861,7 +868,7 @@ module Outlining =
                 yield! parseMatchClauses clauses
             | SynExpr.App (atomicFlag,isInfix,funcExpr,argExpr,r) ->
                 // seq exprs, custom operators, etc
-                if ExprAtomicFlag.NonAtomic=atomicFlag && isInfix=false
+                if ExprAtomicFlag.NonAtomic=atomicFlag && (not isInfix)
                    && (function | SynExpr.Ident _ -> true | _ -> false) funcExpr
                    // if the argExrp is a computation expression another match will handle the outlining
                    // these cases must be removed to prevent creating unnecessary tags for the same scope
@@ -961,17 +968,15 @@ module Outlining =
         }
 
     and private parseMatchClause (SynMatchClause.Clause (synPat,_,e,_,_)) =
-        seq {
-                yield! rcheck Scope.MatchClause Collapse.Same <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
-                yield! parseExpr e
-            }
+        seq { yield! rcheck Scope.MatchClause Collapse.Same <| Range.startToEnd synPat.Range e.Range  // Collapse the scope after `->`
+              yield! parseExpr e }
 
     and private parseMatchClauses = Seq.collect parseMatchClause
 
-    and private parseAttributes (attrs:SynAttributes) =
+    and private parseAttributes (attrs: SynAttributes) =
         seq{
-            let attrListRange  =
-                if attrs.Length = 0 then Seq.empty else
+            let attrListRange =
+                if List.isEmpty attrs then Seq.empty else
                 rcheck Scope.Attribute Collapse.Same  <| Range.startToEnd (attrs.[0].Range) (attrs.[attrs.Length-1].ArgExpr.Range)
             match  attrs with
             | [] -> ()
@@ -1003,10 +1008,10 @@ module Outlining =
     and private parseSynMemberDefn d =
         seq {
             match d with
-            | SynMemberDefn.Member (binding,r) ->
+            | SynMemberDefn.Member (binding, r) ->
                 yield! rcheck Scope.Member Collapse.Below r
                 yield! parseBinding binding
-            | SynMemberDefn.LetBindings (bindings,_,_,_r) ->
+            | SynMemberDefn.LetBindings (bindings, _, _, _r) ->
                 //yield! rcheck Scope.LetOrUse Collapse.Below r
                 yield! parseBindings bindings
             | SynMemberDefn.Interface (tp,iMembers,_) ->
@@ -1014,11 +1019,11 @@ module Outlining =
                 match iMembers with
                 | Some members -> yield! Seq.collect parseSynMemberDefn members
                 | None -> ()
-            | SynMemberDefn.NestedType (td,_,_) ->
+            | SynMemberDefn.NestedType (td, _, _) ->
                 yield! parseTypeDefn td
-            | SynMemberDefn.AbstractSlot (ValSpfn(_,_,_,synt,_,_,_,_,_,_,_),_,r) ->
+            | SynMemberDefn.AbstractSlot (ValSpfn(_, _, _, synt, _, _, _, _, _, _, _), _, r) ->
                 yield! rcheck Scope.Member Collapse.Below <| Range.startToEnd synt.Range r
-            | SynMemberDefn.AutoProperty (_,_,_,_,(*memkind*)_,_,_,_,e,_,r) ->
+            | SynMemberDefn.AutoProperty (_, _, _, _, (*memkind*)_, _, _, _, e, _, r) ->
                 yield! rcheck Scope.Member Collapse.Below r
                 yield! parseExpr e
             | _ -> ()
@@ -1047,11 +1052,11 @@ module Outlining =
             match simple with
             | SynTypeDefnSimpleRepr.Enum (cases,er) ->
                 yield! rcheck Scope.SimpleType Collapse.Below er
-                yield! cases
-                    |> Seq.collect (fun (SynEnumCase.EnumCase (attrs,_,_,_,cr)) ->
-                    seq{yield! rcheck Scope.EnumCase Collapse.Below cr
-                        yield! parseAttributes attrs
-                    })
+                yield! 
+                    cases 
+                    |> Seq.collect (fun (SynEnumCase.EnumCase (attrs, _, _, _, cr)) ->
+                        seq { yield! rcheck Scope.EnumCase Collapse.Below cr
+                              yield! parseAttributes attrs })
             | SynTypeDefnSimpleRepr.Record (_opt,fields,rr) ->
                 //yield! rcheck Scope.SimpleType Collapse.Same <| Range.modBoth rr (accessRange opt+1) 1
                 yield! rcheck Scope.RecordDefn Collapse.Same rr //<| Range.modBoth rr 1 1
@@ -1089,7 +1094,6 @@ module Outlining =
                 yield! Seq.collect parseSynMemberDefn members
         }
 
-
     let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (scope:Scope) (decls: SynModuleDecls) =
         let groupConsecutiveDecls input =
             let rec loop (input: range list) (res: range list list) currentBulk =
@@ -1114,13 +1118,12 @@ module Outlining =
         decls |> (List.choose predicate >> groupConsecutiveDecls >> List.choose selectRanges)
 
 
-    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_,r) -> Some r | _ -> None) Scope.Open
-
+    let collectOpens = getConsecutiveModuleDecls (function SynModuleDecl.Open (_, r) -> Some r | _ -> None) Scope.Open
 
     let collectHashDirectives =
          getConsecutiveModuleDecls(
             function
-            | SynModuleDecl.HashDirective (ParsedHashDirective (directive,_,_),r) ->
+            | SynModuleDecl.HashDirective (ParsedHashDirective (directive, _, _),r) ->
                 let prefixLength = "#".Length + directive.Length + " ".Length
                 Some (Range.mkRange "" (Range.mkPos r.StartLine prefixLength) r.End)
             | _ -> None) Scope.HashDirective
@@ -1148,21 +1151,15 @@ module Outlining =
             | _ -> ()
         }
 
-
     let private parseModuleOrNamespace moduleOrNs =
-        seq {
-            let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
-            yield! collectHashDirectives decls
-            yield! collectOpens decls
-            yield! Seq.collect parseDeclaration decls
-        }
-
+        seq { let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
+              yield! collectHashDirectives decls
+              yield! collectOpens decls
+              yield! Seq.collect parseDeclaration decls }
 
     let getOutliningRanges tree =
-        seq {
-            match tree with
-            | ParsedInput.ImplFile(implFile) ->
-                let (ParsedImplFileInput (_,_,_,_,_,modules,_)) = implFile
-                yield! Seq.collect parseModuleOrNamespace modules
-            | _ -> ()
-        }
+        match tree with
+        | ParsedInput.ImplFile(implFile) ->
+            let (ParsedImplFileInput (_, _, _, _, _, modules, _)) = implFile
+            Seq.collect parseModuleOrNamespace modules
+        | _ -> Seq.empty

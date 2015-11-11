@@ -32,7 +32,7 @@ module GoToDefinitionCommandTests =
         let projectFileName = fullPathBasedOnSourceDir projectPath
         let fileName = fullPathBasedOnSourceDir filePath
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)              
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content) 
         let textView = createMockTextView buffer
         let command = helper.GetCommandFilter(textView)
         let urlChanged = command.UrlChanged.Value

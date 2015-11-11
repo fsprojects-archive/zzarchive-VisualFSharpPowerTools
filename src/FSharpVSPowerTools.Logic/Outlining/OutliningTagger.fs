@@ -8,7 +8,6 @@ open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
-open System.Threading
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
 open System.Windows
@@ -16,6 +15,7 @@ open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
 open FSharpVSPowerTools.UntypedAstUtils
+open AsyncMaybe
 
 let [<Literal>] private UpdateDelay = 200us
 let [<Literal>] private MaxTooltipLines = 25
@@ -53,7 +53,7 @@ type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as se
             (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText ()
 
 let inline scaleToFit (view: IWpfTextView) =
-    let isNormal d = (not (Double.IsNaN d)) && (not (Double.IsInfinity d))
+    let isNormal d = not (Double.IsNaN d || Double.IsInfinity d)
     let suffixLineCount = 2
     view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
 
@@ -64,8 +64,7 @@ let inline scaleToFit (view: IWpfTextView) =
         view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
             let newWidth = view.MaxTextRightCoordinate
             let currentWidth = view.VisualElement.Width
-            if isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth then ()
-            else
+            if not (isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth) then
                 view.VisualElement.Width <- view.MaxTextRightCoordinate))
         |> ignore)
     view
@@ -81,8 +80,8 @@ type OutliningTagger
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
-    let mutable scopedSnapSpans : ScopeSpan [] = [||]
-    let mutable oldAST = None : ParsedInput option
+    let mutable scopedSnapSpans: ScopeSpan [] = [||]
+    let mutable oldAST: ParsedInput option = None
 
 
     /// triggerUpdate -=> tagsChanged
@@ -91,7 +90,7 @@ type OutliningTagger
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
 
 
-    /// convert the FSharp compiler range in SRanges into a snapshotspan and tuple it with its Scope tag
+    /// convert the FSharp compiler range in SRanges into a snapshot span and tuple it with its Scope tag
     let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopeSpan option =
         let r = sr.Range
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
@@ -103,35 +102,82 @@ type OutliningTagger
     // when this happens if we use that empty tree outlining tags will not be created and any scopes that had
     // been collapsed will explode back open causing an annoying buffer shift. To prevent this behavior we check
     // for an empty ast via it's range and ignore it if the length is zero
-    let checkAST (oldtree:ParsedInput option) (newTree:ParsedInput) : bool =
-        match oldtree, newTree with
+    let checkAST (oldTree: ParsedInput option) (newTree: ParsedInput) =
+        match oldTree, newTree with
         | None, _ -> true
-        | _, emptyTree when emptyTree.Range.IsEmpty -> false 
+        | Some _, emptyTree when emptyTree.Range.IsEmpty -> false 
+        | Some _, _ -> true
+
+    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
+
+    let outliningEnabled scope =
+        let options = outliningOptions.Value
+        match scope with
+        | Scope.Open                  -> options.OpensEnabled
+        | Scope.Module                -> options.ModulesEnabled
+        | Scope.HashDirective         -> options.HashDirectivesEnabled
+        | Scope.Attribute             -> options.AttributesEnabled
+        | Scope.Interface             
+        | Scope.TypeExtension         
+        | Scope.Type                  -> options.TypesEnabled
+        | Scope.Member                -> options.MembersEnabled
+        | Scope.LetOrUse              -> options.LetOrUseEnabled 
+        | Scope.Match                 
+        | Scope.MatchClause           
+        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
+        | Scope.IfThenElse            
+        | Scope.ThenInIfThenElse      
+        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
+        | Scope.TryWith               
+        | Scope.TryInTryWith          
+        | Scope.WithInTryWith         
+        | Scope.TryFinally            
+        | Scope.TryInTryFinally       
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled
+        | Scope.ArrayOrList           -> options.CollectionsEnabled
+        | Scope.CompExpr               
+        | Scope.ObjExpr                
+        | Scope.Quote                  
+        | Scope.Record                 
+        | Scope.Tuple                  
+        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
+        | Scope.CompExprInternal       
+        | Scope.LetOrUseBang           
+        | Scope.YieldOrReturn          
+        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
+        | Scope.UnionCase              
+        | Scope.EnumCase               
+        | Scope.RecordField            
+        | Scope.SimpleType             
+        | Scope.RecordDefn             
+        | Scope.UnionDefn             -> options.SimpleTypesEnabled
+        | Scope.For                   
+        | Scope.While                 -> options.LoopsEnabled
+//        | Scope.Namespace             ->
+//        | Scope.Do                    -> 
+//        | Scope.Lambda
         | _ -> true
 
-
     /// doUpdate -=> triggerUpdate -=> tagsChanged
-    let doUpdate () =
-        let uiContext = SynchronizationContext.Current
+    let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
-            let snapshot = buffer.CurrentSnapshot in let source = snapshot.GetText ()
-            let! doc =
-                dte.GetCurrentDocument (textDocument.FilePath)
+            let snapshot = buffer.CurrentSnapshot
+            let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
-            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, source, project) |> AsyncMaybe.liftAsync
+            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
-            //Logging.logInfo "[Outlining]\nAST Range\n%A" ast.Range
-            //Logging.logInfo "[Outlining]\nAST\n%A" ast
             if checkAST oldAST ast then
                 oldAST <- Some ast
-                let scopedSpans = (getOutliningRanges >> Seq.choose (fromScopeRange snapshot) >> Array.ofSeq) ast
-                do! Async.SwitchToContext uiContext |> AsyncMaybe.liftAsync
-                triggerUpdate scopedSpans
+                let scopedSpans = 
+                    ast 
+                    |> getOutliningRanges 
+                    |> Seq.filter (fun x -> outliningEnabled x.Scope)
+                    |> Seq.choose (fromScopeRange snapshot)
+                    |> Array.ofSeq
+                do! callInUIContext (fun _ -> triggerUpdate scopedSpans) |> liftAsync
         }
         |> Async.Ignore
-        |> Async.StartInThreadPoolSafe
-
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged
     let docEventListener =
@@ -157,7 +203,7 @@ type OutliningTagger
         match tryFindStartingLine 0 with
         | None -> 0
         | Some startIndex ->
-            if lines = [||] then 0 else
+            if Array.isEmpty lines then 0 else
             let minIndent =
                 let seed = countLeadingWhitespace lines.[startIndex]
                 (seed, lines.[startIndex..])
@@ -169,14 +215,14 @@ type OutliningTagger
 
     let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
 
-
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
+        let zoomLevel = float (outliningOptions.Value.TooltipZoomLevel) / 100.0
         wpfTextView.Value
-        |>  Option.iterElse (fun cv -> view.ZoomLevel <- 0.80 * cv.ZoomLevel)
-                            (fun _ -> view.ZoomLevel <- 0.80 * view.ZoomLevel)
+        |>  Option.iterElse (fun cv -> view.ZoomLevel <- zoomLevel * cv.ZoomLevel)
+                            (fun _ -> view.ZoomLevel <- zoomLevel * view.ZoomLevel)
         scaleToFit view
 
 
@@ -230,19 +276,17 @@ type OutliningTagger
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
-    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
-
     let collapseByDefault scope =
         let options = outliningOptions.Value
         match scope with
-        | Scope.Open                  -> options.OpensCollapsedByDefault             
-        | Scope.Module                -> options.ModulesCollapsedByDefault   
-        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault   
+        | Scope.Open                  -> options.OpensCollapsedByDefault
+        | Scope.Module                -> options.ModulesCollapsedByDefault
+        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault
         | Scope.Attribute             -> options.AttributesCollapsedByDefault
         | Scope.Interface             
         | Scope.TypeExtension         
-        | Scope.Type                  -> options.TypesCollapsedByDefault   
-        | Scope.Member                -> options.MembersCollapsedByDefault   
+        | Scope.Type                  -> options.TypesCollapsedByDefault
+        | Scope.Member                -> options.MembersCollapsedByDefault
         | Scope.LetOrUse              -> options.LetOrUseCollapsedByDefault 
         | Scope.Match                 
         | Scope.MatchClause           
@@ -255,7 +299,7 @@ type OutliningTagger
         | Scope.WithInTryWith         
         | Scope.TryFinally            
         | Scope.TryInTryFinally       
-        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault     
+        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault
         | Scope.ArrayOrList           -> options.CollectionsCollapsedByDefault
         | Scope.CompExpr               
         | Scope.ObjExpr                
@@ -272,62 +316,13 @@ type OutliningTagger
         | Scope.RecordField            
         | Scope.SimpleType             
         | Scope.RecordDefn             
-        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault   
+        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
         | Scope.For                   
-        | Scope.While                 -> options.LoopsCollapsedByDefault    
+        | Scope.While                 -> options.LoopsCollapsedByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
-//        | Scope.Lambda                 
-        | _ -> false    
-
-    let outliningEnabled scope =
-        let options = outliningOptions.Value
-        match scope with
-        | Scope.Open                  -> options.OpensEnabled             
-        | Scope.Module                -> options.ModulesEnabled   
-        | Scope.HashDirective         -> options.HashDirectivesEnabled   
-        | Scope.Attribute             -> options.AttributesEnabled
-        | Scope.Interface             
-        | Scope.TypeExtension         
-        | Scope.Type                  -> options.TypesEnabled   
-        | Scope.Member                -> options.MembersEnabled   
-        | Scope.LetOrUse              -> options.LetOrUseEnabled 
-        | Scope.Match                 
-        | Scope.MatchClause           
-        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
-        | Scope.IfThenElse            
-        | Scope.ThenInIfThenElse      
-        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
-        | Scope.TryWith               
-        | Scope.TryInTryWith          
-        | Scope.WithInTryWith         
-        | Scope.TryFinally            
-        | Scope.TryInTryFinally       
-        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled     
-        | Scope.ArrayOrList           -> options.CollectionsEnabled
-        | Scope.CompExpr               
-        | Scope.ObjExpr                
-        | Scope.Quote                  
-        | Scope.Record                 
-        | Scope.Tuple                  
-        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
-        | Scope.CompExprInternal       
-        | Scope.LetOrUseBang           
-        | Scope.YieldOrReturn          
-        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
-        | Scope.UnionCase              
-        | Scope.EnumCase               
-        | Scope.RecordField            
-        | Scope.SimpleType             
-        | Scope.RecordDefn             
-        | Scope.UnionDefn             -> options.SimpleTypesEnabled   
-        | Scope.For                   
-        | Scope.While                 -> options.LoopsEnabled    
-//        | Scope.Namespace             ->
-//        | Scope.Do                    -> 
-//        | Scope.Lambda                 
-        | _ -> true   
-
+//        | Scope.Lambda
+        | _ -> false
 
     // outlined regions that should be collapsed by default will make use of
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
@@ -437,7 +432,7 @@ type OutliningTagger
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged -=> getTags
     let getTags (normalizedSnapshotSpans: NormalizedSnapshotSpanCollection) : IOutliningRegionTag ITagSpan seq =
 
-        let (|EmptySeq|) xs = if Seq.isEmpty xs then EmptySeq else ()
+        let (|EmptySeq|) xs = if Seq.isEmpty xs then EmptySeq
         match normalizedSnapshotSpans, scopedSnapSpans with
         | EmptySeq, [||] -> Seq.empty
         | _ ->
@@ -449,7 +444,6 @@ type OutliningTagger
                                         ScopeSpan (s.Scope, s.Collapse, s.SnapSpan.TranslateTo (newSnapshot, SpanTrackingMode.EdgeExclusive)))
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
-            |> Seq.filter (fun s -> outliningEnabled s.Scope)
             |> Seq.choose createTagSpan
 
 

@@ -12,7 +12,7 @@ type ClassificationSpan =
     { Classification: string
       Span: int * int * int * int }
 
-type SyntaxConstructClassifierHelper() =    
+type SyntaxConstructClassifierHelper() =
     inherit VsTestBase()
     
     let classifierProvider = new SyntaxConstructClassifierProvider(
@@ -50,15 +50,17 @@ module SyntaxConstructClassifierTests =
     
     let helper = new SyntaxConstructClassifierHelper()
     let mutable fileName = null 
+    let mutable dummyFileName = null
 
     [<SetUp>]
-    let setUp() = fileName <- getTempFileName ".fsx"
+    let setUp() = 
+        fileName <- getTempFileName ".fsx"
 
     [<Test>]
     let ``should return a single operator symbol if the code doesn't contain any other symbols``() = 
         let content = "let x = 0"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout
             (fun () -> 
@@ -78,7 +80,7 @@ module Module1 =
     let x = ()
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
         let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
@@ -109,11 +111,12 @@ open System
 open System.Collections.Generic
 let internal f() = ()
 """
-        let buffer = createMockTextBuffer content fileName        
+        let buffer = createMockTextBuffer content fileName
         // IsSymbolUsedForProject seems to require a file to exist on disks
         // If not, type checking fails with some weird errors
-        File.WriteAllText(fileName, "")
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)
+        dummyFileName <- fileName
+        File.WriteAllText(dummyFileName, "")
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
 
         // first event is raised when "fast computable" spans (without Unused declarations and opens) are ready
@@ -131,11 +134,9 @@ let internal f() = ()
                 [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
                   { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
                   { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) }
-                  {Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
+                  { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
             actual |> assertEqual expected
-        File.Delete(fileName)
         
-
     [<Test>]
     let ``should be able to get classification spans for provided types``() = 
         let content = """
@@ -148,8 +149,8 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fs"
-        let buffer = createMockTextBuffer content fileName        
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)
+        let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ -> 
             let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
@@ -182,3 +183,9 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
                   { Classification = "FSharp.Operator"; Span = (7, 71, 7, 72) } 
                   { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) } ]
             actual |> assertEqual expected
+
+    [<TestFixtureTearDown>]
+    let tearDownAll() =
+        if File.Exists(dummyFileName) then
+            File.Delete(dummyFileName)
+        

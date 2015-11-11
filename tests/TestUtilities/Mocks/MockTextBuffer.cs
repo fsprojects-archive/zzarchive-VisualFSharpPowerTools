@@ -13,7 +13,6 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.VisualStudioTools;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Utilities;
 
@@ -28,7 +27,7 @@ namespace TestUtilities.Mocks {
         /// </summary>
         private PropertyCollection _properties;
 
-        public MockTextBuffer(string content, string filename = "C:\\fob.py", string contentType = "Python") {
+        public MockTextBuffer(string content, string filename = "C:\\fob.fs", string contentType = "F#") {
             _snapshot = new MockTextSnapshot(this, content);
             _filename = filename;
             _contentType = contentType;
@@ -39,19 +38,12 @@ namespace TestUtilities.Mocks {
         }
 #pragma warning disable 67
         public event EventHandler<TextContentChangedEventArgs> Changed;
-
         public event EventHandler<TextContentChangedEventArgs> ChangedHighPriority;
-
         public event EventHandler<TextContentChangedEventArgs> ChangedLowPriority;
-
         public event EventHandler<TextContentChangingEventArgs> Changing;
-
         public event EventHandler PostChanged;
-
         public event EventHandler<SnapshotSpanEventArgs> ReadOnlyRegionsChanged;
-
         public event EventHandler<ContentTypeChangedEventArgs> ContentTypeChanged;
-
 #pragma warning restore 67
 
         /// <summary>

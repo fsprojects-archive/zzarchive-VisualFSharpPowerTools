@@ -17,19 +17,22 @@ namespace FSharpVSPowerTools
         internal IWpfTextView _textView;
         internal TaskListCommentFilter _taskCommentFilter;
 
-        private readonly System.IServiceProvider _serviceProvider;
-        private readonly IVsEditorAdaptersFactoryService _editorFactory;
-        private readonly TaskListManager _taskListManager;
+        readonly System.IServiceProvider _serviceProvider;
+        readonly IVsEditorAdaptersFactoryService _editorFactory;
+        readonly TaskListManager _taskListManager;
+        readonly IOpenDocumentsTracker _openDocumentTracker;
 
         [ImportingConstructor]
         public TaskListCommentFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
             IVsEditorAdaptersFactoryService editorFactory,
-            TaskListManager taskListManager)
+            TaskListManager taskListManager,
+            IOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _editorFactory = editorFactory;
             _taskListManager = taskListManager;
+            _openDocumentTracker = openDocumentTracker;
         }
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
@@ -39,7 +42,7 @@ namespace FSharpVSPowerTools
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.TaskListCommentsEnabled) return;
 
-            _taskCommentFilter = new TaskListCommentFilter(_textView, _serviceProvider, _taskListManager);
+            _taskCommentFilter = new TaskListCommentFilter(_textView, _serviceProvider, _taskListManager, _openDocumentTracker);
         }
     }
 }

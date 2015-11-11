@@ -7,7 +7,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
 open FSharpLint.Framework.Configuration
@@ -19,7 +18,8 @@ type LintTag(tooltip) =
 type LintTagger(textDocument: ITextDocument,
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
-                projectFactory: ProjectFactory) as self =
+                projectFactory: ProjectFactory,
+                openDocumentsTracker: IOpenDocumentsTracker) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer
@@ -40,20 +40,14 @@ type LintTagger(textDocument: ITextDocument,
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                             
-    let updateAtCaretPosition () =
-        let uiContext = SynchronizationContext.Current
-        let result = maybe {
+    let updateAtCaretPosition (CallInUIContext callInUIContext) =
+        asyncMaybe {
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             let! project = projectFactory.CreateForDocument buffer doc 
-            return doc, project }
-
-        asyncMaybe {
-            let! doc, project = result
-            let source = buffer.CurrentSnapshot.GetText()
-            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, source, project) |> liftAsync
+            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
-
             let config, shouldFileBeIgnored = lintData.Value
+            let! source = openDocumentsTracker.TryGetDocumentText doc.FullName
 
             if not shouldFileBeIgnored then
                 let res = 
@@ -93,10 +87,8 @@ type LintTagger(textDocument: ITextDocument,
                 let spans = spans |> Option.getOrElse []
                 wordSpans <- spans
                 let span = buffer.CurrentSnapshot.FullSpan
-                do! Async.SwitchToContext uiContext
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
+                do! callInUIContext <| fun _ -> tagsChanged.Trigger(self, SnapshotSpanEventArgs span)
             })
-        |> Async.StartInThreadPoolSafe
 
     let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 500us, updateAtCaretPosition)
 

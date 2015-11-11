@@ -76,7 +76,7 @@ let x = 0
 x
 """
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName)            
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 
@@ -103,7 +103,7 @@ val func : int -> int
         let projectFileName = fullPathBasedOnSourceDir "../data/FSharpSignature/FSharpSignature.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/FSharpSignature/Sample.fsi"
         let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName)         
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
 

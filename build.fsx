@@ -37,7 +37,7 @@ let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 // (<solutionFile>.sln is built during the building process)
 let solutionFile  = "FSharpVSPowerTools"
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "tests/**/bin/Release/*Tests*.dll"
+let testAssemblies = "tests/**/bin/Release/*.Tests*.dll"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted 
@@ -160,9 +160,9 @@ Target "UnitTests" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Run the unit tests using test runner
+// Run the unit tests using test runner in parallel
 
-Target "PUnitTests" (fun _ ->
+Target "ParallelUnitTests" (fun _ ->
     !! testAssemblies 
     |> NUnitParallel (fun p ->
         let param =
@@ -173,18 +173,6 @@ Target "PUnitTests" (fun _ ->
                 Domain = NUnitDomainModel.MultipleDomainModel
                 OutputFile = "TestResults.xml" }
         if isAppVeyorBuild then { param with ExcludeCategory = "AppVeyorLongRunning" } else param)
-)
-
-
-// --------------------------------------------------------------------------------------
-// Run the integration tests using test runner
-
-Target "IntegrationTests" (fun _ ->
-    !! "tests/**/bin/Release/FSharpVSPowerTools.IntegrationTests.dll" 
-    |> MSTest.MSTest (fun p ->
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-        })
 )
 
 // --------------------------------------------------------------------------------------
@@ -341,7 +329,7 @@ Target "All" DoNothing
 "Clean"
   ==> "Build"
   ==> "BuildTests"
-  ==> "PUnitTests"
+  ==> "ParallelUnitTests"
 
 "Clean"
  ==> "RunStatistics"
@@ -352,7 +340,6 @@ Target "All" DoNothing
   ==> "ReleaseAll"
 
 "Main"
-  =?> ("IntegrationTests", isLocalBuild)
   ==> "All"
 
 "Main" 

@@ -21,22 +21,25 @@ namespace FSharpVSPowerTools
     [TagType(typeof(DepthRegionTag))]
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
-        private readonly ProjectFactory _projectFactory;
-        private readonly VSLanguageService _vsLanguageService;
+        readonly IServiceProvider _serviceProvider;
+        readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        readonly ProjectFactory _projectFactory;
+        readonly VSLanguageService _vsLanguageService;
+        readonly IOpenDocumentsTracker _openDocumentTracker;
 
         [ImportingConstructor]
         public DepthColorizerTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            VSLanguageService vsLanguageService)
+            VSLanguageService vsLanguageService,
+            IOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
+            _openDocumentTracker = openDocumentTracker;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
@@ -48,7 +51,9 @@ namespace FSharpVSPowerTools
 
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return new DepthTagger( doc, buffer, _serviceProvider,_projectFactory, _vsLanguageService) as ITagger<T>;
+                return buffer.Properties.GetOrCreateSingletonProperty(
+                        () => new DepthTagger(doc, buffer, _serviceProvider, _projectFactory,
+                                              _vsLanguageService, _openDocumentTracker) as ITagger<T>);
             }
 
             return null;

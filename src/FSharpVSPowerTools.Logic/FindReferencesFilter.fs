@@ -29,7 +29,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
+                let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FullName, project)
                 return doc.FullName, project, span, symbol }
 
             match projectItem with

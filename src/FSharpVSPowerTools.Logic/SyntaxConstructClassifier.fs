@@ -11,7 +11,7 @@ open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.AsyncMaybe
-open Microsoft.VisualStudio.Text.Tagging
+open Microsoft.VisualStudio.Text.Tagging 
 open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
@@ -22,10 +22,36 @@ type private CheckingProject =
       Checked: bool }
 
 [<NoComparison>]
+type private SnapshotSpanWithLine =
+    { Span: SnapshotSpan 
+      Line: int }
+
+[<Sealed>]
+type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSnapshot>, originalSnapshot: ITextSnapshot) =
+    let snapshotSpan: SnapshotSpanWithLine option Atom = Atom None 
+    member __.ColumnSpan = columnSpan
+    member __.CachedSnapshotSpan = snapshotSpan.Value
+    member __.GetSnapshotSpan targetSnapshot =
+        snapshotSpan.Swap (fun oldSpan ->
+            oldSpan
+            |> Option.orTry (fun _ -> 
+                fromRange originalSnapshot (columnSpan.WordSpan.ToRange())
+                |> Option.map (fun span -> 
+                    { Span = span
+                      Line = span.Start.GetContainingLine().LineNumber }))
+            |> Option.map (fun span ->
+                if span.Span.Snapshot <> targetSnapshot then
+                    let newSpan = span.Span.TranslateTo(targetSnapshot, SpanTrackingMode.EdgeExclusive)
+                    { Span = newSpan; Line = newSpan.Start.GetContainingLine().LineNumber }
+                else span)) 
+        |> ignore
+        snapshotSpan.Value
+
+[<NoComparison>]
 type private FastStageData =
     { Snapshot: ITextSnapshot
-      Spans: CategorizedColumnSpan<ITextSnapshot>[]
-      SingleSymbolsProjects: CheckingProject list }
+      Spans: CategorizedSnapshotSpan[]
+      SingleSymbolsProjects: CheckingProject list } 
 
 [<NoComparison>]
 type private FastStage =
@@ -36,7 +62,7 @@ type private FastStage =
 [<NoComparison>]
 type private SlowStageData =
     { Snapshot: ITextSnapshot
-      UnusedSpans: Map<WordSpan, CategorizedColumnSpan<ITextSnapshot>>
+      UnusedSpans: Map<WordSpan, CategorizedSnapshotSpan>
       IsUpdating: bool }
 
 [<NoComparison>]
@@ -78,20 +104,9 @@ type SyntaxConstructClassifier
     let classificationChanged = Event<_,_>()
     let fastState = Atom FastStage.NoData
     let slowState = Atom (SlowStage.NoData false)
-    let fastStageCancellationToken = Atom None
     let slowStageCancellationToken = Atom None
-
     let unusedDeclarationChanged = Event<_,_>()
     let unusedDeclarationState = Atom None
-
-    let newCancellationToken (currentToken: Atom<CancellationTokenSource option>) =
-        let newToken = new CancellationTokenSource()
-        currentToken.Swap (fun _ -> Some (newToken))
-        |> Option.iter (fun oldToken ->
-            oldToken.Cancel()
-            oldToken.Dispose())
-        |> ignore
-        newToken
 
     let disposeCancellationToken (currentToken: Atom<CancellationTokenSource option>) =
         currentToken.Value
@@ -113,13 +128,13 @@ type SyntaxConstructClassifier
     let includeUnusedOpens() =
         includeUnusedOpens
         // Don't check for unused opens on generated signatures
-        && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath))
+        && not (isSignatureExtension(Path.GetExtension textDocument.FilePath)
                 && isCurrentProjectForStandaloneScript())
 
     let includeUnusedReferences() =
         includeUnusedReferences
         // Don't check for unused declarations on generated signatures
-        && not (isSignatureExtension(Path.GetExtension(textDocument.FilePath))
+        && not (isSignatureExtension(Path.GetExtension textDocument.FilePath)
                 && isCurrentProjectForStandaloneScript())
 
     let isSlowStageEnabled() = includeUnusedOpens() || includeUnusedReferences()
@@ -131,39 +146,41 @@ type SyntaxConstructClassifier
 
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
-        classificationChanged.Trigger(self, ClassificationChangedEventArgs(span))
+        classificationChanged.Trigger(self, ClassificationChangedEventArgs span)
         debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
 
     let triggerUnusedDeclarationChanged snapshot =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
-        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs(span))
+        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs span)
 
-    let getOpenDeclarations source project ast getTextLineOneBased (pf: Profiler) = async {
-        let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
-            vsLanguageService.GetAllEntities(textDocument.FilePath, source, project)
-
-        return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> async {
-            let qualifyOpenDeclarations line endCol idents = async {
-                let lineStr = getTextLineOneBased (line - 1)
-                let! tooltip =
-                    vsLanguageService.GetOpenDeclarationTooltip(
-                        line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath, source)
-                return
-                    match tooltip with
-                    | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                    | None -> []
-            }
-
-            let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
-            return
-                (entities
-                    |> Option.map
-                     (Seq.groupBy (fun e -> e.FullName)
-                     >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                     >> Dict.ofSeq)
-                                    , openDecls)
+    let getOpenDeclarations filePath project ast getTextLineOneBased (pf: Profiler) = 
+        async {
+            let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
+                vsLanguageService.GetAllEntities(filePath, project)
+            
+            return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> 
+                async {
+                  let qualifyOpenDeclarations line endCol idents = async {
+                      let lineStr = getTextLineOneBased (line - 1)
+                      let! tooltip =
+                          vsLanguageService.GetOpenDeclarationTooltip(
+                              line, endCol, lineStr, Array.toList idents, project, textDocument.FilePath)
+                      return
+                          match tooltip with
+                          | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
+                          | None -> []
+                  }
+                  
+                  let! openDecls = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
+                  return
+                      (entities
+                       |> Option.map
+                           (Seq.groupBy (fun e -> e.FullName)
+                            >> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
+                            >> Dict.ofSeq),
+                      openDecls)
+                }
         }
-    }
 
     let uiContext = SynchronizationContext.Current
 
@@ -173,48 +190,61 @@ type SyntaxConstructClassifier
             None
         else Some()
 
+    let isTypeCheckerCategory = function
+        | Category.ReferenceType
+        | Category.ValueType
+        | Category.PatternCase
+        | Category.Function
+        | Category.MutableVar
+        | Category.Module -> true
+        | Category.Quotation
+        | Category.Unused
+        | Category.Printf
+        | Category.Escaped
+        | Category.Operator
+        | Category.Other -> false
 
-    let mergeSpans (oldSpans: CategorizedColumnSpan<_>[]) (newSpans: CategorizedColumnSpan<_>[]) =
-        let getTypeCheckerSpans spans =
-            spans
-            |> Array.filter (fun x ->
-                match x.Category with
-                | Category.Escaped
-                | Category.Operator
-                | Category.Other
-                | Category.Printf
-                | Category.Quotation
-                | Category.Unused -> false
-                | _ -> true)
-
-        let getLineRange spans =
-            let typeCheckerSpans = getTypeCheckerSpans spans
+    let mergeSpans (oldSpans: CategorizedSnapshotSpan[]) (newSpans: CategorizedSnapshotSpan[]) =
+        let getLineRange includingUnused (spans: CategorizedSnapshotSpan[]) =
+            let typeCheckerSpans = 
+                spans 
+                |> Array.filter (fun x -> 
+                    isTypeCheckerCategory x.ColumnSpan.Category
+                    || (includingUnused && x.ColumnSpan.Category = Category.Unused))
             typeCheckerSpans,
             typeCheckerSpans
-            |> Array.map (fun x -> x.WordSpan.Line)
+            |> Array.map (fun x -> x.ColumnSpan.WordSpan.Line)
             |> function [||] -> -1, -1 | lines -> Array.min lines, Array.max lines
 
-        let newTcSpans, (newStartLine, newEndLine) = getLineRange newSpans
-        let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange oldSpans
+        // we take into account new Unused spans, but do not old ones.
+        let newTcSpans, (newStartLine, newEndLine) = getLineRange true newSpans
+        let oldTcSpans, (oldStartLine, oldEndLine) = getLineRange false oldSpans
         let isNewRangeLarger = newStartLine <= oldStartLine && newEndLine >= oldEndLine
 
         // returns `true` if both first and last spans are still here, which means
         // that new spans are not produced from partially valid source file.
-        let areFirstAndLastSpansNotChanged() =
+        let haveFirstAndLastSpansNotChanged() =
             let sameWordSpan x y =
                 x.SymbolKind = y.SymbolKind
                 && x.StartCol = y.StartCol
                 && x.EndCol = y.EndCol
             match newTcSpans, oldTcSpans with
-            | [||], [||] -> false
-            | _, [||] | [||], _ -> true
+            | [||], [||] -> true
+            | _, [||] | [||], _ -> false
             | x, y ->
-                sameWordSpan x.[0].WordSpan y.[0].WordSpan
-                && sameWordSpan x.[x.Length - 1].WordSpan y.[y.Length - 1].WordSpan
+                sameWordSpan x.[0].ColumnSpan.WordSpan y.[0].ColumnSpan.WordSpan
+                && sameWordSpan x.[x.Length - 1].ColumnSpan.WordSpan y.[y.Length - 1].ColumnSpan.WordSpan
 
-        if isNewRangeLarger || areFirstAndLastSpansNotChanged() then
-            debug "[SyntaxConstructClassifier] Replace spans entirely."
-            Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely.")
+        if isNewRangeLarger then
+            debug "[SyntaxConstructClassifier] Replace spans entirely because new span range are wider than old one (old lines = %d..%d, new lines = %d..%d)" 
+                  oldStartLine oldEndLine newStartLine newEndLine
+            Logging.logInfo (fun _ -> 
+                sprintf "[SyntaxConstructClassifier] Replace spans entirely because new span range are wider than old one (old lines = %d..%d, new lines = %d..%d)." 
+                        oldStartLine oldEndLine newStartLine newEndLine)
+            newSpans
+        elif haveFirstAndLastSpansNotChanged() then
+            debug "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed."
+            Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed.")
             newSpans
         else
             debug "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
@@ -223,15 +253,14 @@ type SyntaxConstructClassifier
                 sprintf "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
                         (newStartLine, newEndLine) (oldStartLine, oldEndLine))
             seq { 
-                yield! oldSpans |> Seq.takeWhile (fun x -> x.WordSpan.Line < newStartLine)
-                yield! oldSpans |> Seq.skipWhile (fun x -> x.WordSpan.Line < newEndLine) 
-                yield! newSpans  
+                yield! oldSpans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
+                yield! oldSpans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line <= newEndLine) 
+                yield! newSpans
             }
-            |> Seq.sortBy (fun x -> x.WordSpan.Line)
+            |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
             |> Seq.toArray
-
-
-    let updateUnusedDeclarations() =
+            
+    let updateUnusedDeclarations (CallInUIContext callInUIContext) =
         let worker (project, snapshot) =
             asyncMaybe {
                 let pf = Profiler()
@@ -239,7 +268,7 @@ type SyntaxConstructClassifier
 
                 let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf) |> liftAsync
+                        snapshot, textDocument.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf)
 
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol textDocument.FilePath project
 
@@ -249,31 +278,31 @@ type SyntaxConstructClassifier
                     else async { return symbolsUses }
                     |> liftAsync
 
-                let lexer = vsLanguageService.CreateLexer(snapshot, project.CompilerOptions)
+                let! lexer = vsLanguageService.CreateLexer(textDocument.FilePath, snapshot, project.CompilerOptions)
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                 let! checkResults = pf.Time "parseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), project) |> liftAsync
-
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
+                     
                 let! ast = checkResults.GetUntypedAst()
                 do! checkAst "Slow stage" ast
 
                 let! entities, openDecls =
                     if includeUnusedOpens() then
-                        getOpenDeclarations (snapshot.GetText()) project (checkResults.GetUntypedAst()) getTextLineOneBased pf
+                        getOpenDeclarations textDocument.FilePath project (checkResults.GetUntypedAst()) getTextLineOneBased pf
                     else async { return None, [] }
                     |> liftAsync
 
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
-                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
+                    |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
 
                 let notUsedSpans =
                     spans
-                    |> Array.filterMap  (fun s -> s.Category = Category.Unused)
-                                        // save current snapshot in order to create a proper SnapshotSpan from it
-                                        (fun s -> s.WordSpan, { s with Snapshot = Some snapshot })
+                    |> Array.filterMap
+                        (fun x -> x.ColumnSpan.Category = Category.Unused)
+                        (fun x -> x.ColumnSpan.WordSpan, x)
                     |> Map.ofArray
 
                 fastState.Swap (function
@@ -289,35 +318,43 @@ type SyntaxConstructClassifier
                 debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
                 Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result)
-                triggerClassificationChanged snapshot "UpdateUnusedDeclarations"
+                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateUnusedDeclarations" 
+                    |> liftAsync
 
                 // Switch back to UI thread before firing events
                 do! Async.SwitchToContext(uiContext) |> liftAsync
                 unusedDeclarationState.Swap(fun _ -> Some (snapshot, notUsedSpans |> Map.toArray |> Array.map fst)) |> ignore
                 triggerUnusedDeclarationChanged snapshot
-            } |> Async.map ignore
+            } |> Async.Ignore
 
         match getCurrentProject(), getCurrentSnapshot() with
         | Some project, Some snapshot ->
             match fastState.Value, slowState.Value with
-            | (FastStage.NoData | FastStage.Updating _), _ -> ()
-            | _, SlowStage.NoData (isUpdating = true) -> ()
+            | (FastStage.NoData | FastStage.Updating _), _ -> async.Return()
+            | _, SlowStage.NoData (isUpdating = true) -> async.Return()
             | FastStage.Data _, slowStage ->
                 match slowStage with
-                | SlowStage.Data { IsUpdating = true } -> ()
-                | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> ()
-                | SlowStage.NoData (isUpdating = true) -> ()
+                | SlowStage.Data { IsUpdating = true } -> async.Return()
+                | SlowStage.Data { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> async.Return()
+                | SlowStage.NoData (isUpdating = true) -> async.Return()
                 | _ ->
                     slowState.Swap (function
                         | SlowStage.Data data -> SlowStage.Data { data with IsUpdating = true }
                         | SlowStage.NoData _ -> SlowStage.NoData true) |> ignore
+                    async {
+                        try do! worker (project, snapshot)
+                        finally
+                            // no matter what's happend in `worker`, we should reset `IsUpdating` flag to `false`
+                            // in order to prevent Slow stage to stop working as it would think that a previous 
+                            // `worker` is still running.
+                            slowState.Swap (function
+                               | SlowStage.NoData _ -> SlowStage.NoData false
+                               | SlowStage.Data x -> SlowStage.Data { x with IsUpdating = false })
+                            |> ignore
+                    }
+        | _ -> async.Return()
 
-                    let cancelToken = newCancellationToken slowStageCancellationToken
-                    Async.StartInThreadPoolSafe(worker (project, snapshot), cancelToken.Token)
-        | _ -> ()
-
-    let updateSyntaxConstructClassifiers force =
-        let cancelToken = newCancellationToken fastStageCancellationToken
+    let updateSyntaxConstructClassifiers force ((CallInUIContext callInUIContext) as ciuc) = 
         let snapshot = getCurrentSnapshot()
         let needUpdate =
             match snapshot, force, fastState.Value with
@@ -337,42 +374,39 @@ type SyntaxConstructClassifier
                 Updating (oldData, snapshot)) |> ignore)
 
         if needUpdate then
-            let worker = asyncMaybe {
+            asyncMaybe {
                 let! currentProject = getCurrentProject()
                 let! snapshot = snapshot
                 debug "[SyntaxConstructClassifier] - Effective update"
                 let pf = Profiler()
 
                 let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, snapshot.GetText(), currentProject)
-                    |> liftAsync
+                    vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, currentProject)
 
                 let! ast = checkResults.GetUntypedAst()
                 do! checkAst "Fast stage" ast
-                let lexer = vsLanguageService.CreateLexer(snapshot, currentProject.CompilerOptions)
+                let! lexer = vsLanguageService.CreateLexer(textDocument.FilePath, snapshot, currentProject.CompilerOptions)
 
                 let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
                         snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
-                    |> liftAsync
 
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                 let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
                     getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
-                    |> Array.map (fun x -> { x with Snapshot = Some snapshot })
+                    |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
 
                 let spans =
                     match slowState.Value with
                     | SlowStage.Data { UnusedSpans = oldUnusedSpans } ->
                         spans
                         |> Array.filter (fun s ->
-                            not (oldUnusedSpans |> Map.containsKey s.WordSpan))
+                            not (oldUnusedSpans |> Map.containsKey s.ColumnSpan.WordSpan))
                         |> Array.append (oldUnusedSpans |> Map.toArray |> Array.map snd)
+                        |> Array.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
                     | _ -> spans
-
-                let spans = spans |> Array.sortBy (fun { WordSpan = { Line = line }} -> line)
 
                 let! singleSymbolsProjects =
                     async {
@@ -407,19 +441,20 @@ type SyntaxConstructClassifier
                           Spans = spans
                           SingleSymbolsProjects = singleSymbolsProjects }) |> ignore
 
-                triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"
+                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers" 
+                    |> liftAsync
 
                 if isSlowStageEnabled() then
                     if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
-                        updateUnusedDeclarations()
+                        do! updateUnusedDeclarations ciuc |> liftAsync
                     else
                         let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject |> liftAsync
                         vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                 pf.Stop()
                 Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
-            }
-            Async.StartInThreadPoolSafe (Async.Ignore worker, cancelToken.Token)
+            } |> Async.Ignore
+        else async.Return ()
 
     let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
@@ -431,13 +466,14 @@ type SyntaxConstructClassifier
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
                 debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers..."
                         builtProjectFileName
-                updateSyntaxConstructClassifiers true
+                let callInUIContext = CallInUIContext.FromCurrentThread()
+                updateSyntaxConstructClassifiers true callInUIContext |> Async.StartInThreadPoolSafe
         } |> ignore)
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
 
     let docEventListener =
-        new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, fun _ -> updateSyntaxConstructClassifiers false)
+        new DocumentEventListener ([ViewChange.bufferEvent textDocument.TextBuffer], 200us, updateSyntaxConstructClassifiers false)
 
     let projectCheckedSubscription =
         // project check results needed for Unused Declarations only.
@@ -459,40 +495,40 @@ type SyntaxConstructClassifier
                     | None ->
                         // all the needed projects have been checked in background, let's calculate
                         // Slow Stage (unused symbols and opens)
-                        updateUnusedDeclarations()
+                        let ctx = CallInUIContext.FromCurrentThread()
+                        updateUnusedDeclarations ctx |> Async.StartInThreadPoolSafe
                 | _ -> ()))
         else None
 
     let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match fastState.Value with
-        | FastStage.Data { FastStageData.Snapshot = snapshot; Spans = spans }
-        | FastStage.Updating (Some { FastStageData.Snapshot = snapshot; Spans = spans }, _) ->
-            let spanStartLine = max 0 (targetSnapshotSpan.Start.GetContainingLine().LineNumber - 10)
-            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber + 10
+        | FastStage.Data { FastStageData.Spans = spans }
+        | FastStage.Updating (Some { FastStageData.Spans = spans }, _) ->
+            let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber
+            let widenSpanStartLine = max 0 (spanStartLine - 10)
+            let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber
             spans
-            // Locations are sorted, so we can safely filter them efficiently
-            |> Seq.skipWhile (fun span -> span.WordSpan.Line < spanStartLine)
-            |> Seq.choose (fun columnSpan ->
+            // Locations are sorted, so we can safely filter them efficiently.
+            // Skip spans that's not are potential candidates for return (we widen the range 
+            // because spans may shift to up after translation).
+            |> Seq.skipWhile (fun span -> span.ColumnSpan.WordSpan.Line < widenSpanStartLine)
+            |> Seq.choose (fun snapshotSpan ->
                 maybe {
-                    let! clType = getClassificationType columnSpan.Category
-                    // Create a span on the original snapshot
-                    let origSnapshot = columnSpan.Snapshot |> Option.getOrElse snapshot
-                    let! span = fromRange origSnapshot (columnSpan.WordSpan.ToRange())
-                    let span =
-                        if targetSnapshotSpan.Snapshot <> span.Snapshot then
-                            span.TranslateTo(targetSnapshotSpan.Snapshot, SpanTrackingMode.EdgeExclusive)
-                        else span
-                    // Translate the span to the new snapshot
+                    let! clType = getClassificationType snapshotSpan.ColumnSpan.Category
+                    let! span = snapshotSpan.GetSnapshotSpan targetSnapshotSpan.Snapshot
                     return clType, span
                 })
-            |> Seq.takeWhile (fun (_, span) -> span.Start.GetContainingLine().LineNumber <= spanEndLine)
-            |> Seq.map (fun (clType, span) -> ClassificationSpan (span, clType))
+            |> Seq.takeWhile (fun (_, span) -> span.Line <= spanEndLine)
+            // Because we may translate spans above, some of them may not be contained in the requested `SnapshotSpan`.
+            |> Seq.filter (fun (_, span) -> targetSnapshotSpan.Contains span.Span)
+            |> Seq.map (fun (clType, span) -> ClassificationSpan (span.Span, clType))
             |> Seq.toArray
         | FastStage.NoData ->
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(textDocument.FilePath)) then
                 // If not yet schedule an action, do it now.
-                updateSyntaxConstructClassifiers false
+                let callInUIContext = CallInUIContext.FromCurrentThread()
+                updateSyntaxConstructClassifiers false callInUIContext |> Async.StartInThreadPoolSafe
             [||]
         | FastStage.Updating _ -> [||]
 
@@ -523,6 +559,5 @@ type SyntaxConstructClassifier
         member __.Dispose() =
             projectCheckedSubscription |> Option.iter (fun sub -> sub.Dispose())
             events |> Option.iter (fun e -> e.BuildEvents.remove_OnBuildProjConfigDone onBuildDoneHandler)
-            disposeCancellationToken fastStageCancellationToken
             disposeCancellationToken slowStageCancellationToken
             (docEventListener :> IDisposable).Dispose()

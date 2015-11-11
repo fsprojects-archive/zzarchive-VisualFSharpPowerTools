@@ -27,7 +27,7 @@ type NavigateToItemExtraData =
 type NavigateToItemProviderFactory 
     [<ImportingConstructor>]
     (
-        openDocumentsTracker: OpenDocumentsTracker,
+        openDocumentsTracker: IOpenDocumentsTracker,
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         fsharpLanguageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
@@ -65,7 +65,7 @@ type NavigateToItemProviderFactory
 and
     NavigateToItemProvider
         (
-            openDocumentsTracker: OpenDocumentsTracker,
+            openDocumentsTracker: IOpenDocumentsTracker,
             serviceProvider: IServiceProvider,
             fsharpLanguageService: VSLanguageService,
             itemDisplayFactory: INavigateToItemDisplayFactory,
@@ -81,7 +81,7 @@ and
                 |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
-                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Snapshot.GetText())
+                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Text.Value)
                 |> Map.ofSeq
 
             let projects = 

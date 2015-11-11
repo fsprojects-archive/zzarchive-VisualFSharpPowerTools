@@ -3,7 +3,6 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Microsoft.FSharp.Compiler.Range
 open System.Threading
 open System.Windows.Threading
 open FSharpVSPowerTools
@@ -15,7 +14,7 @@ module ViewChange =
     let layoutEvent (view: ITextView) = 
         view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
     
-    let viewportHeightEvent (view: ITextView) = 
+    let viewportHeightEvent (view: ITextView) =  
         view.ViewportHeightChanged |> Event.map (fun _ -> ())
 
     let caretEvent (view: ITextView) = 
@@ -27,7 +26,19 @@ module ViewChange =
     let tagsEvent (tagAggregator: ITagAggregator<_>) = 
         tagAggregator.TagsChanged |> Event.map (fun _ -> ())
 
-type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: unit -> unit) =
+[<NoComparison; NoEquality>]
+type CallInUIContext = CallInUIContext of ((unit -> unit) -> Async<unit>)
+    with static member FromCurrentThread() = 
+                         let uiContext = SynchronizationContext.Current
+                         CallInUIContext (fun f ->
+                             async {
+                                 let ctx = SynchronizationContext.Current
+                                 do! Async.SwitchToContext uiContext
+                                 protect f
+                                 do! Async.SwitchToContext ctx
+                             })
+
+type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: CallInUIContext -> Async<unit>) =
     // Start an async loop on the UI thread that will execute the update action after the delay
     do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
@@ -38,9 +49,6 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
 
     // This is a none or for-all option for unit testing purpose only
     static let mutable skipTimerDelay = false
-
-    // Protect against exceptions and log error messages
-    let protectUpdate() = protect update
 
     let startNewTimer() = 
         timer.Stop()
@@ -57,17 +65,25 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
         }
         
     do 
+       let callUIContext = CallInUIContext.FromCurrentThread()
+       let startUpdate (cts: CancellationTokenSource) = Async.StartInThreadPoolSafe (update callUIContext, cts.Token)
+
        let computation =
            async { 
-            while true do
-                do! Async.AwaitEvent events
-                if not skipTimerDelay then
-                    startNewTimer()
-                    do! awaitPauseAfterChange()
-                protectUpdate() }
-       Async.StartImmediateSafe(computation, tokenSource.Token)
-       // Go ahead and synchronously get the first bit of info for the original rendering
-       protectUpdate()
+               let cts = ref (new CancellationTokenSource())
+               startUpdate !cts
+
+               while true do
+                   do! Async.AwaitEvent events
+                   if not skipTimerDelay then
+                       startNewTimer()
+                       do! awaitPauseAfterChange()
+                   (!cts).Cancel()
+                   (!cts).Dispose()
+                   cts := new CancellationTokenSource()
+                   startUpdate !cts }
+       
+       Async.StartInThreadPoolSafe (computation, tokenSource.Token)
 
     /// Skip all timer events in order to test events instantaneously
     static member internal SkipTimerDelay 

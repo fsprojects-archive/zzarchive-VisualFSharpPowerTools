@@ -439,6 +439,18 @@ let protectOrDefault f defaultVal =
         Logging.logException e
         defaultVal
 
+/// Try to run a given async computation, catch and log its exceptions
+let protectAsync a =
+    async {
+        let! res = Async.Catch a
+        return 
+            match res with 
+            | Choice1Of2 () -> ()
+            | Choice2Of2 e ->
+                Logging.logException e
+                ()
+    }
+
 /// Try to run a given function and catch its exceptions
 let protect f = protectOrDefault f ()
 
@@ -503,9 +515,6 @@ type IServiceProvider with
             let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
             Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
         else None      
-        
-           
-
 
 let isSourceExtension ext =
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
@@ -522,7 +531,7 @@ let listFSharpProjectsInSolution (dte: DTE) =
         elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
         else []  
         
-    and handleProjectItems (items: ProjectItems) = 
+    and handleProjectItems (items: ProjectItems) =
         [ for pi in items do
                 yield! handleProject pi.SubProject ]
 

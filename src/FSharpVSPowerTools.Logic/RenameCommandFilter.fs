@@ -33,7 +33,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
                 let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
-                return { Word = vsLanguageService.GetSymbol(caretPos, project); File = doc.FullName; Project = project }
+                return { Word = vsLanguageService.GetSymbol(caretPos, doc.FullName, project); File = doc.FullName; Project = project }
             }
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 

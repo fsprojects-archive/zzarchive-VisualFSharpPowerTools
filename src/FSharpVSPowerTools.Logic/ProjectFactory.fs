@@ -11,56 +11,31 @@ open System.IO
 open System.Diagnostics
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text
-
-[<NoComparison; NoEquality>]
-type private CacheMessage<'K, 'V> =
-    | Get of 'K * (unit -> 'V) * AsyncReplyChannel<'V>
-    | TryGet of 'K * AsyncReplyChannel<'V option>
-    | Remove of 'K
-    | Clear
+open System.Collections.Concurrent
 
 type private Cache<'K, 'V when 'K: comparison>() =
+    let cache = ConcurrentDictionary<'K, 'V>()
+
     let disposeValue value =
         match box value with
         | :? IDisposable as d -> d.Dispose()
         | _ -> ()
 
-    let agent = MailboxProcessor.Start(fun inbox ->
-        let rec loop (cache: Dictionary<'K, 'V>) = 
-            async {
-                let! msg = inbox.Receive()
-                return! loop (
-                    match msg with
-                    | Get (key, creator, r) ->
-                        match cache |> Dict.tryFind key with
-                        | Some value ->
-                            //debug "[Project cache] Return from cache for %A" key
-                            r.Reply value
-                            cache
-                        | None ->
-                            let value = creator()
-                            //debug "[Project cache] Creating new value for %A" key
-                            r.Reply value
-                            cache |> Dict.add key value
-                    | TryGet (key, r) ->
-                        r.Reply (cache |> Dict.tryFind key)
-                        cache
-                    | Remove key -> 
-                        match cache |> Dict.tryFind key with
-                        | Some value -> 
-                            disposeValue value
-                            cache |> Dict.remove key
-                        | _ -> cache
-                    | Clear -> 
-                        cache |> Seq.iter (fun x -> disposeValue x.Value)
-                        Dictionary())
-            }
-        loop (Dictionary()))
-    do agent.Error.Add (fail "%O")
-    member __.Get key creator = agent.PostAndReply (fun r -> Get (key, creator, r))
-    member __.TryGet key = agent.PostAndReply (fun r -> TryGet (key, r))
-    member __.Remove key = agent.Post (Remove key)
-    member __.Clear() = agent.Post Clear
+    member __.Get key (creator: unit -> 'V) = cache.GetOrAdd (key, valueFactory = fun _ -> creator())
+    
+    member __.TryGet key =
+        match cache.TryGetValue key with
+        | true, value -> Some value
+        | _ -> None
+    
+    member __.Remove key = 
+        match cache.TryRemove key with
+        | true, value -> disposeValue value
+        | _ -> ()
+    
+    member __.Clear() = 
+        cache |> Seq.iter (fun x -> disposeValue x.Value)
+        cache.Clear()
 
 type private ProjectUniqueName = string
 
@@ -68,7 +43,7 @@ type private ProjectUniqueName = string
 type ProjectFactory
     [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-     openDocumentsTracker: OpenDocumentsTracker,
+     openDocumentsTracker: IOpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
@@ -149,6 +124,10 @@ type ProjectFactory
         Debug.Assert(mayReferToSameBuffer buffer filePath, 
                 sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = doc.ProjectItem.ContainingProject
+        let getText (buffer: ITextBuffer) =
+            // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
+            openDocumentsTracker.TryGetDocumentText filePath
+            |> Option.getOrTry (fun _ -> buffer.CurrentSnapshot.GetText())
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
             // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
@@ -159,14 +138,14 @@ type ProjectFactory
                 let ext = Path.GetExtension filePath
                 if isSourceExtension ext then
                     let vsVersion = VisualStudioVersion.fromDTEVersion doc.DTE.Version
-                    Some (VirtualProjectProvider(buffer, filePath, vsVersion) :> _)
+                    Some (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                 else
                     None
         elif not (filePath === null) then
             let ext = Path.GetExtension filePath
             if isSourceExtension ext then
                 let vsVersion = VisualStudioVersion.fromDTEVersion doc.DTE.Version
-                Some (VirtualProjectProvider(buffer, filePath, vsVersion) :> _)
+                Some (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
             elif isSignatureExtension ext then
                 match signatureProjectData.TryGetValue(filePath) with
                 | true, project ->

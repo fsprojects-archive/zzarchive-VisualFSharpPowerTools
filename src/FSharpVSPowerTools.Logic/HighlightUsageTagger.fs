@@ -34,13 +34,13 @@ type HighlightUsageTagger(textDocument: ITextDocument,
     let buffer = view.TextBuffer
 
     // Perform a synchronous update, in case multiple background threads are running
-    let synchronousUpdate(currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
+    let synchronousUpdate (currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
                 currentWord <- newWord
                 let span = buffer.CurrentSnapshot.FullSpan
-                tagsChanged.Trigger(self, SnapshotSpanEventArgs(span)))
+                tagsChanged.Trigger(self, SnapshotSpanEventArgs span))
 
     let symbolUsesToSpans (word: SnapshotSpan) fileName (lastIdent: string) (symbolUses: FSharpSymbolUse []) =
         let filePath = Path.GetFullPathSafe(fileName)
@@ -53,7 +53,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
         |> fixInvalidSymbolSpans word.Snapshot lastIdent
 
     let doUpdate (currentRequest: SnapshotPoint, symbol, newWord: SnapshotSpan,
-                  fileName: string, projectProvider: IProjectProvider) =
+                  fileName: string, projectProvider: IProjectProvider, CallInUIContext callInUIContext) =
         async {
             if currentRequest = requestedPoint then
                 try
@@ -68,47 +68,46 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                         | Some references -> 
                             // Ignore symbols without any use
                             let word = if Seq.isEmpty references then None else Some newWord
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
                         | None ->
                             // Return empty values in order to clear up markers
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-                    | None -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    | None -> 
+                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
                 with e ->
                     Logging.logExceptionWithContext(e, "Failed to update highlight references.")
-                    synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-            }
+                    do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+        }
 
-    let updateAtCaretPosition () =
-        // If the new cursor position is still within the current word (and on the same snapshot),
-        // we don't need to check it.
-        match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
-        | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
-        | Some point, _ ->
-            let res =
-                maybe {
-                    requestedPoint <- point
-                    let currentRequest = requestedPoint
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-                    let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                    let! project = projectFactory.CreateForDocument buffer doc 
-                    return currentRequest, doc, project }
-            
-            asyncMaybe {
-                let! currentRequest, doc, project = res
-                match vsLanguageService.GetSymbol(currentRequest, project) with
-                | Some (newWord, symbol) ->
-                    // If this is the same word we currently have, we're done (e.g. caret moved within a word).
-                    match currentWord with
-                    | Some cw when cw = newWord -> ()
-                    | _ ->
-                        // If we are still up-to-date (another change hasn't happened yet), do a real update
-                        return! doUpdate (currentRequest, symbol, newWord, doc.FullName, project) |> liftAsync
-                | None ->
-                    return synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
-            }
-            |> Async.map (Option.iter id)
-            |> Async.StartInThreadPoolSafe
-        | None, _ -> ()
+    let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
+        asyncMaybe {
+            // If the new cursor position is still within the current word (and on the same snapshot),
+            // we don't need to check it.
+            match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
+            | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
+            | Some point, _ ->
+                requestedPoint <- point
+                let currentRequest = requestedPoint
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                let! project = projectFactory.CreateForDocument buffer doc
+                return!
+                    match vsLanguageService.GetSymbol(currentRequest, doc.FullName, project) with
+                    | Some (newWord, symbol) ->
+                        // If this is the same word we currently have, we're done (e.g. caret moved within a word).
+                        match currentWord with
+                        | Some cw when cw = newWord -> async.Return None
+                        | _ ->
+                            // If we are still up-to-date (another change hasn't happened yet), do a real update
+                            doUpdate (currentRequest, symbol, newWord, doc.FullName, project, ciuc) |> liftAsync
+                    | None ->
+                        callInUIContext <| fun _ -> 
+                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                        |> liftAsync
+
+//                    |> Async.map (Option.iter id)
+            | None, _ -> ()
+        } |> Async.Ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)

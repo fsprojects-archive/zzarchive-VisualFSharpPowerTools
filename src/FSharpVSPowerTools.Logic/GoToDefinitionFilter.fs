@@ -61,7 +61,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let projectItems = maybe {
                 let! _, project, doc = getCurrentFilePathProjectAndDoc()
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, project)
+                let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FullName, project)
                 return doc.FullName, project, span, symbol }
 
             match projectItems with

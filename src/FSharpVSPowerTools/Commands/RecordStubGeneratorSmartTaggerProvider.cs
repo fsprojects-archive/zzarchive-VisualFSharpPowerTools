@@ -8,7 +8,6 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using FSharpVSPowerTools.Refactoring;
 using FSharpVSPowerTools.ProjectSystem;
-using System.Diagnostics;
 using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
@@ -22,6 +21,7 @@ namespace FSharpVSPowerTools
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly IOpenDocumentsTracker _openDocumentsTracker;
         private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
         
         [ImportingConstructor]
@@ -30,13 +30,15 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ITextUndoHistoryRegistry undoHistoryRegistry,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+            VSLanguageService fsharpVsLanguageService,
+            IOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _undoHistoryRegistry = undoHistoryRegistry;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _openDocumentsTracker = openDocumentsTracker;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -59,7 +61,8 @@ namespace FSharpVSPowerTools
                 var generator = new RecordStubGenerator(doc, textView,
                                 _undoHistoryRegistry.RegisterHistory(buffer),
                                 _fsharpVsLanguageService, _serviceProvider,
-                                _projectFactory, Setting.getDefaultMemberBody(codeGenOptions));
+                                _projectFactory, Setting.getDefaultMemberBody(codeGenOptions),
+                                _openDocumentsTracker);
                 return new RecordStubGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }
             

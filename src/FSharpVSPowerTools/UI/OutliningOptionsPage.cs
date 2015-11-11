@@ -15,34 +15,50 @@ namespace FSharpVSPowerTools {
         {
             OpensEnabled = true;
             OpensCollapsedByDefault = true;
+
             ModulesEnabled = true;
             ModulesCollapsedByDefault = false;
+            
             HashDirectivesEnabled = true;
             HashDirectivesCollapsedByDefault = true;
+            
             TypesEnabled = true;
             TypesCollapsedByDefault = false;
+            
             SimpleTypesEnabled = true;
             SimpleTypesCollapsedByDefault = false;
+
             TypeExpressionsEnabled = true;
             TypeExpressionsCollapsedByDefault = false;
+            
             MembersEnabled = true;
             MembersCollapsedByDefault = false;
+            
             LetOrUseEnabled = true;
             LetOrUseCollapsedByDefault = false;
-            CollectionsEnabled = true;
+
+            CollectionsEnabled = false;
             CollectionsCollapsedByDefault = false;
-            PatternMatchesEnabled = true;
+
+            PatternMatchesEnabled = false;
             PatternMatchesCollapsedByDefault = false;
-            TryWithFinallyEnabled = true;
+
+            TryWithFinallyEnabled = false;
             TryWithFinallyCollapsedByDefault = false;
-            IfThenElseEnabled = true;
+
+            IfThenElseEnabled = false;
             IfThenElseCollapsedByDefault = false;
-            CExpressionMembersEnabled = true;
+
+            CExpressionMembersEnabled = false;
             CExpressionMembersCollapsedByDefault = false;
-            LoopsEnabled = true;
+
+            LoopsEnabled = false;
             LoopsCollapsedByDefault = false;
-            AttributesEnabled = true;
+
+            AttributesEnabled = false;
             AttributesCollapsedByDefault = false;
+            
+            TooltipZoomLevel = 80;
         }
 
         protected override void OnApply(PageApplyEventArgs e) {
@@ -76,6 +92,7 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
             AttributesEnabled = _control.Attributes.OutliningEnabled;
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
+            TooltipZoomLevel = _control.Tooltip.InputValue;
 
             base.OnApply(e);
         }
@@ -169,6 +186,9 @@ namespace FSharpVSPowerTools {
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool AttributesCollapsedByDefault { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public int TooltipZoomLevel { get; set; }
 
         protected override IWin32Window Window {
             get { return _control = new OutliningOptionsControl(this); }
