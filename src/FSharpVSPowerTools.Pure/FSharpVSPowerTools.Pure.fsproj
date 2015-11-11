@@ -115,6 +115,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Commands\OutliningTaggerProvider.fs" />
+    <Compile Include="Commands\SyntaxConstructClassifierProvider.fs" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
