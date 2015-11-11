@@ -1,48 +1,38 @@
 ﻿module FSharpVSPowerTools.UnusedDeclarationMarginProvider
 
-//using Microsoft.VisualStudio.Shell;
-//using Microsoft.VisualStudio.Text.Classification;
-//using Microsoft.VisualStudio.Text.Editor;
-//using Microsoft.VisualStudio.Text.Tagging;
-//using Microsoft.VisualStudio.Utilities;
-//using System;
-//using System.Collections.Generic;
-//using System.ComponentModel.Composition;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-//using FSharpVSPowerTools.SyntaxColoring;
-//
-//namespace FSharpVSPowerTools
-//{
-//    [Export(typeof(IWpfTextViewMarginProvider))]
-//    [Name(Constants.fsharpUnusedDeclarationMargin)]
-//    [ContentType("F#")]
-//    [Order(After = PredefinedMarginNames.VerticalScrollBar)]
-//    [MarginContainer(PredefinedMarginNames.VerticalScrollBarContainer)]
-//    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
-//    public class UnusedDeclarationMarginProvider : IWpfTextViewMarginProvider
-//    {
-//        private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
-//        private readonly IServiceProvider _serviceProvider;
-//        
-//        [ImportingConstructor]
-//        public UnusedDeclarationMarginProvider(
-//            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-//            IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
-//        {
-//            _serviceProvider = serviceProvider;
-//            _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
-//        }
-//
-//        public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
-//        {
-//            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-//            if (generalOptions == null || !(generalOptions.UnusedReferencesEnabled || generalOptions.UnusedOpensEnabled)) return null;
-//
-// 	        var textView = wpfTextViewHost.TextView;
-//            var tagAggregator = _viewTagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag>(textView);
-//            return new UnusedDeclarationMargin(textView, marginContainer, tagAggregator);
-//        }
-//    }
-//}
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Text.Classification
+open Microsoft.VisualStudio.Text.Editor
+open Microsoft.VisualStudio.Text.Tagging
+open Microsoft.VisualStudio.Utilities
+open System
+open System.Collections.Generic
+open System.ComponentModel.Composition
+open System.Linq
+open System.Text
+open System.Threading.Tasks
+open FSharpVSPowerTools.SyntaxColoring
+
+[<Export (typeof<IWpfTextViewMarginProvider>)>]
+[<Name (Constants.fsharpUnusedDeclarationMargin)>]
+[<ContentType "F#">]
+[<Order (After = PredefinedMarginNames.VerticalScrollBar)>]
+[<MarginContainer (PredefinedMarginNames.VerticalScrollBarContainer)>]
+[<TextViewRole (PredefinedTextViewRoles.PrimaryDocument)>]
+type UnusedDeclarationMarginProvider [<ImportingConstructor>]
+    ( [<Import(typeof<SVsServiceProvider>)>] 
+    serviceProvider : IServiceProvider,
+    viewTagAggregatorFactoryService :   IViewTagAggregatorFactoryService ) =
+
+    interface IWpfTextViewMarginProvider with
+        member __.CreateMargin (wpfTextViewHost, marginContainer) =
+            maybe {
+                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                if  not generalOptions.UnusedReferencesEnabled 
+                    ||  generalOptions.UnusedOpensEnabled then return! None else 
+                let textView = wpfTextViewHost.TextView
+                let tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag> textView
+                return 
+                    new UnusedDeclarationMargin (textView, marginContainer, tagAggregator)
+                    :> IWpfTextViewMargin
+            } |>  Option.getOrElse null
