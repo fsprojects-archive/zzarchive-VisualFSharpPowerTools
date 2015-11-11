@@ -9,7 +9,6 @@ open Microsoft.VisualStudio.Utilities
 open System
 open System.ComponentModel.Composition
 
-
 [<Export (typeof<IWpfTextViewMarginProvider>)>]
 [<Name (Constants.QuickInfoMargin)>]
 [<Order (After = PredefinedMarginNames.HorizontalScrollBar)>]
@@ -23,9 +22,8 @@ type QuickInfoMarginProvider [<ImportingConstructor>]
         projectFactory                  :   ProjectFactory              ,
         vsLanguageService               :   VSLanguageService           ) =
 
-
     interface IWpfTextViewMarginProvider with
-        member x.CreateMargin(wpfTextViewHost: IWpfTextViewHost, marginContainer: IWpfTextViewMargin): IWpfTextViewMargin = 
+        member x.CreateMargin (wpfTextViewHost: IWpfTextViewHost, marginContainer: IWpfTextViewMargin): IWpfTextViewMargin = 
             let textView = wpfTextViewHost.TextView
             let buffer = textView.TextBuffer
             maybe {
@@ -36,5 +34,3 @@ type QuickInfoMarginProvider [<ImportingConstructor>]
                     new QuickInfoMargin( doc, textView, vsLanguageService, serviceProvider, projectFactory)
                     :> IWpfTextViewMargin
             } |> Option.getOrElse marginContainer
-
-
