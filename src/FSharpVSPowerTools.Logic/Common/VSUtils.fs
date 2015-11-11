@@ -488,6 +488,11 @@ type IVsEditorAdaptersFactoryService with
     member inline adapter.TryGetViewAdapter wpfTextView =
         adapter.GetViewAdapter wpfTextView |> Option.ofNull
 
+    member inline adapter.TryGetWpfTextView viewAdapter =
+        adapter.GetWpfTextView viewAdapter |> Option.ofNull
+
+
+
 type IServiceProvider with
     /// Go to exact location in a given file.
     member serviceProvider.NavigateTo (fileName, startRow, startCol, endRow, endCol) =
