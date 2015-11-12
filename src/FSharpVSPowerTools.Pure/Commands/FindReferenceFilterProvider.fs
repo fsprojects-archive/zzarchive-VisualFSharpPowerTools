@@ -15,7 +15,6 @@ open Microsoft.VisualStudio.Text
 open System
 open System.ComponentModel.Composition
 
-
 [<Export(typeof<IWpfTextViewCreationListener>)>]
 [<ContentType("F#")>]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
@@ -55,3 +54,4 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
         }
     member __.TextViewCreated textView =
         self.RegisterCommandFilter (textView, true) |> ignore
+

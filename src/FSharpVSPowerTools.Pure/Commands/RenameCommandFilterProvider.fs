@@ -16,11 +16,11 @@ open System
 open Microsoft.VisualStudio.Text
 
 
-[<Export(typeof<IVsTextViewCreationListener>)>]
+[<Export (typeof<IVsTextViewCreationListener>)>]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+[<TextViewRole (PredefinedTextViewRoles.Editable)>]
 type RenameCommandFilterProvider [<ImportingConstructor>]
-    ( [<Import(typeof<SVsServiceProvider>)>] 
+    ( [<Import (typeof<SVsServiceProvider>)>] 
         serviceProvider             :   IServiceProvider                ,
         textDocumentFactoryService  :   ITextDocumentFactoryService     ,
         editorFacotry               :   IVsEditorAdaptersFactoryService ,

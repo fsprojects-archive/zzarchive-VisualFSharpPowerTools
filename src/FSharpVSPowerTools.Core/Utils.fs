@@ -477,10 +477,8 @@ type MaybeBuilder () =
     [<DebuggerStepThrough>]
     member inline __.Combine (r1, r2: 'T option): 'T option =
         match r1 with
-        | None ->
-            None
-        | Some () ->
-            r2
+        | None -> None
+        | Some () -> r2
 
     // M<'T> * ('T -> M<'U>) -> M<'U>
     [<DebuggerStepThrough>]

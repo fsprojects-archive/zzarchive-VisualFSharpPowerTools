@@ -12,7 +12,7 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.TextManager.Interop
 
 
-[<Export(typeof<IVsTextViewCreationListener>)>]
+[<Export (typeof<IVsTextViewCreationListener>)>]
 [<ContentType "F#">]
 [<TextViewRole (PredefinedTextViewRoles.Editable)>]
 type TaskListCommentFilterProvider [<ImportingConstructor>]

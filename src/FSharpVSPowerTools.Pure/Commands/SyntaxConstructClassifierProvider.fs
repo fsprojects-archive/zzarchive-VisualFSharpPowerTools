@@ -357,7 +357,6 @@ type SyntaxConstructClassifierProvider [<ImportingConstructor>]
                     (   doc, textBuffer, classificationRegistry,
                         fsharpVsLanguageService, serviceProvider, projectFactory,
                         includeUnusedReferences, includeUnusedOpens))
-                //|> Some
         }
 
     interface IClassifierProvider with
