@@ -29,14 +29,14 @@ type RenameCommandFilterProvider [<ImportingConstructor>]
 
 
     static member AddCommandFilter (viewAdapter:IVsTextView, commandFilter:RenameCommandFilter) =
-            if not commandFilter.IsAdded then
-                let mutable next = Unchecked.defaultof<IOleCommandTarget>
-                let hr = viewAdapter.AddCommandFilter(commandFilter, &next)
+        if not commandFilter.IsAdded then
+            let mutable next = Unchecked.defaultof<IOleCommandTarget>
+            let hr = viewAdapter.AddCommandFilter(commandFilter, &next)
 
-                if hr = VSConstants.S_OK then
-                    commandFilter.IsAdded <- true
-                    // You'll need the next target for Exec and QueryStatus
-                    if isNotNull next then commandFilter.NextTarget <- next
+            if hr = VSConstants.S_OK then
+                commandFilter.IsAdded <- true
+                // You'll need the next target for Exec and QueryStatus
+                if isNotNull next then commandFilter.NextTarget <- next
 
 
     interface IVsTextViewCreationListener with
