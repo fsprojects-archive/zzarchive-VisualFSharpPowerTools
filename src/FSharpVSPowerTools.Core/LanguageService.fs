@@ -245,8 +245,6 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           return results
       }
 
-  let astCache: ConcurrentDictionary<string, Microsoft.FSharp.Compiler.Ast.ParsedInput> = ConcurrentDictionary()
-
   member __.OnFileChanged filePath = 
     files.AddOrUpdate (filePath, NeedChecking, (fun _ oldState -> 
         match oldState with
@@ -417,21 +415,13 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           asyncMaybe {
               if i < files.Length then
                   let file = files.[i]
-                  let! ast =
-                    match astCache.TryGetValue file with
-                    | true, ast -> async.Return (Some ast)
-                    | _ ->
-                      asyncMaybe {  
-                          let! source = 
-                              Map.tryFind file openDocuments 
-                              |> Option.orElse (fun _ -> Option.attempt (fun _ -> File.ReadAllText file))
-                          
-                          let! parseResults = checkerInstance.ParseFileInProject(file, source, opts) |> liftAsync
-                          let! ast = parseResults.ParseTree
-                          astCache.[file] <- ast
-                          return ast
-                      }
-                  parseTreeHandler ast
+                  let! source = 
+                      Map.tryFind file openDocuments 
+                      |> Option.orElse (fun _ -> Option.attempt (fun _ -> File.ReadAllText file)) 
+                  
+                  let! parseResults = checkerInstance.ParseFileInProject(file, source, opts) |> liftAsync
+                  let! ast = parseResults.ParseTree
+                  parseTreeHandler file ast
                   return! loop (i + 1)
             }
       loop 0 |> Async.Ignore

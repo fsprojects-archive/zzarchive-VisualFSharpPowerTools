@@ -294,6 +294,41 @@ module Array =
             i <- i + 1
         result
 
+    /// <summary>
+    /// Splits the collection into two (2) collections, containing the elements for which the given function returns
+    /// <c>Choice1Of2</c> or <c>Choice2Of2</c>, respectively.
+    /// </summary>
+    /// <param name="partitioner"></param>
+    /// <param name="array"></param>
+    /// <returns></returns>
+    /// <remarks>
+    /// This function is similar to Array.partition, but it allows the returned collections to have different types.
+    /// </remarks>
+    let mapPartition (partitioner : 'T -> Choice<'U1, 'U2>) array : 'U1[] * 'U2[] =
+        // Preconditions
+        checkNonNull "array" array
+        
+        // OPTIMIZATION : If the input array is empty, immediately return empty results.
+        if Array.isEmpty array then
+            Array.empty, Array.empty
+        else
+            // Use ResizeArrays to hold the mapped values.
+            let resultList1 = ResizeArray ()
+            let resultList2 = ResizeArray ()
+    
+            // Partition the array, adding each element to the ResizeArray
+            // specific by the partition function.
+            array
+            |> Array.iter (fun el ->
+                match partitioner el with
+                | Choice1Of2 value ->
+                    resultList1.Add value
+                | Choice2Of2 value ->
+                    resultList2.Add value)
+    
+            // Convert the ResizeArrays to arrays and return them.
+            resultList1.ToArray (),
+            resultList2.ToArray ()
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]

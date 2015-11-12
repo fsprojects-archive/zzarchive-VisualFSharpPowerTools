@@ -123,6 +123,7 @@ type VSLanguageService
         }
 
     let entityCache = EntityCache()
+    let navigableItemCache = System.Collections.Concurrent.ConcurrentDictionary<string, Navigation.NavigableItem[]>()
 
     member __.GetSymbol(point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
@@ -154,12 +155,33 @@ type VSLanguageService
     member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems) =
         async {
             let! opts = projectProvider.GetProjectCheckerOptions instance
+            let openFiles = openDocuments |> Map.toArray |> Array.map fst |> Set.ofArray
+            let cachedItems, newItems =
+                projectProvider.SourceFiles 
+                |> Array.mapPartition (fun file ->
+                    if Set.contains file openFiles then Choice2Of2 file
+                    else 
+                        match navigableItemCache.TryGetValue file with
+                        | true, items -> Choice1Of2 items
+                        | _ -> Choice2Of2 file)
+
+            cachedItems |> Array.iter processNavigableItems
+
+            openFiles |> Set.iter (fun x ->
+                let mutable item = null
+                navigableItemCache.TryRemove(x, &item) |> ignore)
+
+            let processAst file ast =
+                let items = Navigation.NavigableItemsCollector.collect ast |> Seq.toArray
+                navigableItemCache.[file] <- items
+                processNavigableItems items
+
             return!
                 instance.ProcessParseTrees(
                     opts,
                     openDocuments, 
-                    projectProvider.SourceFiles, 
-                    Navigation.NavigableItemsCollector.collect >> processNavigableItems)
+                    newItems, 
+                    processAst)
         }
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
@@ -329,6 +351,7 @@ type VSLanguageService
         debug "[Language Service] Clearing FCS caches."
         instance.RawChecker.InvalidateAll()
         entityCache.Clear()
+        navigableItemCache.Clear()
     
     member __.CheckProjectInBackground (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
