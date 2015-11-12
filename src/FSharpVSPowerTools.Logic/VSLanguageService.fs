@@ -151,15 +151,16 @@ type VSLanguageService
             return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) |> liftAsync
         }
 
-    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
-        instance.ProcessParseTrees(
-            projectProvider.ProjectFileName, 
-            openDocuments, 
-            projectProvider.SourceFiles, 
-            projectProvider.CompilerOptions, 
-            projectProvider.CompilerVersion |> Option.getOrElse FSharpCompilerVersion.FSharp_3_1, 
-            (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
-            ct)        
+    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems) =
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return!
+                instance.ProcessParseTrees(
+                    opts,
+                    openDocuments, 
+                    projectProvider.SourceFiles, 
+                    Navigation.NavigableItemsCollector.collect >> processNavigableItems)
+        }
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         asyncMaybe {

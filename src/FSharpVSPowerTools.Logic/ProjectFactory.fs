@@ -124,10 +124,12 @@ type ProjectFactory
         Debug.Assert(mayReferToSameBuffer buffer filePath, 
                 sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = doc.ProjectItem.ContainingProject
+        
         let getText (buffer: ITextBuffer) =
             // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
             openDocumentsTracker.TryGetDocumentText filePath
             |> Option.getOrTry (fun _ -> buffer.CurrentSnapshot.GetText())
+        
         if not (project === null) && not (filePath === null) && isFSharpProject project then
             let projectProvider = x.CreateForProject project
             // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 

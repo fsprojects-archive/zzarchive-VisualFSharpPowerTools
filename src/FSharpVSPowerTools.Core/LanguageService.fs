@@ -245,6 +245,8 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           return results
       }
 
+  let astCache: ConcurrentDictionary<string, Microsoft.FSharp.Compiler.Ast.ParsedInput> = ConcurrentDictionary()
+
   member __.OnFileChanged filePath = 
     files.AddOrUpdate (filePath, NeedChecking, (fun _ oldState -> 
         match oldState with
@@ -407,43 +409,32 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.InvalidateConfiguration options =
       checkerAsync <| fun checker -> async { checker.InvalidateConfiguration options }
 
-  // additions
-
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, fscVersion, parseTreeHandler, ct: System.Threading.CancellationToken) = 
-      let rec loop i options = 
-        async {
-          if not ct.IsCancellationRequested && i < files.Length then
-              let file = files.[i]
-              let source = 
-                  match Map.tryFind file openDocuments with
-                  | None -> try Some(File.ReadAllText file) with _ -> None 
-                  | x -> x
-              let! options = 
-                async {
-                  match source with
-                  | Some source ->
-                      let! opts = 
-                        async {
-                          match options with
-                          | None -> 
-                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], fscVersion)
-                          | Some opts -> 
-                              return opts
-                        }
-                      let! parseResults = checkerInstance.ParseFileInProject(file, source, opts)
-                      match parseResults.ParseTree with
-                      | Some tree -> parseTreeHandler tree
-                      | None -> ()
-                      return Some opts
-                  | None -> 
-                      return options
-                }
-              return! loop (i + 1) options
-          }
-      loop 0 None
+  member x.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler) =
+      let rec loop i = 
+          asyncMaybe {
+              if i < files.Length then
+                  let file = files.[i]
+                  let! ast =
+                    match astCache.TryGetValue file with
+                    | true, ast -> async.Return (Some ast)
+                    | _ ->
+                      asyncMaybe {  
+                          let! source = 
+                              Map.tryFind file openDocuments 
+                              |> Option.orElse (fun _ -> Option.attempt (fun _ -> File.ReadAllText file))
+                          
+                          let! parseResults = checkerInstance.ParseFileInProject(file, source, opts) |> liftAsync
+                          let! ast = parseResults.ParseTree
+                          astCache.[file] <- ast
+                          return ast
+                      }
+                  parseTreeHandler ast
+                  return! loop (i + 1)
+            }
+      loop 0 |> Async.Ignore
 
     member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
                                            checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =

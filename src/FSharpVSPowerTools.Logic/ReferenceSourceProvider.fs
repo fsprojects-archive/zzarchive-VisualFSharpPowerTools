@@ -14,9 +14,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 // Reference https://github.com/SLaks/Ref12/blob/master/Ref12/Services/ReferenceSourceProvider.cs
 
 type ReferenceSourceProvider(baseUrl: string) =
-    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                Interval = TimeSpan.FromMinutes(60.0))
-
+    let timer = DispatcherTimer (DispatcherPriority.ApplicationIdle, Interval = TimeSpan.FromMinutes 60.)
     let mutable availableAssemblies = Set.empty
 
     let lookUpAvailableAssemblies() =
