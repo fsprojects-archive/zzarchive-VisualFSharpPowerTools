@@ -1,4 +1,4 @@
 ﻿namespace FSharpVSPowerTools
 open FsXaml
 
-type ResourceDictionary = XAML< @"GUI/ResourceDictionary.xaml">
+type ResourceDictionary = XAML< @"GUI/ResourceDictionary.xaml",true>

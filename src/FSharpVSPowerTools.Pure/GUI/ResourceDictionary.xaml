@@ -10,8 +10,7 @@
     xmlns:ic     =  "clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
     xmlns:mc     =  "http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable =  "d ignore" 
-    xmlns:local  =  "clr-namespace:FSharpVSPowerTools;assembly=FSharpVSPowerTools.Pure" 
-    
+
 >
     <Style x:Key="FocusVisual">
         <Setter Property="Control.Template">

@@ -6,40 +6,38 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:fsx="clr-namespace:FsXaml;assembly=FsXaml.Wpf"
         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
-        xmlns:local="clr-namespace:FSharpVSPowerTools;assembly=FSharpVSPowerTools.Pure"
+        xmlns:local="clr-namespace:FSharpVSPowerTools"
         xmlns:ignore = "http://www.galasoft.ch/ignore" 
         x:Name="GeneralOptionsPage"
         mc:Ignorable="d ignore" 
 
 
         d:DesignHeight="556" d:DesignWidth="552">
-    <!--        
+    <!--
+        xmlns:local="clr-namespace:FSharpVSPowerTools;assembly=FSharpVSPowerTools.Pure"
         ignore:ViewController.Custom="{x:Type local:GeneralOptionsController}"
         ignore:DataContext="{d:DesignInstance local:GeneralOptionsViewModel, IsDesignTimeCreatable=True}"
+                    <ResourceDictionary>
+                    <SolidColorBrush x:Key="Background1" Color="#FF575757"   />
+                    <SolidColorBrush x:Key="Background2" Color="#FF616161"   />
+                </ResourceDictionary>
+    
     -->    
 
-
-
-
-        
     <UserControl.Resources>
         <ResourceDictionary >
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Pure;component/GUI/ResourceDictionary.xaml"/>
-                <ResourceDictionary>
-                    <SolidColorBrush x:Key="Background1" Color="#FF575757"   />
-                    <SolidColorBrush x:Key="Background2" Color="#FF616161"   />
-                </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
 
 
- <!---
+ <!--
     <UserControl.DataContext>
         <local:GeneralOptionsControl/>
     </UserControl.DataContext>
-    
+  -->  
     <Grid Name="RootGrid">
 
         <Grid.RowDefinitions>
@@ -80,5 +78,5 @@
 
 
     </Grid>
-    -->
+
 </UserControl>
