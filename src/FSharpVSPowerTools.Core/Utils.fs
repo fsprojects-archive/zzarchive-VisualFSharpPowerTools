@@ -514,6 +514,33 @@ type MaybeBuilder () =
                 x.Delay (fun () ->
                     body enum.Current)))
 
+[<Sealed>][<DebuggerStepThrough>]
+type UnitMaybeBuilder () =
+    member inline __.Return value: 'T option = Some value
+    member inline __.ReturnFrom value: 'T option =  value
+    member inline __.Zero (): unit option = Some ()     // TODO: Should this be None?
+    member __.Delay (f: unit -> 'T option): 'T option = f ()
+    member inline __.Combine (r1, r2: 'T option): 'T option = match r1 with None -> None | Some () -> r2
+    member inline __.Bind (value, f: 'T -> 'U option): 'U option = Option.bind f value
+
+    member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
+        try body resource
+        finally
+            if not <| obj.ReferenceEquals (null, box resource) then
+                resource.Dispose ()
+
+    member x.While (guard, body: _ option): _ option =
+        if guard () then
+            // OPTIMIZE: This could be simplified so we don't need to make calls to Bind and While.
+            x.Bind (body, (fun () -> x.While (guard, body)))
+        else Some ()
+
+    member x.For (sequence: seq<_>, body: 'T -> unit option): _ option =
+        // OPTIMIZE: This could be simplified so we don't need to make calls to Using, While, Delay.
+        x.Using (sequence.GetEnumerator (), fun enum -> x.While (enum.MoveNext, x.Delay (fun () -> body enum.Current)))
+
+    member __.Run x = x |> ignore
+
 [<Sealed>]
 type AsyncMaybeBuilder () =
     [<DebuggerStepThrough>]
@@ -602,7 +629,9 @@ module Pervasive =
 #endif
 
     let maybe = MaybeBuilder()
+    let unitMaybe = UnitMaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
+
     
     let tryCast<'T> (o: obj): 'T option = 
         match o with
@@ -713,6 +742,22 @@ module Pervasive =
 
         member __.Yield (_) = ()
         member __.Zero () = ()
+
+    
+    open System.ComponentModel.Design
+
+    type IServiceContainer with
+        /// <summary>
+        /// Wraps serviceContainer.AddService ( typeof 'T, ServiceCreatorCallback callback) 
+        /// </summary>
+        /// <param name="callback"></param>
+        member inline serviceContainer.AddService<'T> (callback:IServiceContainer->Type-> obj) =
+            serviceContainer.AddService (typeof<'T>, ServiceCreatorCallback callback )
+                    
+        member serviceContainer.AddService<'T> (callback, promote) =
+            serviceContainer.AddService (typeof<'T>, ServiceCreatorCallback callback, promote)
+
+        
 
 [<RequireQualifiedAccess>]
 module Dict = 
