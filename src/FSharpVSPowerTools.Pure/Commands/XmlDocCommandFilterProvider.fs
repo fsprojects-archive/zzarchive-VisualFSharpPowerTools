@@ -30,7 +30,7 @@ type XmlDocCommandFilterProvider [<ImportingConstructor>]
 
     interface IVsTextViewCreationListener with
         member __.VsTextViewCreated textViewAdapter = 
-            maybe {
+            unitMaybe {
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! wpfTextView = editorFactory.TryGetWpfTextView textViewAdapter
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer wpfTextView.TextBuffer  
@@ -38,7 +38,7 @@ type XmlDocCommandFilterProvider [<ImportingConstructor>]
                     XmlDocFilter( textViewAdapter, wpfTextView, doc.FilePath, projectFactory, 
                         vsLanguageService,OpenDocumentsTracker textDocumentFactoryService, serviceProvider)
                     |> ignore
-            } |> ignore
+            } 
 
 
          

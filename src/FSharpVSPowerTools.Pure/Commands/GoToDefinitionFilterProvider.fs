@@ -115,11 +115,11 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
 
     interface IVsTextViewCreationListener with
         member __.VsTextViewCreated (textViewAdapter:IVsTextView) =
-            maybe {
+            unitMaybe {
                 let! textView = editorFactory.TryGetWpfTextView textViewAdapter
                 self.Register( textViewAdapter, textView, false)
                 |> ignore
-            } |> ignore
+            } 
 
 
     interface IDisposable with

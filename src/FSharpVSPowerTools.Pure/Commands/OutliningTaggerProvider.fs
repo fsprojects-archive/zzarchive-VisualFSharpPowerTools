@@ -45,7 +45,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
 
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView  =  
-            maybe{
+            unitMaybe{
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider  
                 if not generalOptions.OutliningEnabled then return () else
                 let textBuffer = textView.TextBuffer
@@ -63,7 +63,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
                                 ( fullspan, fun (c:ICollapsible) -> c.Tag.IsDefaultCollapsed ) |> ignore
                             isFirstOutlining := false
                     )         
-            } |> ignore
+            }
         
 
 

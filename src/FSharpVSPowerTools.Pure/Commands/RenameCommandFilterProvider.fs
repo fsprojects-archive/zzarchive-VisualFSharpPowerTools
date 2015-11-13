@@ -42,7 +42,7 @@ type RenameCommandFilterProvider [<ImportingConstructor>]
     interface IVsTextViewCreationListener with
 
         member __.VsTextViewCreated textViewAdapter =
-            maybe {
+            unitMaybe {
                 let! textView = editorFacotry.TryGetWpfTextView textViewAdapter
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
 
@@ -50,5 +50,5 @@ type RenameCommandFilterProvider [<ImportingConstructor>]
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
                 RenameCommandFilterProvider.AddCommandFilter ( textViewAdapter, 
                         new RenameCommandFilter( doc, textView, vsLanguageService, serviceProvider, projectFactory))
-            } |> ignore
+            } 
 

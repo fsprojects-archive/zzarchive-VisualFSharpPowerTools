@@ -27,11 +27,11 @@ type TaskListCommentFilterProvider [<ImportingConstructor>]
     interface IVsTextViewCreationListener with
 
         member __.VsTextViewCreated textViewAdapter =
-            maybe {
+            unitMaybe {
                 let! textView = editorFactory.TryGetWpfTextView textViewAdapter
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 if not generalOptions.TaskListCommentsEnabled then return! None else
                 taskCommentFilter <- new TaskListCommentFilter 
                                         (   textView, serviceProvider, taskListManager, 
                                             OpenDocumentsTracker textDocumentFactoryService )
-            } |> ignore
+            } 
