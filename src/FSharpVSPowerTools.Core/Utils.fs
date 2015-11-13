@@ -516,18 +516,14 @@ type MaybeBuilder () =
 
 [<Sealed>][<DebuggerStepThrough>]
 type UnitMaybeBuilder () =
-    member inline __.Return value: 'T option = Some value
-    member inline __.ReturnFrom value: 'T option =  value
-    member inline __.Zero (): unit option = Some ()     // TODO: Should this be None?
+    member inline __.Zero () = ()  
     member __.Delay (f: unit -> 'T option): 'T option = f ()
     member inline __.Combine (r1, r2: 'T option): 'T option = match r1 with None -> None | Some () -> r2
     member inline __.Bind (value, f: 'T -> 'U option): 'U option = Option.bind f value
 
     member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
         try body resource
-        finally
-            if not <| obj.ReferenceEquals (null, box resource) then
-                resource.Dispose ()
+        finally if isNotNull resource then resource.Dispose ()
 
     member x.While (guard, body: _ option): _ option =
         if guard () then
