@@ -137,6 +137,7 @@
     <Compile Include="Commands\OutliningTaggerProvider.fs" />
     <Compile Include="GUI\GuiUtils.fs" />
     <None Include="GUI\ResourceDictionary.xaml" />
+    <Compile Include="GUI\ResourceDictionary.xaml.fs" />
     <Compile Include="GUI\GeneralOptionsViewModel.fs" />
     <None Include="GUI\GeneralOptionsControl.xaml" />
     <Compile Include="GUI\GeneralOptionsControl.xaml.fs" />
@@ -147,7 +148,6 @@
     <None Include="GUI\FantomasOptions.xaml" />
     <Compile Include="GUI\FantomasOptions.xaml.fs" />
     <None Include="GUI\GlobalOptions.xaml" />
-    <Compile Include="GUI\ResourceDictionary.xaml.fs" />
     <None Include="Resources\Images.png" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
