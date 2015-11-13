@@ -77,6 +77,9 @@
     <None Include="FolderNameDialog.xaml">
       <Link>FolderNameDialog.xaml</Link>
     </None>
+    <Compile Include="Common\CommonResources.xaml.fs">
+      <Link>Common\CommonResources.xaml.fs</Link>
+    </Compile>
     <Compile Include="Common\Resource.fs">
       <Link>Common\Resource.fs</Link>
     </Compile>
@@ -107,7 +110,6 @@
     <Compile Include="Common\Status.fs">
       <Link>Common\Status.fs</Link>
     </Compile>
-    <Compile Include="Common\CommonResources.xaml.fs" />
     <Compile Include="ProjectSystem\ProjectSystem.fs">
       <Link>ProjectSystem\ProjectSystem.fs</Link>
     </Compile>
