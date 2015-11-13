@@ -410,7 +410,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member x.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler) =
+  member __.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler) =
       let rec loop i = 
           asyncMaybe {
               if i < files.Length then
