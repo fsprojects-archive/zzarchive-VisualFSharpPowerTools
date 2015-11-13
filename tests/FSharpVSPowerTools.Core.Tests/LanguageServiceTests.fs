@@ -13,20 +13,17 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open System.Threading
-open System
 
 [<Literal>]
-let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
-type dataFolder = FSharp.Management.FileSystem<dataFolderName>
- 
-let fileName = dataFolder.``LanguageServiceSampleFile.fs``
+let DataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
 
+type DataFolder = FSharp.Management.FileSystem<DataFolderName>
+ 
+let fileName = DataFolder.``LanguageServiceSampleFile.fs``
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
 let sourceFiles = [| fileName |]
 let args = LanguageServiceTestHelper.argsDotNET451
-
 let compilerVersion = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
 let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
@@ -332,9 +329,9 @@ let private tempSource content =
         member __.FilePath = path
         member __.Dispose() = File.Delete path }
 
-let private processParseTree sources openDocs = 
+let private processParseTree sources openDocs ct = 
     let seen = ResizeArray()
-    languageService.ProcessParseTrees(opts, openDocs, sources, fun file ast -> seen.Add (file, ast)) 
+    languageService.ProcessParseTrees(opts, openDocs, sources, (fun file ast -> seen.Add (file, ast)), ct) 
     |> Async.RunSynchronously
     seen |> Seq.map (fun (file, ast) -> file, ast) |> Seq.toList
 
@@ -342,13 +339,13 @@ let private processParseTree sources openDocs =
 let ``ProcessParseTree should be called for all files in project``() =
     use f1 = tempSource "module M1"
     use f2 = tempSource "module M2"
-    let actual = processParseTree [| f1.FilePath; f2.FilePath |] Map.empty |> List.map fst
+    let actual = processParseTree [| f1.FilePath; f2.FilePath |] Map.empty CancellationToken.None |> List.map fst
     CollectionAssert.AreEquivalent ([ f1.FilePath; f2.FilePath ], actual)
 
 [<Test>]
 let ``ProcessParseTree should prefer open documents``() =
     use f1 = tempSource "module Foo"
-    let actual = processParseTree [| f1.FilePath |] (Map.ofList [f1.FilePath, "module Bar"])
+    let actual = processParseTree [| f1.FilePath |] (Map.ofList [f1.FilePath, "module Bar"]) CancellationToken.None
 
     match actual |> List.map snd with
     | [ Ast.ParsedInput.ImplFile(Ast.ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, [m], _)) ] -> 
@@ -363,14 +360,7 @@ let ``ProcessParseTree should prefer open documents``() =
 [<Test>]
 let ``ProcessParseTree should react on cancellation``() =
     use f1 = tempSource "module Foo"
-    let seen = ResizeArray()
     let cts = new CancellationTokenSource()
     cts.Cancel()
-    try
-        Async.RunSynchronously (
-            languageService.ProcessParseTrees(opts, Map.empty, [| f1.FilePath|], fun file _ -> seen.Add file),
-            cancellationToken = cts.Token) 
-    with 
-    | :? OperationCanceledException -> ()
-    | e -> Assert.Fail (sprintf "Expected `OperationCanceledException`, but was %s" (e.GetType().Name))
-    assertTrue (seen.Count = 0)
+    let actual = processParseTree [| f1.FilePath|] Map.empty cts.Token
+    assertTrue (actual.Length = 0)

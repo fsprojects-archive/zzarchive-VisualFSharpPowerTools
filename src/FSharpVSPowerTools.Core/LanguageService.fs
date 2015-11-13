@@ -148,6 +148,7 @@ type LexerBase() =
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Collections.Concurrent
+open System.Threading
 
 type FileState =
     | Checked
@@ -410,10 +411,10 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member __.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler) =
+  member __.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler, ct: CancellationToken) =
       let rec loop i = 
           asyncMaybe {
-              if i < files.Length then
+              if not ct.IsCancellationRequested && i < files.Length then
                   let file = files.[i]
                   let! source = 
                       Map.tryFind file openDocuments 

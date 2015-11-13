@@ -53,19 +53,17 @@ module private ItemKind =
         | other -> failwithf "Unrecognized NavigateToItemKind:%s" other
 
 [<Export>]
-type NavigationItemIconCache() =
-    [<Import; DefaultValue>] 
-    val mutable glyphService: IGlyphService
+type NavigationItemIconCache [<ImportingConstructor>] ([<Import>] glyphService: IGlyphService) =
     let iconCache = Dictionary<StandardGlyphGroup * StandardGlyphItem, Icon * Bitmap>()
                 
-    member private x.GetOrCreateIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
+    member private __.GetOrCreateIcon(glyphGroup, glyphItem): System.Drawing.Icon = 
         let key = glyphGroup, glyphItem
         iconCache 
         |> Dict.tryFind key
         |> Option.map fst
         |> Option.getOrTry (fun _ ->
             let icon, bitmap =
-                match x.glyphService.GetGlyph(glyphGroup, glyphItem) with
+                match glyphService.GetGlyph(glyphGroup, glyphItem) with
                 | :? Windows.Media.Imaging.BitmapSource as bs ->
                     let bmpEncoder = Windows.Media.Imaging.PngBitmapEncoder()
                     bmpEncoder.Frames.Add(Windows.Media.Imaging.BitmapFrame.Create bs)
@@ -137,10 +135,11 @@ type NavigateToItemProvider
                         incr counter
                     
                     while !i < projects.Length && not processProjectsCTS.IsCancellationRequested do
-                        do! languageService.ProcessNavigableItemsInProject(openedDocuments, projects.[!i], processNavigableItemsInFile)
+                        do! languageService.ProcessNavigableItemsInProject(
+                                openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
                         incr i 
                 }
-            Async.StartInThreadPoolSafe (fetchIndexes, processProjectsCTS.Token)
+            Async.StartInThreadPoolSafe fetchIndexes
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
     let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct) = 
@@ -201,14 +200,14 @@ type NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IService
 [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2012)>]
 type VS2012NavigateToItemDisplayFactory() =
     [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable serviceProvider: IServiceProvider
+    val mutable ServiceProvider: IServiceProvider
     [<Import; DefaultValue>]
-    val mutable iconCache: NavigationItemIconCache
+    val mutable IconCache: NavigationItemIconCache
     
     interface INavigateToItemDisplayFactory with
         member x.CreateItemDisplay(item) = 
-            let icon = x.iconCache.GetIconForNavigationItemKind(item.Kind)
-            NavigateToItemDisplay(item, icon, x.serviceProvider) :> _
+            let icon = x.IconCache.GetIconForNavigationItemKind(item.Kind)
+            NavigateToItemDisplay(item, icon, x.ServiceProvider) :> _
 
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
 [<Export(typeof<INavigateToItemProviderFactory>)>]

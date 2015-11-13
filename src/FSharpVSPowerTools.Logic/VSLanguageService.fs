@@ -16,6 +16,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools.AssemblyContentProvider
 open FSharpVSPowerTools.AsyncMaybe
+open System.Threading
 
 type FilePath = string
 
@@ -152,7 +153,7 @@ type VSLanguageService
             return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) |> liftAsync
         }
 
-    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems) =
+    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct: CancellationToken) =
         async {
             let! opts = projectProvider.GetProjectCheckerOptions instance
             let openFiles = openDocuments |> Map.toArray |> Array.map fst |> Set.ofArray
@@ -176,12 +177,7 @@ type VSLanguageService
                 navigableItemCache.[file] <- items
                 processNavigableItems items
 
-            return!
-                instance.ProcessParseTrees(
-                    opts,
-                    openDocuments, 
-                    newItems, 
-                    processAst)
+            return! instance.ProcessParseTrees(opts, openDocuments, newItems, processAst, ct)
         }
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
