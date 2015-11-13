@@ -135,6 +135,19 @@
     <Compile Include="Commands\FindReferenceFilterProvider.fs" />
     <Compile Include="Commands\DepthColorizerManager.fs" />
     <Compile Include="Commands\OutliningTaggerProvider.fs" />
+    <Compile Include="GUI\GuiUtils.fs" />
+    <None Include="GUI\ResourceDictionary.xaml" />
+    <Compile Include="GUI\GeneralOptionsViewModel.fs" />
+    <None Include="GUI\GeneralOptionsControl.xaml" />
+    <Compile Include="GUI\GeneralOptionsControl.xaml.fs" />
+    <Compile Include="GUI\GeneralOptionsPage.fs" />
+    <None Include="GUI\OutliningOptionsPageControl.xaml" />
+    <None Include="GUI\CodeGenerationOptions.xaml" />
+    <Compile Include="GUI\CodeGenerationOptions.xaml.fs" />
+    <None Include="GUI\FantomasOptions.xaml" />
+    <Compile Include="GUI\FantomasOptions.xaml.fs" />
+    <None Include="GUI\GlobalOptions.xaml" />
+    <Compile Include="GUI\ResourceDictionary.xaml.fs" />
     <None Include="Resources\Images.png" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
