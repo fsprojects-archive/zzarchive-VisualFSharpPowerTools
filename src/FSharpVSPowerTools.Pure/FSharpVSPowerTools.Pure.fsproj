@@ -16,7 +16,7 @@
     <ProjectGuid>f853e76d-c69a-451c-a672-500fe169a42f</ProjectGuid>
     <ProjectTypeGuids>{82b43b9b-a64c-4715-b499-d71e9ca2bd60};{F2A71F9B-5D33-465A-A702-920D77279786}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
-    <RootNamespace>FSharpVSPowerTools</RootNamespace>
+    <RootNamespace>FSharpVSPowerTools.Pure</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Pure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <GeneratePkgDefFile>false</GeneratePkgDefFile>
@@ -144,7 +144,12 @@
     </EmbeddedResource>
     <Content Include="Resources\Package.ico" />
     <Compile Include="PowerToolsCommandsPackage.fs" />
-    <None Include="paket.references" />
+    <None Include="source.extension.vsixmanifest">
+      <SubType>Designer</SubType>
+    </None>
+    <VSCTCompile Include="FSharpVSPowerTools.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+    </VSCTCompile>
     <Content Include="..\..\LICENSE.txt">
       <Link>LICENSE.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -165,13 +170,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <VSCTCompile Include="FSharpVSPowerTools.vsct">
-      <ResourceName>Menus.ctmenu</ResourceName>
-    </VSCTCompile>
+    <None Include="paket.references" />
     <!--Compile Include="Resources\FSharpVSPowerTools.Designer.fs" /-->
-    <None Include="source.extension.vsixmanifest">
-      <SubType>Designer</SubType>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FsXaml.Wpf, Version=0.9.9.0, Culture=neutral, processorArchitecture=MSIL">
@@ -188,6 +188,7 @@
     <Reference Include="Microsoft.CSharp">
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" />
     <Reference Include="Microsoft.VisualStudio.ComponentModelHost, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
@@ -231,6 +232,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Threading, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.Windows.Design.Interaction, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="mscorlib">
       <Private>False</Private>
     </Reference>
@@ -372,11 +374,6 @@
       <Private>True</Private>
       <Paket>True</Paket>
     </Reference>
-    <Reference Include="FSharpLint.Application">
-      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
     <Reference Include="FSharpLint.Framework">
       <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Framework.dll</HintPath>
       <Private>True</Private>
@@ -388,6 +385,8 @@
       <Paket>True</Paket>
     </Reference>
   </ItemGroup>
+  <!--
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
+  -->
 </Project>
