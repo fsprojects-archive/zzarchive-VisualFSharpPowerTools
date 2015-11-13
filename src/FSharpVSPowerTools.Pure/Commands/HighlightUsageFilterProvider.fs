@@ -42,12 +42,12 @@ type HighlightUsageFilterProvider [<ImportingConstructor>]
     interface IVsTextViewCreationListener with
 
         member __.VsTextViewCreated textViewAdapter =
-            unitMaybe {
+            maybe {
                 let! textView = editorFactory.TryGetWpfTextView textViewAdapter
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 if not generalOptions.HighlightUsageEnabled then return! None else
 
                 HighlightUsageFilterProvider.AddCommandFilter ( textViewAdapter, 
                         new HighlightUsageFilter (textView, tagAggregator.CreateTagAggregator<TextMarkerTag> textView))
-            } 
+            } |> ignore
 

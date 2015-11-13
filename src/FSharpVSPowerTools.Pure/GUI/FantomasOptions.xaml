@@ -1,0 +1,17 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
+        xmlns:ie="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions" 
+        xmlns:local="clr-namespace:FSharpVSPowerTools"
+        xmlns:fsxaml="http://github.com/fsprojects/FsXaml" 
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:fsx="clr-namespace:FsXaml;assembly=FsXaml.Wpf"
+        xmlns:ignore = "http://www.galasoft.ch/ignore" 
+        x:Name="GeneralOptionsPage"
+        mc:Ignorable="d ignore" 
+        d:fsxaml='" ViewController.Custom="{x:Type local:GeneralOptionsControl}"'
+        d:DesignHeight="556" d:DesignWidth="552">
+</Window>

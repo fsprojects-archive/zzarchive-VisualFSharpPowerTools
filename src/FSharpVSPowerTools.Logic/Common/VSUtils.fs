@@ -466,13 +466,14 @@ let protect f = protectOrDefault f ()
 let time label f =
     let sw = Stopwatch.StartNew()
     let result = f()
-    sw.Stop()
+    sw.Stop ()
     debug "%s took: %i ms" label sw.ElapsedMilliseconds
     result
 
-//=============================
-// VISUAL STUDIO MEF SERVICES
-//=============================
+
+  //===========================================//
+ // VISUAL STUDIO MEF SERVICE TYPE EXTENSIONS //
+//===========================================//
 
 type ITextDocumentFactoryService with
 
@@ -536,16 +537,20 @@ type IServiceProvider with
 
     /// Get the IWPFTextView of a document if it is open
     member serviceProvider.GetWPFTextViewOfDocument fileName =
-        let mutable hierarchy = Unchecked.defaultof<_>
-        let mutable itemId = Unchecked.defaultof<_>
-        let mutable windowFrame = Unchecked.defaultof<_>
-        if VsShellUtilities.IsDocumentOpen
-               (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
-            let vsTextView = VsShellUtilities.GetTextView windowFrame 
-            let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
-            let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
-            Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
-        else None      
+        maybe {
+            let mutable hierarchy = Unchecked.defaultof<_>
+            let mutable itemId = Unchecked.defaultof<_>
+            let mutable windowFrame = Unchecked.defaultof<_>
+            if VsShellUtilities.IsDocumentOpen
+                   (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
+                let vsTextView = VsShellUtilities.GetTextView windowFrame 
+                let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
+                let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
+                return
+                    (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
+            else 
+                return! None      
+        }
 
     member serviceProvider.GetDocumentFromBuffer (textBuffer:ITextBuffer) =
         maybe{
@@ -568,8 +573,8 @@ type IServiceProvider with
 
     member serviceProvider.GetActiveViewAndDocument () =
         maybe {
-            let documentService     = serviceProvider.GetService<ITextDocumentFactoryService>()
-            let dte                 = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
+            let! documentService     = serviceProvider.TryGetService<ITextDocumentFactoryService>()
+            let! dte                 = serviceProvider.TryGetService<EnvDTE.DTE, SDTE> ()
             let! doc = dte.GetActiveDocument ()
             let! wpfview =
                 let mutable hierarchy   = Unchecked.defaultof<_>

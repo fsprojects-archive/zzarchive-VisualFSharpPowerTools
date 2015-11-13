@@ -55,3 +55,12 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
     member __.TextViewCreated textView =
         self.RegisterCommandFilter (textView, true) |> ignore
 
+    interface IWpfTextViewConnectionListener with
+        
+        member x.SubjectBuffersConnected(textView, reason, subjectBuffers) = ()
+           
+
+        member x.SubjectBuffersDisconnected(textView, reason, subjectBuffers) =  ()
+            
+        
+

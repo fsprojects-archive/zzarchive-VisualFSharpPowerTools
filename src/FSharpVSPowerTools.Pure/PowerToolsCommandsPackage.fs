@@ -17,14 +17,16 @@ open System.Diagnostics
 open Microsoft.VisualStudio.ComponentModelHost 
 open FSharpVSPowerTools.Reference              
 
-
+[<AutoOpen>]
+module internal PackageHelpers =
+    let addService<'a> (serviceContainer:IServiceContainer) page = serviceContainer.AddService<'a> ((fun _ _ -> page :> obj), true)
 
 [< ProvideBindingPath >]
 [< Guid "1F699E38-7D87-44F4-BC08-6B1DD5A6F926" >]
 [< PackageRegistration (UseManagedResourcesOnly = true) >]
 [< ProvideMenuResource (resourceID= "Menus.ctmenu", version=1) >]
 [< InstalledProductRegistration ("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400) >]
-//[< ProvideOptionPage (typeof<GeneralOptionsPage>       , Resource.vsPackageTitle, "General"        , 0s, 0s, true, 0) >]
+[< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "General"        , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<FantomasOptionsPage>      , Resource.vsPackageTitle, "Formatting"     , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<CodeGenerationOptionsPage>, Resource.vsPackageTitle, "Code Generation", 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<GlobalOptionsPage>        , Resource.vsPackageTitle, "Configuration"  , 0s, 0s, true, 0) >]
@@ -120,14 +122,12 @@ type PowerToolsCommandsPackage () as self =
 
         VSUtils.ForegroundThreadGuard.BindThread ()
         
-        let addService page = serviceContainer.AddService<IGeneralOptions> ((fun _ _ -> page :> obj), true)
-
-        self.GetDialogPage<IGeneralOptions> () |> addService 
-        self.GetDialogPage<IFormattingOptions> () |> addService 
-        self.GetDialogPage<ICodeGenerationOptions> () |> addService 
-        self.GetDialogPage<IGlobalOptions> () |> addService 
-        self.GetDialogPage<ILintOptions> () |> addService 
-        self.GetDialogPage<IOutliningOptions> () |> addService 
+        self.GetDialogPage<GeneralOptionsPage> () |> addService<IGeneralOptions> serviceContainer
+//        self.GetDialogPage<FantomasOptionsPage> () |> addService<IFormattingOptions> 
+//        self.GetDialogPage<CodeGenerationOptionsPage> () |> addService<ICodeGenerationOptions> 
+//        self.GetDialogPage<GlobalOptionsPage> () |> addService<IGlobalOptions>
+        self.GetDialogPage<Linting.LintOptionsPage> () |> addService<ILintOptions> serviceContainer
+        //self.GetDialogPage<OutliningOptionsPage> () |> addService<IOutliningOptions> serviceContainer 
 
         let generalOptions = self.GetService<IGeneralOptions> ()
 

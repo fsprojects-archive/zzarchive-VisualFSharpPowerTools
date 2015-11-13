@@ -45,7 +45,7 @@ type DepthColorizerAdornmentManager [<ImportingConstructor>]
         member __.TextViewCreated textView =
             unitMaybe {
                 let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
-                if not generalOptions.DepthColorizerEnabled then return! None else
+                if not generalOptions.DepthColorizerEnabled then () else
 
                 let tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag> textView
                 let adornment = new DepthColorizerAdornment (textView, tagAggregator, themeManager, shellEventListener)

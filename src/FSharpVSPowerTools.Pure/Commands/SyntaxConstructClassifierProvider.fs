@@ -341,16 +341,13 @@ type SyntaxConstructClassifierProvider [<ImportingConstructor>]
         ) |> subscriptions.Add
 
     member __.GetClassifier(textBuffer: ITextBuffer)= 
-        //let generalOptions = Setting.getGeneralOptions serviceProvider
-//            if not generalOptions.SyntaxColoringEnabled then None else
-//        let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
-//        let includeUnusedOpens = generalOptions.UnusedOpensEnabled
-        let includeUnusedReferences = false
-        let includeUnusedOpens = false
-        //let mutable doc = Unchecked.defaultof<ITextDocument>
-        //if not(textDocumentFactoryService.TryGetTextDocument (textBuffer,&doc)) then None else
-            //let d = doc
         maybe{
+            let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+            if not generalOptions.SyntaxColoringEnabled then return! None else
+            let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
+            let includeUnusedOpens = generalOptions.UnusedOpensEnabled
+            let includeUnusedReferences = false
+            let includeUnusedOpens = false
             let! doc = textDocumentFactoryService.TryDocumentFromBuffer textBuffer
             return textBuffer.Properties.GetOrCreateSingletonProperty (serviceType, fun () ->
                 new SyntaxConstructClassifier

@@ -101,11 +101,20 @@ module Utils =
         ///  `.GetService<IVsTextManager, SVsTextManager>()`
         member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
         /// Try to use the service provider to get an MEF service via its Interface type
-        member x.TryGetService<'T>() =  x.GetService<'T>() |> Option.ofNull
+        member x.TryGetService<'T>() = 
+            try x.GetService(typeof<'T>) :?> 'T |> Option.ofNull
+            with _ -> None
+                
+
         ///  Try to use the service provider to get an MEF Visual Studio service
         ///  and cast it to its Interface type e.g.
         ///  `.GetService<IVsTextManager, SVsTextManager>()`
-        member x.TryGetService<'T, 'S>() =  x.GetService<'T,'S>() |> Option.ofNull
+        member x.TryGetService<'T, 'S>() = 
+            try x.GetService(typeof<'S> ) :?> 'T |> Option.ofNull
+            with _ -> None
+        
+        
+         
 
 [<RequireQualifiedAccess>]
 module Setting =

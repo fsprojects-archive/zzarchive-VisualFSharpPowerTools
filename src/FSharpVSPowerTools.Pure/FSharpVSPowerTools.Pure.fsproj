@@ -37,7 +37,7 @@
     <StartProgram>$(DevEnvDir)\devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' Or '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -47,7 +47,7 @@
     <WarningLevel>3</WarningLevel>
     <DeployExtension>True</DeployExtension>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU'  Or '$(Configuration)|$(Platform)' == 'Release|x86'  ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
@@ -136,18 +136,18 @@
     <Compile Include="Commands\DepthColorizerManager.fs" />
     <Compile Include="Commands\OutliningTaggerProvider.fs" />
     <Compile Include="GUI\GuiUtils.fs" />
-    <None Include="GUI\ResourceDictionary.xaml" />
+    <Resource Include="GUI\ResourceDictionary.xaml" />
     <Compile Include="GUI\ResourceDictionary.xaml.fs" />
     <Compile Include="GUI\GeneralOptionsViewModel.fs" />
-    <None Include="GUI\GeneralOptionsControl.xaml" />
     <Compile Include="GUI\GeneralOptionsControl.xaml.fs" />
+    <Resource Include="GUI\GeneralOptionsControl.xaml" />
     <Compile Include="GUI\GeneralOptionsPage.fs" />
-    <None Include="GUI\OutliningOptionsPageControl.xaml" />
-    <None Include="GUI\CodeGenerationOptions.xaml" />
+    <Resource Include="GUI\OutliningOptionsPageControl.xaml" />
+    <Resource Include="GUI\CodeGenerationOptions.xaml" />
     <Compile Include="GUI\CodeGenerationOptions.xaml.fs" />
-    <None Include="GUI\FantomasOptions.xaml" />
+    <Resource Include="GUI\FantomasOptions.xaml" />
     <Compile Include="GUI\FantomasOptions.xaml.fs" />
-    <None Include="GUI\GlobalOptions.xaml" />
+    <Resource Include="GUI\GlobalOptions.xaml" />
     <None Include="Resources\Images.png" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -328,6 +328,21 @@
     </COMReference>
   </ItemGroup>
 -->
+  <!--
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
+  -->
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
+      <ItemGroup>
+        <Reference Include="Windows.UI.Interactivity">
+          <HintPath>..\..\packages\Expression.Blend.Sdk\lib\netcore45\Windows.UI.Interactivity.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
   <ItemGroup>
     <Reference Include="FantomasLib">
       <HintPath>..\..\packages\Fantomas\lib\FantomasLib.dll</HintPath>
@@ -375,7 +390,6 @@
       </ItemGroup>
     </When>
   </Choose>
-  <Import Project="..\..\packages\FSharpLint\build\FSharpLint.targets" Condition="Exists('..\..\packages\FSharpLint\build\FSharpLint.targets')" Label="Paket" />
   <ItemGroup>
     <Reference Include="FParsec">
       <HintPath>..\..\packages\FSharpLint.Core\lib\FParsec.dll</HintPath>
@@ -384,6 +398,11 @@
     </Reference>
     <Reference Include="FParsecCS">
       <HintPath>..\..\packages\FSharpLint.Core\lib\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="FSharpLint.Application">
+      <HintPath>..\..\packages\FSharpLint.Core\lib\FSharpLint.Application.dll</HintPath>
       <Private>True</Private>
       <Paket>True</Paket>
     </Reference>
@@ -398,8 +417,6 @@
       <Paket>True</Paket>
     </Reference>
   </ItemGroup>
-  <!--
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
   <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
-  -->
 </Project>

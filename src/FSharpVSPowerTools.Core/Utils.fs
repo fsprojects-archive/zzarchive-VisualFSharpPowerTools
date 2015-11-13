@@ -298,12 +298,16 @@ module Array =
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Option =
+    /// Converts a value that could be null into None if it is, otherwise Some value
     let inline ofNull value =
         if obj.ReferenceEquals(value, null) then None else Some value
-
+    
+    /// Converts a Nullable value into None if it does not contain a value, otherwise extract the
+    /// Nullables value and wrap it in a Some
     let inline ofNullable (value: Nullable<'T>) =
         if value.HasValue then Some value.Value else None
 
+    /// Take an Option and create an empty Nullable when None, or a Nullable with the value `x` if `Some x`
     let inline toNullable (value: 'T option) =
         match value with
         | Some x -> Nullable<_> x
@@ -514,27 +518,31 @@ type MaybeBuilder () =
                 x.Delay (fun () ->
                     body enum.Current)))
 
-[<Sealed>][<DebuggerStepThrough>]
+[<Sealed>]
 type UnitMaybeBuilder () =
-    member inline __.Zero () = ()  
+    [<DebuggerStepThrough>]
+    member inline __.Zero () = Some ()  
+    [<DebuggerStepThrough>]
     member __.Delay (f: unit -> 'T option): 'T option = f ()
+    [<DebuggerStepThrough>]
     member inline __.Combine (r1, r2: 'T option): 'T option = match r1 with None -> None | Some () -> r2
+    [<DebuggerStepThrough>]
     member inline __.Bind (value, f: 'T -> 'U option): 'U option = Option.bind f value
-
+    [<DebuggerStepThrough>]
     member __.Using (resource: ('T :> System.IDisposable), body: _ -> _ option): _ option =
         try body resource
         finally if isNotNull resource then resource.Dispose ()
-
+    [<DebuggerStepThrough>]
     member x.While (guard, body: _ option): _ option =
         if guard () then
             // OPTIMIZE: This could be simplified so we don't need to make calls to Bind and While.
             x.Bind (body, (fun () -> x.While (guard, body)))
         else Some ()
-
+    [<DebuggerStepThrough>]
     member x.For (sequence: seq<_>, body: 'T -> unit option): _ option =
         // OPTIMIZE: This could be simplified so we don't need to make calls to Using, While, Delay.
         x.Using (sequence.GetEnumerator (), fun enum -> x.While (enum.MoveNext, x.Delay (fun () -> body enum.Current)))
-
+    [<DebuggerStepThrough>]
     member __.Run x = x |> ignore
 
 [<Sealed>]
@@ -623,7 +631,10 @@ module Pervasive =
     Debug.Listeners.Add(new TextWriterTraceListener(System.Console.Out)) |> ignore
     Debug.AutoFlush <- true
 #endif
-
+    /// <summary>
+    /// cexpr for working with options <para/>
+    /// `let!` - unwrap an option and bind it. If the option was `None` the whole cexpr returns `None`
+    /// </summary>
     let maybe = MaybeBuilder()
     let unitMaybe = UnitMaybeBuilder()
     let asyncMaybe = AsyncMaybeBuilder()
@@ -749,11 +760,15 @@ module Pervasive =
         /// <param name="callback"></param>
         member inline serviceContainer.AddService<'T> (callback:IServiceContainer->Type-> obj) =
             serviceContainer.AddService (typeof<'T>, ServiceCreatorCallback callback )
-                    
+        
+        /// <summary>
+        /// Wraps serviceContainer.AddService ( typeof 'T, ServiceCreatorCallback callback, promote) 
+        /// </summary>
+        /// <param name="callback"></param>
+        /// <param name="promote"></param>
         member serviceContainer.AddService<'T> (callback, promote) =
             serviceContainer.AddService (typeof<'T>, ServiceCreatorCallback callback, promote)
 
-        
 
 [<RequireQualifiedAccess>]
 module Dict = 
