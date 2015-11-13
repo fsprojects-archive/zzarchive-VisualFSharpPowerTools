@@ -9,6 +9,7 @@ NUGET
     FSharp.ViewModule.Core (0.9.9.1)
     FSharpLint.Core (0.0.13-beta)
       FSharp.Compiler.Service (>= 1.4.0.6)
+    FsPickler (1.5.2)
     FsXaml.Wpf (0.9.9)
       Expression.Blend.Sdk (>= 1.0.2) - framework: >= net45
     SourceLink.SymbolStore (0.5.0)

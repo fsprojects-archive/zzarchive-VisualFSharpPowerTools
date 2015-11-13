@@ -100,48 +100,52 @@ type NavigateToItemProvider
     let processProjectsCTS = new CancellationTokenSource()
     let mutable searchCts = CancellationTokenSource.CreateLinkedTokenSource processProjectsCTS.Token
     
-    let processParseTrees (project: IProjectProvider, openDocuments, files: string[], parseTreeHandler, ct: CancellationToken) =
+    let processParseTrees (project: IProjectProvider, files: (FileDescriptor * (unit -> Source option))[], parseTreeHandler, 
+                           ct: CancellationToken) =
         let rec loop i = 
             asyncMaybe {
                 if not ct.IsCancellationRequested && i < files.Length then
-                    let file = files.[i]
-                    let! source, lastWriteTime = 
-                        Map.tryFind file openDocuments 
-                        |> Option.orTry (fun _ -> 
-                            maybe {
-                                let! source = Option.attempt (fun _ -> File.ReadAllText file)
-                                let! lastWriteTime = Option.attempt (fun _ -> File.GetLastWriteTimeUtc file)
-                                return source, lastWriteTime 
-                            })
-                  
-                    let! parseResults = languageService.ParseFileInProject(file, source, project) |> liftAsync
+                    let file, getSource = files.[i]
+                    let! source = getSource()
+                    let! parseResults = languageService.ParseFileInProject(file.Path, source, project) |> liftAsync
                     let! ast = parseResults.ParseTree
-                    parseTreeHandler file lastWriteTime ast
+                    parseTreeHandler file ast
                     return! loop (i + 1)
             }
         loop 0 |> Async.Ignore
 
     let processNavigableItemsInProject (openDocuments, project: IProjectProvider, processNavigableItems, ct: CancellationToken) =
         async {
-            let openFilesPaths = openDocuments |> Map.toArray |> Array.map fst |> Set.ofArray
-            let cachedItems, newItems =
+            let (cachedItems, newItems): NavigableItem[][] * ((FileDescriptor * (unit -> Source option)) option []) =
                 project.SourceFiles 
                 |> Array.mapPartition (fun file ->
-                    if Set.contains file openFilesPaths then Choice2Of2 file
-                    else 
-                        match navigableItemCache.TryGet file with
+                    let res =
+                        match openDocuments |> Map.tryFind file with
+                        | Some (source: Source, descriptor) -> Some (descriptor, fun _ -> Some source)
+                        | None ->
+                            maybe {
+                                let! lastWriteTime = Option.attempt (fun _ -> File.GetLastWriteTimeUtc file)
+                                return 
+                                    { Path = file; LastWriteTime = lastWriteTime },
+                                    fun _ -> Option.attempt (fun _ -> File.ReadAllText file)
+                            }
+                        
+                    match res with
+                    | None -> Choice2Of2 None
+                    | Some (descriptor, _) as res ->
+                        match navigableItemCache.TryGet descriptor with
                         | Some items -> Choice1Of2 items
-                        | None -> Choice2Of2 file)
+                        | None -> Choice2Of2 res)
 
+            let newItems = newItems |> Array.choose id
             cachedItems |> Array.iter processNavigableItems
-            openFilesPaths |> Set.iter navigableItemCache.Remove
 
-            let processAst file lastWriteTime ast =
-                let items = Navigation.NavigableItemsCollector.collect file ast |> Seq.toArray
-                navigableItemCache.Set { FilePath = file; FileLastWriteTime = lastWriteTime; Items = items }
+            let processAst (file: FileDescriptor) ast =
+                let items = Navigation.NavigableItemsCollector.collect file.Path ast |> Seq.toArray
+                navigableItemCache.Add (file, items)
                 processNavigableItems items
 
-            return! processParseTrees(project, openDocuments, newItems, processAst, ct)
+            return! processParseTrees(project, newItems, processAst, ct)
         }
 
     let projectIndexes = 
@@ -152,7 +156,7 @@ type NavigateToItemProvider
 
             let openedDocuments = 
                 openDocumentsTracker.MapOpenDocuments (fun (KeyValue (path, doc)) -> 
-                    path, (doc.Text.Value, doc.LastChangeTime))
+                    path, (doc.Text.Value, { Path = path; LastWriteTime = doc.LastChangeTime }))
                 |> Map.ofSeq
 
             let projects = 

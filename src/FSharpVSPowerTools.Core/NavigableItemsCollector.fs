@@ -45,7 +45,7 @@ module NavigableItemsCollector =
     let rec private lastInLid (lid: LongIdent) = 
         match lid with
         | [x] -> Some x
-        | _::xs -> lastInLid xs
+        | _ :: xs -> lastInLid xs
         | _ -> None // empty lid is possible in case of broken ast
      
     let collect filePath (parsedInput: ParsedInput) = 

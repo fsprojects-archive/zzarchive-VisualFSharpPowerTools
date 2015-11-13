@@ -330,6 +330,16 @@ module Array =
             resultList1.ToArray (),
             resultList2.ToArray ()
 
+    let toHexString (bytes: byte[]) =
+        let length = bytes.Length
+        let chars = Array.zeroCreate length
+        for i in 0..length/2-1 do
+            let b1 = byte (bytes.[i] >>> 4)
+            chars.[i * 2] <- if b1 > 9uy then char (b1 + 87uy) else char (b1 + 0x30uy)
+            let b2 = byte (bytes.[i] &&& 0xFuy)
+            chars.[i * 2 + 1] <- if b2 > 9uy then char (b2 + 87uy) else char (b2 + 0x30uy)
+        String chars
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Option =
