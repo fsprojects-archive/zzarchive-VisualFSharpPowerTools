@@ -33,8 +33,8 @@ type DocumentNavigator() =
             let vsTextManager = x.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
             let mutable vsTextBuffer = Unchecked.defaultof<_>
             vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
-            let (startRow, startCol), (endRow, endCol) = position.Span
-            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, endRow, endCol)
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, 
+                  position.Span.Start.Row, position.Span.Start.Col, position.Span.End.Row, position.Span.End.Col)
             |> ensureSucceeded
 
     member internal __.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =

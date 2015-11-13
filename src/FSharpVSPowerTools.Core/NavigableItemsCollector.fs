@@ -3,6 +3,7 @@
 open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
+open Microsoft.FSharp.Compiler.Range
 
 [<RequireQualifiedAccess>]
 type NavigableItemKind = 
@@ -18,29 +19,45 @@ type NavigableItemKind =
     | EnumCase
     | UnionCase
 
-[<NoComparison; NoEquality>]
+type NavigableItemPos =
+    { Row: int
+      Col: int }
+
+type NavigableItemRange =
+    { Start: NavigableItemPos
+      End: NavigableItemPos }
+    static member FromRange (r: Range.range) =
+        let _, range01 = Range.toFileZ r
+        let (startRow, startCol), (endRow, endCol) = range01
+        { Start = { Row = startRow; Col = startCol }
+          End = { Row = endRow; Col = endCol }}
+
 type NavigableItem = 
     {
+        FilePath: string
         Name: string
-        Range: Range.range
+        Range: NavigableItemRange
         IsSignature: bool
         Kind: NavigableItemKind
     }
 
 module NavigableItemsCollector =
-    
     let rec private lastInLid (lid: LongIdent) = 
         match lid with
         | [x] -> Some x
         | _::xs -> lastInLid xs
         | _ -> None // empty lid is possible in case of broken ast
      
-    let collect (parsedInput: ParsedInput) = 
+    let collect filePath (parsedInput: ParsedInput) = 
         let result = ResizeArray()
         
         let addIdent kind (id: Ident) (isSignature: bool) = 
             if not (String.IsNullOrEmpty id.idText) then
-                let item = { Name = id.idText; Range = id.idRange; IsSignature = isSignature; Kind = kind  }
+                let item = 
+                    { FilePath = filePath
+                      Name = id.idText
+                      Range = NavigableItemRange.FromRange id.idRange
+                      IsSignature = isSignature; Kind = kind  }
                 result.Add item
 
         let addModule  lid isSig = 
@@ -51,26 +68,26 @@ module NavigableItemsCollector =
         let addModuleAbbreviation (id: Ident) isSig =
             addIdent NavigableItemKind.ModuleAbbreviation id isSig 
         
-        let addExceptionRepr (ExceptionDefnRepr(_attributes, UnionCase(_unionAttributes, id, _type, _unionXmlDoc, _unionAccess, _unionRange), _lid, _xmlDoc, _access, _range)) isSig = 
+        let addExceptionRepr (ExceptionDefnRepr(_, UnionCase(_, id, _, _, _, _), _, _, _, _)) isSig = 
             addIdent NavigableItemKind.Exception id isSig
 
-        let addComponentInfo kind (ComponentInfo(_attributes, _typeArgs, _constraints, lid, _xmlDoc, _preferPostfix, _access, _componentRange)) isSig = 
+        let addComponentInfo kind (ComponentInfo(_, _, _, lid, _, _, _, _)) isSig = 
             match lastInLid lid with
             | Some id -> addIdent kind id isSig
             | _ -> ()
 
-        let addValSig kind (ValSpfn(_attributes, id, _typeArgDecls, _type, _valInfo, _, _mutable, _xmlDoc, _access, _rhs, _range)) isSig = 
+        let addValSig kind (ValSpfn(_, id, _, _, _, _, _, _, _, _, _)) isSig = 
             addIdent kind id isSig
         
-        let addField(SynField.Field(_attributes, _isStatic, id, _type, _, _xmlDoc, _access, _fieldRange)) isSig = 
+        let addField(SynField.Field(_, _, id, _, _, _, _, _)) isSig = 
             match id with
             | Some id -> addIdent NavigableItemKind.Field id isSig
             | _ -> ()
         
-        let addEnumCase(EnumCase(_attributes, id, _rhs, _xmlDoc, _range)) isSig = 
+        let addEnumCase(EnumCase(_, id, _, _, _)) isSig = 
             addIdent NavigableItemKind.EnumCase id isSig
         
-        let addUnionCase(UnionCase(_attributes, id, _type, _xmlDoc, _access, _range)) isSig = 
+        let addUnionCase(UnionCase(_, id, _, _, _, _)) isSig = 
             addIdent NavigableItemKind.UnionCase id isSig
 
         let mapMemberKind mk = 
@@ -82,9 +99,8 @@ module NavigableItemsCollector =
             | MemberKind.PropertyGetSet -> NavigableItemKind.Property
             | MemberKind.Member -> NavigableItemKind.Member
 
-        let addBinding (Binding(_access, _bindingKind, _isInline, _isMutable, _attrs, _xmldoc, valData, headPat, _retTy, 
-                                _rhs, _bindingRange, _seqPoint)) itemKind =
-            let (SynValData(memberFlagsOpt, _valInfo, _idOpt)) = valData
+        let addBinding (Binding(_, _, _, _, _, _, valData, headPat, _, _, _, _)) itemKind =
+            let (SynValData(memberFlagsOpt, _, _)) = valData
             let kind =
                 match itemKind with
                 | Some x -> x
@@ -94,13 +110,13 @@ module NavigableItemsCollector =
                     | _ -> NavigableItemKind.ModuleValue
 
             match headPat with
-            | SynPat.LongIdent(LongIdentWithDots([_this; id], _ranges), _, _typeArgs, _constructorDecls, _access, _range) ->
+            | SynPat.LongIdent(LongIdentWithDots([_; id], _), _, _, _, _access, _) ->
                 // instance members
                 addIdent kind id false
-            | SynPat.LongIdent(LongIdentWithDots([id], _ranges), _, _typeArgs, _constructorDecls, _access, _range) ->
+            | SynPat.LongIdent(LongIdentWithDots([id], _), _, _, _, _, _) ->
                 // functions
                 addIdent kind id false
-            | SynPat.Named(_pat, id, _isThis, _access, _range) ->
+            | SynPat.Named(_, id, _, _, _) ->
                 // values
                 addIdent kind id false
             | _ -> ()
@@ -109,11 +125,11 @@ module NavigableItemsCollector =
             let ctor = mapMemberKind memberFlags.MemberKind
             addValSig ctor valSig isSig
 
-        let rec walkSigFileInput (ParsedSigFileInput(_name, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList)) = 
+        let rec walkSigFileInput (ParsedSigFileInput(_, _, _, _, moduleOrNamespaceList)) = 
             for item in moduleOrNamespaceList do
                 walkSynModuleOrNamespaceSig item
 
-        and walkSynModuleOrNamespaceSig (SynModuleOrNamespaceSig(lid, isModule, decls, _xmldoc, _attributes, _access, _range)) = 
+        and walkSynModuleOrNamespaceSig (SynModuleOrNamespaceSig(lid, isModule, decls, _, _, _, _)) = 
             if isModule then
                 addModule lid true
             for decl in decls do
@@ -121,17 +137,17 @@ module NavigableItemsCollector =
 
         and walkSynModuleSigDecl(decl: SynModuleSigDecl) = 
             match decl with
-            | SynModuleSigDecl.ModuleAbbrev(lhs, _rhs, _range) ->
+            | SynModuleSigDecl.ModuleAbbrev(lhs, _, _range) ->
                 addModuleAbbreviation lhs true
-            | SynModuleSigDecl.Exception(ExceptionSig(representation, _members, _exceptionRange), _range) ->
+            | SynModuleSigDecl.Exception(ExceptionSig(representation, _, _), _) ->
                 addExceptionRepr representation true
             | SynModuleSigDecl.NamespaceFragment fragment ->
                 walkSynModuleOrNamespaceSig fragment
-            | SynModuleSigDecl.NestedModule(componentInfo, nestedDecls, _range) ->
+            | SynModuleSigDecl.NestedModule(componentInfo, nestedDecls, _) ->
                 addComponentInfo NavigableItemKind.Module componentInfo true
                 for decl in nestedDecls do
                     walkSynModuleSigDecl decl
-            | SynModuleSigDecl.Types(types, _range) ->
+            | SynModuleSigDecl.Types(types, _) ->
                 for ty in types do
                     walkSynTypeDefnSig ty
             | SynModuleSigDecl.Val(valSig, _range) ->
@@ -139,33 +155,33 @@ module NavigableItemsCollector =
             | SynModuleSigDecl.HashDirective _
             | SynModuleSigDecl.Open _ -> ()
 
-        and walkSynTypeDefnSig (TypeDefnSig(componentInfo, repr, members, _range)) = 
+        and walkSynTypeDefnSig (TypeDefnSig(componentInfo, repr, members, _)) = 
             addComponentInfo NavigableItemKind.Type componentInfo true
             for m in members do
                 walkSynMemberSig m
             match repr with
-            | SynTypeDefnSigRepr.ObjectModel(_kind, membersSigs, _range) ->
+            | SynTypeDefnSigRepr.ObjectModel(_, membersSigs, _) ->
                 for m in membersSigs do
                     walkSynMemberSig m
-            | SynTypeDefnSigRepr.Simple(repr, _range) ->
+            | SynTypeDefnSigRepr.Simple(repr, _) ->
                 walkSynTypeDefnSimpleRepr repr true
 
         and walkSynMemberSig (synMemberSig: SynMemberSig) = 
             match synMemberSig with
-            | SynMemberSig.Member(valSig, memberFlags, _range) ->
+            | SynMemberSig.Member(valSig, memberFlags, _) ->
                 addMember valSig memberFlags true
-            | SynMemberSig.ValField(synField, _range) ->
+            | SynMemberSig.ValField(synField, _) ->
                 addField synField true
-            | SynMemberSig.NestedType(synTypeDef, _range) ->
+            | SynMemberSig.NestedType(synTypeDef, _) ->
                 walkSynTypeDefnSig synTypeDef
             | SynMemberSig.Inherit _
             | SynMemberSig.Interface _ -> ()
 
-        and walkImplFileInpit (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
+        and walkImplFileInpit (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             for item in moduleOrNamespaceList do
                 walkSynModuleOrNamespace item
 
-        and walkSynModuleOrNamespace(SynModuleOrNamespace(lid, isModule, decls, _xmldoc, _attributes, _access, _range)) =
+        and walkSynModuleOrNamespace(SynModuleOrNamespace(lid, isModule, decls, _, _, _, _)) =
             if isModule then
                 addModule lid false
             for decl in decls do
@@ -173,18 +189,18 @@ module NavigableItemsCollector =
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
-            | SynModuleDecl.Exception(ExceptionDefn(repr, synMembers, _defnRange), _range) -> 
+            | SynModuleDecl.Exception(ExceptionDefn(repr, synMembers, _), _) -> 
                 addExceptionRepr repr false
                 for m in synMembers do
                     walkSynMemberDefn m
-            | SynModuleDecl.Let(_isRecursive, bindings, _range) ->
+            | SynModuleDecl.Let(_, bindings, _) ->
                 for binding in bindings do
                     addBinding binding None
-            | SynModuleDecl.ModuleAbbrev(lhs, _rhs, _range) ->
+            | SynModuleDecl.ModuleAbbrev(lhs, _, _) ->
                 addModuleAbbreviation lhs false
             | SynModuleDecl.NamespaceFragment(fragment) ->
                 walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(componentInfo, modules, _isContinuing, _range) ->
+            | SynModuleDecl.NestedModule(componentInfo, modules, _, _) ->
                 addComponentInfo NavigableItemKind.Module componentInfo false
                 for m in modules do
                     walkSynModuleDecl m
@@ -196,7 +212,7 @@ module NavigableItemsCollector =
             | SynModuleDecl.HashDirective _
             | SynModuleDecl.Open _ -> ()
 
-        and walkSynTypeDefn(TypeDefn(componentInfo, representation, members, _range)) = 
+        and walkSynTypeDefn(TypeDefn(componentInfo, representation, members, _)) = 
             addComponentInfo NavigableItemKind.Type componentInfo false
             walkSynTypeDefnRepr representation
             for m in members do
@@ -204,22 +220,22 @@ module NavigableItemsCollector =
 
         and walkSynTypeDefnRepr(typeDefnRepr: SynTypeDefnRepr) = 
             match typeDefnRepr with
-            | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
+            | SynTypeDefnRepr.ObjectModel(_, members, _) ->
                 for m in members do
                     walkSynMemberDefn m
-            | SynTypeDefnRepr.Simple(repr, _range) -> 
+            | SynTypeDefnRepr.Simple(repr, _) -> 
                 walkSynTypeDefnSimpleRepr repr false
 
         and walkSynTypeDefnSimpleRepr(repr: SynTypeDefnSimpleRepr) isSig = 
             match repr with
-            | SynTypeDefnSimpleRepr.Enum(enumCases, _range) ->
+            | SynTypeDefnSimpleRepr.Enum(enumCases, _) ->
                 for c in enumCases do
                     addEnumCase c isSig
-            | SynTypeDefnSimpleRepr.Record(_access, fields, _range) ->
+            | SynTypeDefnSimpleRepr.Record(_, fields, _) ->
                 for f in fields do
                     // TODO: add specific case for record field?
                     addField f isSig
-            | SynTypeDefnSimpleRepr.Union(_access, unionCases, _range) ->
+            | SynTypeDefnSimpleRepr.Union(_, unionCases, _) ->
                 for uc in unionCases do
                     addUnionCase uc isSig
             | SynTypeDefnSimpleRepr.General _
@@ -229,21 +245,21 @@ module NavigableItemsCollector =
 
         and walkSynMemberDefn (memberDefn: SynMemberDefn) =
             match memberDefn with
-            | SynMemberDefn.AbstractSlot(synValSig, memberFlags, _range) ->
+            | SynMemberDefn.AbstractSlot(synValSig, memberFlags, _) ->
                 addMember synValSig memberFlags false
-            | SynMemberDefn.AutoProperty(_attributes, _isStatic, id, _type, _memberKind, _memberFlags, _xmlDoc, _access, _rhs, _r1, _r2) ->
+            | SynMemberDefn.AutoProperty(_, _, id, _, _, _, _, _, _, _, _) ->
                 addIdent NavigableItemKind.Property id false
-            | SynMemberDefn.Interface(_interfaceType, members, _range) ->
+            | SynMemberDefn.Interface(_, members, _) ->
                 match members with
                 | Some members ->
                     for m in members do
                         walkSynMemberDefn m
                 | None -> ()
-            | SynMemberDefn.Member(binding, _range) ->
+            | SynMemberDefn.Member(binding, _) ->
                 addBinding binding None
-            | SynMemberDefn.NestedType(typeDef, _access, _range) -> 
+            | SynMemberDefn.NestedType(typeDef, _, _) -> 
                 walkSynTypeDefn typeDef
-            | SynMemberDefn.ValField(field, _range) ->
+            | SynMemberDefn.ValField(field, _) ->
                 addField field false
             | SynMemberDefn.LetBindings (bindings, _, _, _) -> 
                 bindings |> List.iter (fun binding -> addBinding binding (Some NavigableItemKind.Field))

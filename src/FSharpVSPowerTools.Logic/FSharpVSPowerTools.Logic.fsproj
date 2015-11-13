@@ -132,6 +132,9 @@
     <Compile Include="ActiveViewsRegistratorListener.fs">
       <Link>Navigation/ActiveViewsRegistratorListener.fs</Link>
     </Compile>
+	<Compile Include="NavigableItemCache.fs">
+      <Link>Navigation/NavigableItemCache.fs</Link>
+    </Compile>
     <Compile Include="NavigateToItem.fs">
       <Link>Navigation/NavigateToItem.fs</Link>
     </Compile>

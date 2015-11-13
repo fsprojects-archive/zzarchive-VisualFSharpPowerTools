@@ -16,7 +16,6 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools.AssemblyContentProvider
 open FSharpVSPowerTools.AsyncMaybe
-open System.Threading
 
 type FilePath = string
 
@@ -124,7 +123,6 @@ type VSLanguageService
         }
 
     let entityCache = EntityCache()
-    let navigableItemCache = System.Collections.Concurrent.ConcurrentDictionary<string, Navigation.NavigableItem[]>()
 
     member __.GetSymbol(point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
@@ -146,38 +144,17 @@ type VSLanguageService
             return! instance.ParseFileInProject(opts, fileName, source) |> liftAsync
         }
 
+    member __.ParseFileInProject (fileName, source, projectProvider: IProjectProvider) =
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return! instance.ParseFileInProject(opts, fileName, source)
+        }
+
     member __.ParseAndCheckFileInProject (currentFile: string, projectProvider: IProjectProvider) =
         asyncMaybe {
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
             return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) |> liftAsync
-        }
-
-    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct: CancellationToken) =
-        async {
-            let! opts = projectProvider.GetProjectCheckerOptions instance
-            let openFiles = openDocuments |> Map.toArray |> Array.map fst |> Set.ofArray
-            let cachedItems, newItems =
-                projectProvider.SourceFiles 
-                |> Array.mapPartition (fun file ->
-                    if Set.contains file openFiles then Choice2Of2 file
-                    else 
-                        match navigableItemCache.TryGetValue file with
-                        | true, items -> Choice1Of2 items
-                        | _ -> Choice2Of2 file)
-
-            cachedItems |> Array.iter processNavigableItems
-
-            openFiles |> Set.iter (fun x ->
-                let mutable item = null
-                navigableItemCache.TryRemove(x, &item) |> ignore)
-
-            let processAst file ast =
-                let items = Navigation.NavigableItemsCollector.collect ast |> Seq.toArray
-                navigableItemCache.[file] <- items
-                processNavigableItems items
-
-            return! instance.ProcessParseTrees(opts, openDocuments, newItems, processAst, ct)
         }
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
@@ -283,7 +260,7 @@ type VSLanguageService
             return allSymbolsUses
         }
 
-     member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
+    member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
          async {
              let projects =
                  match getSymbolDeclLocation symbol with
@@ -301,15 +278,15 @@ type VSLanguageService
              | None -> return None
          }
 
-     member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
+    member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
 
-     member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+    member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
             let! opts = currentProject.GetProjectCheckerOptions instance
             return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
         }
 
-     member __.GetAllEntities (fileName, project: IProjectProvider) =
+    member __.GetAllEntities (fileName, project: IProjectProvider) =
         asyncMaybe { 
             let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             let! source = openDocumentsTracker.TryGetDocumentText fileName
@@ -330,7 +307,7 @@ type VSLanguageService
         }
 
     member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file) =
-        asyncMaybe {    
+        asyncMaybe {
             let! source = openDocumentsTracker.TryGetDocumentText file
             let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             try return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)
@@ -347,7 +324,6 @@ type VSLanguageService
         debug "[Language Service] Clearing FCS caches."
         instance.RawChecker.InvalidateAll()
         entityCache.Clear()
-        navigableItemCache.Clear()
     
     member __.CheckProjectInBackground (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName

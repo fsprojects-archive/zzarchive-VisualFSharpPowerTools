@@ -10,17 +10,18 @@ open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open EnvDTE
-open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Navigation
 open System.Collections.Concurrent
+open System.IO
+open FSharpVSPowerTools.AsyncMaybe
 
 module Constants = 
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])
 
 type NavigateToItemExtraData = 
     { FileName: string
-      Span: Range01
+      Span: NavigableItemRange
       Description: string }
 
 module private ItemKind =
@@ -93,11 +94,56 @@ type NavigateToItemProvider
         serviceProvider: IServiceProvider,
         languageService: VSLanguageService,
         itemDisplayFactory: INavigateToItemDisplayFactory,
-        projectFactory: ProjectFactory
+        projectFactory: ProjectFactory,
+        navigableItemCache: NavigableItemCache
     ) = 
     let processProjectsCTS = new CancellationTokenSource()
     let mutable searchCts = CancellationTokenSource.CreateLinkedTokenSource processProjectsCTS.Token
     
+    let processParseTrees (project: IProjectProvider, openDocuments, files: string[], parseTreeHandler, ct: CancellationToken) =
+        let rec loop i = 
+            asyncMaybe {
+                if not ct.IsCancellationRequested && i < files.Length then
+                    let file = files.[i]
+                    let! source, lastWriteTime = 
+                        Map.tryFind file openDocuments 
+                        |> Option.orTry (fun _ -> 
+                            maybe {
+                                let! source = Option.attempt (fun _ -> File.ReadAllText file)
+                                let! lastWriteTime = Option.attempt (fun _ -> File.GetLastWriteTimeUtc file)
+                                return source, lastWriteTime 
+                            })
+                  
+                    let! parseResults = languageService.ParseFileInProject(file, source, project) |> liftAsync
+                    let! ast = parseResults.ParseTree
+                    parseTreeHandler file lastWriteTime ast
+                    return! loop (i + 1)
+            }
+        loop 0 |> Async.Ignore
+
+    let processNavigableItemsInProject (openDocuments, project: IProjectProvider, processNavigableItems, ct: CancellationToken) =
+        async {
+            let openFilesPaths = openDocuments |> Map.toArray |> Array.map fst |> Set.ofArray
+            let cachedItems, newItems =
+                project.SourceFiles 
+                |> Array.mapPartition (fun file ->
+                    if Set.contains file openFilesPaths then Choice2Of2 file
+                    else 
+                        match navigableItemCache.TryGet file with
+                        | Some items -> Choice1Of2 items
+                        | None -> Choice2Of2 file)
+
+            cachedItems |> Array.iter processNavigableItems
+            openFilesPaths |> Set.iter navigableItemCache.Remove
+
+            let processAst file lastWriteTime ast =
+                let items = Navigation.NavigableItemsCollector.collect file ast |> Seq.toArray
+                navigableItemCache.Set { FilePath = file; FileLastWriteTime = lastWriteTime; Items = items }
+                processNavigableItems items
+
+            return! processParseTrees(project, openDocuments, newItems, processAst, ct)
+        }
+
     let projectIndexes = 
         lazy
             let listFSharpProjectsInSolution() = 
@@ -105,7 +151,8 @@ type NavigateToItemProvider
                 |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
-                openDocumentsTracker.MapOpenDocuments(fun (KeyValue (path, doc)) -> path, doc.Text.Value)
+                openDocumentsTracker.MapOpenDocuments (fun (KeyValue (path, doc)) -> 
+                    path, (doc.Text.Value, doc.LastChangeTime))
                 |> Map.ofSeq
 
             let projects = 
@@ -122,7 +169,7 @@ type NavigateToItemProvider
             
             // TODO: consider making index more coarse grained (i.e. 1 TCS per project instead of file)
             let length = projects |> Array.sumBy (fun p -> p.SourceFiles.Length)
-            let indexPromises = Array.init length (fun _ -> Tasks.TaskCompletionSource<_>())
+            let indexPromises = Array.init length (fun _ -> Tasks.TaskCompletionSource())
             let fetchIndexes = 
                 async {
                     let i = ref 0
@@ -135,8 +182,7 @@ type NavigateToItemProvider
                         incr counter
                     
                     while !i < projects.Length && not processProjectsCTS.IsCancellationRequested do
-                        do! languageService.ProcessNavigableItemsInProject(
-                                openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
+                        do! processNavigableItemsInProject(openedDocuments, projects.[!i], processNavigableItemsInFile, processProjectsCTS.Token)
                         incr i 
                 }
             Async.StartInThreadPoolSafe fetchIndexes
@@ -144,12 +190,11 @@ type NavigateToItemProvider
 
     let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct) = 
         let processItem (seen: ConcurrentDictionary<_, unit>) (item: NavigableItem, name, isOperator, matchKind: Index.MatchKind) = 
-            let fileName, range01 = Range.toFileZ item.Range
             let itemName = if isOperator then "(" + name + ")" else name
-            if seen.TryAdd((itemName, fileName, range01), ()) then
+            if seen.TryAdd ((itemName, item.FilePath, item.Range), ()) then
                 let kind, textKind = ItemKind.toKinds item.Kind
                 let textKind = textKind + (if item.IsSignature then "(signature)" else "(implementation)")
-                let extraData = { FileName = fileName; Span = range01; Description = textKind; }
+                let extraData = { FileName = item.FilePath; Span = item.Range; Description = textKind; }
                 let navigateToItem = NavigateToItem(itemName, kind, "F#", searchValue, extraData, enum (int matchKind), itemDisplayFactory)
                 callback.AddItem navigateToItem
 
@@ -194,8 +239,8 @@ type NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IService
         member __.Description = extraData.Description
         member __.DescriptionItems = Constants.EmptyReadOnlyCollection
         member __.NavigateTo() = 
-            let (startRow, startCol), (endRow, endCol) = extraData.Span
-            serviceProvider.NavigateTo(extraData.FileName, startRow, startCol, endRow, endCol)
+            serviceProvider.NavigateTo(extraData.FileName, extraData.Span.Start.Row, 
+                extraData.Span.Start.Col, extraData.Span.End.Row, extraData.Span.End.Col)
 
 [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2012)>]
 type VS2012NavigateToItemDisplayFactory() =
@@ -219,8 +264,9 @@ type NavigateToItemProviderFactory
         languageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
         vsCompositionService: ICompositionService,
-        projectFactory: ProjectFactory
-    ) =
+        projectFactory: ProjectFactory,
+        [<Import(typeof<NavigableItemCache>)>] navigableItemCache: NavigableItemCache
+    ) = 
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
@@ -245,6 +291,6 @@ type NavigateToItemProviderFactory
                 provider <- null
                 false
             else
-                provider <- 
-                    new NavigateToItemProvider(openDocumentsTracker, serviceProvider, languageService, itemDisplayFactory, projectFactory)
+                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, 
+                                    languageService, itemDisplayFactory, projectFactory, navigableItemCache)
                 true

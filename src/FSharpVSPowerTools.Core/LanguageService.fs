@@ -98,7 +98,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             | None -> 
                 return FSharpFindDeclResult.DeclNotFound FSharpFindDeclFailureReason.Unknown
             | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)       
+                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)
         }
             
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
@@ -148,7 +148,6 @@ type LexerBase() =
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Collections.Concurrent
-open System.Threading
 
 type FileState =
     | Checked
@@ -281,7 +280,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
             debug "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName
             let! opts = checkerInstance.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
-            let results =         
+            let results =
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
                 if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then
                     match fscVersion with
@@ -309,7 +308,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
               
             // Print contents of check option for debugging purposes
             debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    results.ProjectFileName results.ProjectFileNames results.OtherOptions results.IsIncompleteTypeCheckEnvironment results.UseScriptResolutionRules        
+                                    results.ProjectFileName results.ProjectFileNames results.OtherOptions results.IsIncompleteTypeCheckEnvironment results.UseScriptResolutionRules
             return results
         with e -> 
             return failwithf "Exception when getting check options for '%s'\n.Details: %A" fileName e
@@ -328,7 +327,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           ReferencedProjects = referencedProjects }
     debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
                                     opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
-    opts     
+    opts
 
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
@@ -384,12 +383,12 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
              let! result = fileCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
-                 let! refs =                    
+                 let! refs =
                     let dependentProjects = dependentProjectsOptions |> Seq.toArray
                     
                     dependentProjects |> Async.Array.mapi (fun index opts ->
-                          async {   
-                            try                         
+                          async {
+                            try
                                 let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
                                 reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
                                 let! projectResults = checkerAsync (fun x -> x.ParseAndCheckProject opts)
@@ -411,24 +410,8 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member __.ProcessParseTrees (opts: FSharpProjectOptions, openDocuments, files: string[], parseTreeHandler, ct: CancellationToken) =
-      let rec loop i = 
-          asyncMaybe {
-              if not ct.IsCancellationRequested && i < files.Length then
-                  let file = files.[i]
-                  let! source = 
-                      Map.tryFind file openDocuments 
-                      |> Option.orElse (fun _ -> Option.attempt (fun _ -> File.ReadAllText file)) 
-                  
-                  let! parseResults = checkerInstance.ParseFileInProject(file, source, opts) |> liftAsync
-                  let! ast = parseResults.ParseTree
-                  parseTreeHandler file ast
-                  return! loop (i + 1)
-            }
-      loop 0 |> Async.Ignore
-
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
-                                           checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
+  member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
+                                         checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
 
         async {
             let! results = pf.TimeAsync "LS ParseAndCheckFileInProject" <| fun _ ->
@@ -501,7 +484,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                                     // So we add a FullName without having the type part.
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
-                                 |]   
+                                 |]
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
                         |> Array.map (fun fullName -> fullName.Split '.')
