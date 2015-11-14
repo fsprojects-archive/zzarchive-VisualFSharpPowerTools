@@ -77,12 +77,13 @@ type StandardCommandDispatcher private () as self =
         //let generalOptions = Setting.getGeneralOptions codeServices.ServiceProvider
         //Unchecked.defaultof<StandardCommandDispatcher>
         maybe{
-            let!  generalOptions = Setting.tryGetGeneralOptions codeServices.ServiceProvider
-            return!
-                if not generalOptions.FormattingEnabled then None else
+         //   let!  generalOptions = Setting.tryGetGeneralOptions codeServices.ServiceProvider
+ //               return!
+           //     if not generalOptions.FormattingEnabled then None else
                 let dispatcher = StandardCommandDispatcher()
                 dispatcher.textView <- textView
-                Some dispatcher
+                return!
+                    Some dispatcher
         }
  
 

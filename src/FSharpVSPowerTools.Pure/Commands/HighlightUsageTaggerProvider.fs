@@ -26,9 +26,9 @@ type HighlightUsageTaggerProvider [<ImportingConstructor>]
     interface IViewTaggerProvider with
         member __.CreateTagger (textView, buffer) = 
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
-                if not generalOptions.HighlightUsageEnabled then return! None else
+            //    if not generalOptions.HighlightUsageEnabled then return! None else
                 return buffer.Properties.GetOrCreateSingletonProperty (fun () ->
                     new HighlightUsageTagger (doc, textView, vsLanguageService, serviceProvider, projectFactory)
                 ) :> obj :?> _

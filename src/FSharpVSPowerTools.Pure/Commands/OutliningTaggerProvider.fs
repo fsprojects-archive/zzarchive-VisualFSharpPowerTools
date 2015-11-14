@@ -33,9 +33,9 @@ type OutliningTaggerProvider [<ImportingConstructor>]
     interface ITaggerProvider with
         member __.CreateTagger buffer = 
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+             //   let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
-                if not generalOptions.OutliningEnabled then return! None else
+            //    if not generalOptions.OutliningEnabled then return! None else
                 return buffer.Properties.GetOrCreateSingletonProperty (fun () ->
                     new OutliningTagger (doc, serviceProvider, textEditorFactoryService, 
                             projectionBufferFactoryService, projectFactory, vsLanguageService)

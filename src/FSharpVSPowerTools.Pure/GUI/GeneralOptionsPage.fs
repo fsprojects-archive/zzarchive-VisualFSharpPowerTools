@@ -35,12 +35,13 @@ module internal Utils =
 
 [<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<ComVisible true>]
-[<CLSCompliant(false)>]
 [<Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")>]
-type GeneralOptionsPage () as self =
+type GeneralOptionsPage () =
     inherit UIElementDialogPage () 
+    //inherit DialogPage()
 
-    let mutable generalOptionsControl = Unchecked.defaultof<_> 
+    let generalOptionsControl = GeneralOptionsView ()
+    do generalOptionsControl.DataContext <- GeneralOptionsViewModel ()
     
     let componentModel = Package.GetGlobalService(typeof<SComponentModel>) :?> IComponentModel 
         
@@ -89,112 +90,113 @@ type GeneralOptionsPage () as self =
         with get () = generalOptionsControl :> UIElement
 
     override __.OnActivate cancelArgs =
-        generalOptionsControl <- GeneralOptionsControlView ()
-        generalOptionsControl.DataContext <- GeneralOptionsViewModel ()
+
         
         base.OnActivate cancelArgs
 
     override __.OnApply pageApplyArgs =
         base.OnApply pageApplyArgs
 
-    [<Browsable(false); DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>]
-    override __.Window
-        with get () = self:> IWin32Window
-
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.XmlDocEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.FormattingEnabled with get() = formattingEnabled and set v = formattingEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.NavBarEnabled with get() = navBarEnabledInAppConfig and set v = navBarEnabledInAppConfig <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.HighlightUsageEnabled with get() = highlightUsageEnabled and set v = highlightUsageEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.RenameRefactoringEnabled with get() = renameRefactoringEnabled and set v = renameRefactoringEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.DepthColorizerEnabled with get() = depthColorizerEnabled and set v = depthColorizerEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.NavigateToEnabled with get() = navigateToEnabled and set v = navigateToEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.SyntaxColoringEnabled with get() = syntaxColoringEnabled and set v = syntaxColoringEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.InterfaceImplementationEnabled with get() = interfaceImplementationEnabled and set v = interfaceImplementationEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.FolderOrganizationEnabled with get() = folderOrganizationEnabled and set v = folderOrganizationEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.FindAllReferencesEnabled with get() = findAllReferencesEnabled and set v = findAllReferencesEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.GenerateRecordStubEnabled with get() = generateRecordStubEnabled and set v = generateRecordStubEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.UnionPatternMatchCaseGenerationEnabled with get() = unionPatternMatchCaseGenerationEnabled and set v = unionPatternMatchCaseGenerationEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.ResolveUnopenedNamespacesEnabled with get() = resolveUnopenedNamespacesEnabled and set v = resolveUnopenedNamespacesEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.UnusedReferencesEnabled with get() = unusedReferencesEnabled and set v = unusedReferencesEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.UnusedOpensEnabled with get() = unusedOpensEnabled and set v = unusedOpensEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.TaskListCommentsEnabled with get() = taskListCommentsEnabled and set v = taskListCommentsEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.GoToMetadataEnabled with get() = goToMetadataEnabled and set v = goToMetadataEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.GenerateReferencesEnabled with get() = generateReferencesEnabled and set v = generateReferencesEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.GoToSymbolSourceEnabled with get() = goToSymbolSourceEnabled and set v = goToSymbolSourceEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.QuickInfoPanelEnabled with get() = quickInfoPanelEnabled and set v = quickInfoPanelEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.LinterEnabled with get() = linterEnabled and set v = linterEnabled <- v
-    [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-    member __.OutliningEnabled with get() = outliningEnabled and set v = outliningEnabled <- v        
-
+//    [<Browsable(false); DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>]
+//    override __.Window
+//        with get () = //generalOptionsControl :> UserControl  
+//            self :> IWin32Window
     interface IGeneralOptions with
+
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.XmlDocEnabled                          with get () = self.XmlDocEnabled                           and set v = self.XmlDocEnabled                            <- v
+        member __.XmlDocEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.FormattingEnabled                      with get () = self.FormattingEnabled                       and set v = self.FormattingEnabled                        <- v
+        member __.FormattingEnabled with get() = formattingEnabled and set v = formattingEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.NavBarEnabled                          with get () = self.NavBarEnabled                           and set v = self.NavBarEnabled                            <- v
+        member __.NavBarEnabled with get() = navBarEnabledInAppConfig and set v = navBarEnabledInAppConfig <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.HighlightUsageEnabled                  with get () = self.HighlightUsageEnabled                   and set v = self.HighlightUsageEnabled                    <- v
+        member __.HighlightUsageEnabled with get() = highlightUsageEnabled and set v = highlightUsageEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.RenameRefactoringEnabled               with get () = self.RenameRefactoringEnabled                and set v = self.RenameRefactoringEnabled                 <- v
+        member __.RenameRefactoringEnabled with get() = renameRefactoringEnabled and set v = renameRefactoringEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.DepthColorizerEnabled                  with get () = self.DepthColorizerEnabled                   and set v = self.DepthColorizerEnabled                    <- v
+        member __.DepthColorizerEnabled with get() = depthColorizerEnabled and set v = depthColorizerEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.NavigateToEnabled                      with get () = self.NavigateToEnabled                       and set v = self.NavigateToEnabled                        <- v
+        member __.NavigateToEnabled with get() = navigateToEnabled and set v = navigateToEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.SyntaxColoringEnabled                  with get () = self.SyntaxColoringEnabled                   and set v = self.SyntaxColoringEnabled                    <- v
+        member __.SyntaxColoringEnabled with get() = syntaxColoringEnabled and set v = syntaxColoringEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.InterfaceImplementationEnabled         with get () = self.InterfaceImplementationEnabled          and set v = self.InterfaceImplementationEnabled           <- v
+        member __.InterfaceImplementationEnabled with get() = interfaceImplementationEnabled and set v = interfaceImplementationEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.FolderOrganizationEnabled              with get () = self.FolderOrganizationEnabled               and set v = self.FolderOrganizationEnabled                <- v
+        member __.FolderOrganizationEnabled with get() = folderOrganizationEnabled and set v = folderOrganizationEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.FindAllReferencesEnabled               with get () = self.FindAllReferencesEnabled                and set v = self.FindAllReferencesEnabled                 <- v
+        member __.FindAllReferencesEnabled with get() = findAllReferencesEnabled and set v = findAllReferencesEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.GenerateRecordStubEnabled              with get () = self.GenerateRecordStubEnabled               and set v = self.GenerateRecordStubEnabled                <- v
+        member __.GenerateRecordStubEnabled with get() = generateRecordStubEnabled and set v = generateRecordStubEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.UnionPatternMatchCaseGenerationEnabled with get () = self.UnionPatternMatchCaseGenerationEnabled  and set v = self.UnionPatternMatchCaseGenerationEnabled   <- v
+        member __.UnionPatternMatchCaseGenerationEnabled with get() = unionPatternMatchCaseGenerationEnabled and set v = unionPatternMatchCaseGenerationEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.ResolveUnopenedNamespacesEnabled       with get () = self.ResolveUnopenedNamespacesEnabled        and set v = self.ResolveUnopenedNamespacesEnabled         <- v
+        member __.ResolveUnopenedNamespacesEnabled with get() = resolveUnopenedNamespacesEnabled and set v = resolveUnopenedNamespacesEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.UnusedReferencesEnabled                with get () = self.UnusedReferencesEnabled                 and set v = self.UnusedReferencesEnabled                  <- v
+        member __.UnusedReferencesEnabled with get() = unusedReferencesEnabled and set v = unusedReferencesEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.UnusedOpensEnabled                     with get () = self.UnusedOpensEnabled                      and set v = self.UnusedOpensEnabled                       <- v
+        member __.UnusedOpensEnabled with get() = unusedOpensEnabled and set v = unusedOpensEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.TaskListCommentsEnabled                with get () = self.TaskListCommentsEnabled                 and set v = self.TaskListCommentsEnabled                  <- v
+        member __.TaskListCommentsEnabled with get() = taskListCommentsEnabled and set v = taskListCommentsEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.GoToMetadataEnabled                    with get () = self.GoToMetadataEnabled                     and set v = self.GoToMetadataEnabled                      <- v
+        member __.GoToMetadataEnabled with get() = goToMetadataEnabled and set v = goToMetadataEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.GenerateReferencesEnabled              with get () = self.GenerateReferencesEnabled               and set v = self.GenerateReferencesEnabled                <- v
+        member __.GenerateReferencesEnabled with get() = generateReferencesEnabled and set v = generateReferencesEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.GoToSymbolSourceEnabled                with get () = self.GoToSymbolSourceEnabled                 and set v = self.GoToSymbolSourceEnabled                  <- v
+        member __.GoToSymbolSourceEnabled with get() = goToSymbolSourceEnabled and set v = goToSymbolSourceEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.QuickInfoPanelEnabled                  with get () = self.QuickInfoPanelEnabled                   and set v = self.QuickInfoPanelEnabled                    <- v
+        member __.QuickInfoPanelEnabled with get() = quickInfoPanelEnabled and set v = quickInfoPanelEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.LinterEnabled                          with get () = self.LinterEnabled                           and set v = self.LinterEnabled                            <- v
+        member __.LinterEnabled with get() = linterEnabled and set v = linterEnabled <- v
         [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
-        member __.OutliningEnabled                       with get () = self.OutliningEnabled                        and set v = self.OutliningEnabled                         <- v
+        member __.OutliningEnabled with get() = outliningEnabled and set v = outliningEnabled <- v        
+
+//    interface IGeneralOptions with
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.XmlDocEnabled                          with get () = self.XmlDocEnabled                           and set v = self.XmlDocEnabled                            <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.FormattingEnabled                      with get () = self.FormattingEnabled                       and set v = self.FormattingEnabled                        <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.NavBarEnabled                          with get () = self.NavBarEnabled                           and set v = self.NavBarEnabled                            <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.HighlightUsageEnabled                  with get () = self.HighlightUsageEnabled                   and set v = self.HighlightUsageEnabled                    <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.RenameRefactoringEnabled               with get () = self.RenameRefactoringEnabled                and set v = self.RenameRefactoringEnabled                 <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.DepthColorizerEnabled                  with get () = self.DepthColorizerEnabled                   and set v = self.DepthColorizerEnabled                    <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.NavigateToEnabled                      with get () = self.NavigateToEnabled                       and set v = self.NavigateToEnabled                        <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.SyntaxColoringEnabled                  with get () = self.SyntaxColoringEnabled                   and set v = self.SyntaxColoringEnabled                    <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.InterfaceImplementationEnabled         with get () = self.InterfaceImplementationEnabled          and set v = self.InterfaceImplementationEnabled           <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.FolderOrganizationEnabled              with get () = self.FolderOrganizationEnabled               and set v = self.FolderOrganizationEnabled                <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.FindAllReferencesEnabled               with get () = self.FindAllReferencesEnabled                and set v = self.FindAllReferencesEnabled                 <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.GenerateRecordStubEnabled              with get () = self.GenerateRecordStubEnabled               and set v = self.GenerateRecordStubEnabled                <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.UnionPatternMatchCaseGenerationEnabled with get () = self.UnionPatternMatchCaseGenerationEnabled  and set v = self.UnionPatternMatchCaseGenerationEnabled   <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.ResolveUnopenedNamespacesEnabled       with get () = self.ResolveUnopenedNamespacesEnabled        and set v = self.ResolveUnopenedNamespacesEnabled         <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.UnusedReferencesEnabled                with get () = self.UnusedReferencesEnabled                 and set v = self.UnusedReferencesEnabled                  <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.UnusedOpensEnabled                     with get () = self.UnusedOpensEnabled                      and set v = self.UnusedOpensEnabled                       <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.TaskListCommentsEnabled                with get () = self.TaskListCommentsEnabled                 and set v = self.TaskListCommentsEnabled                  <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.GoToMetadataEnabled                    with get () = self.GoToMetadataEnabled                     and set v = self.GoToMetadataEnabled                      <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.GenerateReferencesEnabled              with get () = self.GenerateReferencesEnabled               and set v = self.GenerateReferencesEnabled                <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.GoToSymbolSourceEnabled                with get () = self.GoToSymbolSourceEnabled                 and set v = self.GoToSymbolSourceEnabled                  <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.QuickInfoPanelEnabled                  with get () = self.QuickInfoPanelEnabled                   and set v = self.QuickInfoPanelEnabled                    <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.LinterEnabled                          with get () = self.LinterEnabled                           and set v = self.LinterEnabled                            <- v
+//        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
+//        member __.OutliningEnabled                       with get () = self.OutliningEnabled                        and set v = self.OutliningEnabled                         <- v
 
 
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so

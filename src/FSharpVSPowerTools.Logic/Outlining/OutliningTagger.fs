@@ -110,53 +110,53 @@ type OutliningTagger
 
     let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
 
-    let outliningEnabled scope =
-        let options = outliningOptions.Value
-        match scope with
-        | Scope.Open                  -> options.OpensEnabled
-        | Scope.Module                -> options.ModulesEnabled
-        | Scope.HashDirective         -> options.HashDirectivesEnabled
-        | Scope.Attribute             -> options.AttributesEnabled
-        | Scope.Interface             
-        | Scope.TypeExtension         
-        | Scope.Type                  -> options.TypesEnabled
-        | Scope.Member                -> options.MembersEnabled
-        | Scope.LetOrUse              -> options.LetOrUseEnabled 
-        | Scope.Match                 
-        | Scope.MatchClause           
-        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
-        | Scope.IfThenElse            
-        | Scope.ThenInIfThenElse      
-        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
-        | Scope.TryWith               
-        | Scope.TryInTryWith          
-        | Scope.WithInTryWith         
-        | Scope.TryFinally            
-        | Scope.TryInTryFinally       
-        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled
-        | Scope.ArrayOrList           -> options.CollectionsEnabled
-        | Scope.CompExpr               
-        | Scope.ObjExpr                
-        | Scope.Quote                  
-        | Scope.Record                 
-        | Scope.Tuple                  
-        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
-        | Scope.CompExprInternal       
-        | Scope.LetOrUseBang           
-        | Scope.YieldOrReturn          
-        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
-        | Scope.UnionCase              
-        | Scope.EnumCase               
-        | Scope.RecordField            
-        | Scope.SimpleType             
-        | Scope.RecordDefn             
-        | Scope.UnionDefn             -> options.SimpleTypesEnabled
-        | Scope.For                   
-        | Scope.While                 -> options.LoopsEnabled
-//        | Scope.Namespace             ->
-//        | Scope.Do                    -> 
-//        | Scope.Lambda
-        | _ -> true
+//    let outliningEnabled scope =
+//        let options = outliningOptions.Value
+//        match scope with
+//        | Scope.Open                  -> options.OpensEnabled
+//        | Scope.Module                -> options.ModulesEnabled
+//        | Scope.HashDirective         -> options.HashDirectivesEnabled
+//        | Scope.Attribute             -> options.AttributesEnabled
+//        | Scope.Interface             
+//        | Scope.TypeExtension         
+//        | Scope.Type                  -> options.TypesEnabled
+//        | Scope.Member                -> options.MembersEnabled
+//        | Scope.LetOrUse              -> options.LetOrUseEnabled 
+//        | Scope.Match                 
+//        | Scope.MatchClause           
+//        | Scope.MatchLambda           -> options.PatternMatchesEnabled 
+//        | Scope.IfThenElse            
+//        | Scope.ThenInIfThenElse      
+//        | Scope.ElseInIfThenElse      -> options.IfThenElseEnabled 
+//        | Scope.TryWith               
+//        | Scope.TryInTryWith          
+//        | Scope.WithInTryWith         
+//        | Scope.TryFinally            
+//        | Scope.TryInTryFinally       
+//        | Scope.FinallyInTryFinally   -> options.TryWithFinallyEnabled
+//        | Scope.ArrayOrList           -> options.CollectionsEnabled
+//        | Scope.CompExpr               
+//        | Scope.ObjExpr                
+//        | Scope.Quote                  
+//        | Scope.Record                 
+//        | Scope.Tuple                  
+//        | Scope.SpecialFunc           -> options.TypeExpressionsEnabled 
+//        | Scope.CompExprInternal       
+//        | Scope.LetOrUseBang           
+//        | Scope.YieldOrReturn          
+//        | Scope.YieldOrReturnBang     -> options.CExpressionMembersEnabled
+//        | Scope.UnionCase              
+//        | Scope.EnumCase               
+//        | Scope.RecordField            
+//        | Scope.SimpleType             
+//        | Scope.RecordDefn             
+//        | Scope.UnionDefn             -> options.SimpleTypesEnabled
+//        | Scope.For                   
+//        | Scope.While                 -> options.LoopsEnabled
+////        | Scope.Namespace             ->
+////        | Scope.Do                    -> 
+////        | Scope.Lambda
+//        | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
@@ -172,7 +172,7 @@ type OutliningTagger
                 let scopedSpans = 
                     ast 
                     |> getOutliningRanges 
-                    |> Seq.filter (fun x -> outliningEnabled x.Scope)
+                   // |> Seq.filter (fun x -> outliningEnabled x.Scope)
                     |> Seq.choose (fromScopeRange snapshot)
                     |> Array.ofSeq
                 do! callInUIContext (fun _ -> triggerUpdate scopedSpans) |> liftAsync
@@ -276,53 +276,53 @@ type OutliningTagger
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text
         loop firstLineNum
 
-    let collapseByDefault scope =
-        let options = outliningOptions.Value
-        match scope with
-        | Scope.Open                  -> options.OpensCollapsedByDefault
-        | Scope.Module                -> options.ModulesCollapsedByDefault
-        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault
-        | Scope.Attribute             -> options.AttributesCollapsedByDefault
-        | Scope.Interface             
-        | Scope.TypeExtension         
-        | Scope.Type                  -> options.TypesCollapsedByDefault
-        | Scope.Member                -> options.MembersCollapsedByDefault
-        | Scope.LetOrUse              -> options.LetOrUseCollapsedByDefault 
-        | Scope.Match                 
-        | Scope.MatchClause           
-        | Scope.MatchLambda           -> options.PatternMatchesCollapsedByDefault 
-        | Scope.IfThenElse            
-        | Scope.ThenInIfThenElse      
-        | Scope.ElseInIfThenElse      -> options.IfThenElseCollapsedByDefault 
-        | Scope.TryWith               
-        | Scope.TryInTryWith          
-        | Scope.WithInTryWith         
-        | Scope.TryFinally            
-        | Scope.TryInTryFinally       
-        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault
-        | Scope.ArrayOrList           -> options.CollectionsCollapsedByDefault
-        | Scope.CompExpr               
-        | Scope.ObjExpr                
-        | Scope.Quote                  
-        | Scope.Record                 
-        | Scope.Tuple                  
-        | Scope.SpecialFunc           -> options.TypeExpressionsCollapsedByDefault 
-        | Scope.CompExprInternal       
-        | Scope.LetOrUseBang           
-        | Scope.YieldOrReturn          
-        | Scope.YieldOrReturnBang     -> options.CExpressionMembersCollapsedByDefault
-        | Scope.UnionCase              
-        | Scope.EnumCase               
-        | Scope.RecordField            
-        | Scope.SimpleType             
-        | Scope.RecordDefn             
-        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
-        | Scope.For                   
-        | Scope.While                 -> options.LoopsCollapsedByDefault
-//        | Scope.Namespace             ->
-//        | Scope.Do                    -> 
-//        | Scope.Lambda
-        | _ -> false
+//    let collapseByDefault scope =
+//        let options = outliningOptions.Value
+//        match scope with
+//        | Scope.Open                  -> options.OpensCollapsedByDefault
+//        | Scope.Module                -> options.ModulesCollapsedByDefault
+//        | Scope.HashDirective         -> options.HashDirectivesCollapsedByDefault
+//        | Scope.Attribute             -> options.AttributesCollapsedByDefault
+//        | Scope.Interface             
+//        | Scope.TypeExtension         
+//        | Scope.Type                  -> options.TypesCollapsedByDefault
+//        | Scope.Member                -> options.MembersCollapsedByDefault
+//        | Scope.LetOrUse              -> options.LetOrUseCollapsedByDefault 
+//        | Scope.Match                 
+//        | Scope.MatchClause           
+//        | Scope.MatchLambda           -> options.PatternMatchesCollapsedByDefault 
+//        | Scope.IfThenElse            
+//        | Scope.ThenInIfThenElse      
+//        | Scope.ElseInIfThenElse      -> options.IfThenElseCollapsedByDefault 
+//        | Scope.TryWith               
+//        | Scope.TryInTryWith          
+//        | Scope.WithInTryWith         
+//        | Scope.TryFinally            
+//        | Scope.TryInTryFinally       
+//        | Scope.FinallyInTryFinally   -> options.TryWithFinallyCollapsedByDefault
+//        | Scope.ArrayOrList           -> options.CollectionsCollapsedByDefault
+//        | Scope.CompExpr               
+//        | Scope.ObjExpr                
+//        | Scope.Quote                  
+//        | Scope.Record                 
+//        | Scope.Tuple                  
+//        | Scope.SpecialFunc           -> options.TypeExpressionsCollapsedByDefault 
+//        | Scope.CompExprInternal       
+//        | Scope.LetOrUseBang           
+//        | Scope.YieldOrReturn          
+//        | Scope.YieldOrReturnBang     -> options.CExpressionMembersCollapsedByDefault
+//        | Scope.UnionCase              
+//        | Scope.EnumCase               
+//        | Scope.RecordField            
+//        | Scope.SimpleType             
+//        | Scope.RecordDefn             
+//        | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
+//        | Scope.For                   
+//        | Scope.While                 -> options.LoopsCollapsedByDefault
+////        | Scope.Namespace             ->
+////        | Scope.Do                    -> 
+////        | Scope.Lambda
+//        | _ -> false
 
     // outlined regions that should be collapsed by default will make use of
     // the scope argument currently hidden by the wildcard `(scope,collapse,snapshotSpan)`
@@ -418,7 +418,7 @@ type OutliningTagger
             TagSpan ( collapseSpan,
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
-                        member __.IsDefaultCollapsed = collapseByDefault scope
+                        member __.IsDefaultCollapsed = false //collapseByDefault scope
                         member __.IsImplementation   = false
                         member __.CollapsedHintForm  =
                             OutliningHint (createElisionBufferView textEditorFactoryService, createBuffer) :> _

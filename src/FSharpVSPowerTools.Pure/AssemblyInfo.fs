@@ -1,7 +1,20 @@
 ﻿namespace System
 open System.Reflection
 open System.Runtime.CompilerServices
+open Microsoft.VisualStudio.Shell
 
+//[<assembly: ProvideCodeBase
+//            (AssemblyName="FSharpVSPowerTools.Pure",
+//            Version="2.2.0",
+//            CodeBase = "$PackageFolder$\\FSharpVSPowerTools.Pure.dll")>]
+//[<assembly: ProvideCodeBase
+//            (AssemblyName="FSharpVSPowerTools.Core",
+//            Version="2.2.0",
+//            CodeBase = "$PackageFolder$\\FSharpVSPowerTools.Core.dll")>]
+//[<assembly: ProvideCodeBase
+//            (AssemblyName="FSharpVSPowerTools.Logic",
+//            Version="2.2.0",
+//            CodeBase = "$PackageFolder$\\FSharpVSPowerTools.Logic.dll")>]
 [<assembly: InternalsVisibleToAttribute("FSharpVSPowerTools.Tests")>]
 [<assembly: AssemblyTitleAttribute("FSharpVSPowerTools.Pure")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools.Pure")>]

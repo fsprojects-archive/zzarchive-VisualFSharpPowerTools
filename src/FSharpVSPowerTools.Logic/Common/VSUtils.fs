@@ -480,17 +480,18 @@ type ITextDocumentFactoryService with
     member docService.TryDocumentFromBuffer (textBuffer:ITextBuffer) =
         let mutable doc = Unchecked.defaultof<ITextDocument>
         match docService.TryGetTextDocument (textBuffer,&doc) with
-        | true -> Some doc
-        | false -> None
+        | true -> Some doc | false -> None
 
 
 type IVsEditorAdaptersFactoryService with
 
     member inline adapter.TryGetViewAdapter wpfTextView =
-        adapter.GetViewAdapter wpfTextView |> Option.ofNull
+        match adapter.GetViewAdapter wpfTextView with
+        | null -> None | va -> Some va
 
     member inline adapter.TryGetWpfTextView viewAdapter =
-        adapter.GetWpfTextView viewAdapter |> Option.ofNull
+        match adapter.GetWpfTextView viewAdapter with
+        | null -> None | tview -> Some tview
 
 
 

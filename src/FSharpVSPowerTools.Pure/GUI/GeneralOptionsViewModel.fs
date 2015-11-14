@@ -16,7 +16,7 @@ type CheckBoxData =
 
 
 [<AutoOpen>]
-module internal Config =
+module Config =
 
     let xmlDocData = { 
         Label   = "Auto-Generate Xml Documentation Comment"
@@ -186,9 +186,6 @@ module internal Config =
 //        Enabled =
 //    }
 
-    let x = ()
-
-
 
 type public GeneralOptionsViewModel () as self =
     inherit ViewModelBase ()
@@ -246,7 +243,3 @@ type public GeneralOptionsViewModel () as self =
     member __.LinterEnabled                          with get () = linterEnabled                         .Value  and set v =  linterEnabled                          .Value <- v
     member __.OutliningEnabled                       with get () = outliningEnabled                      .Value  and set v =  outliningEnabled                       .Value <- v             
     
-
-
-type GeneralOptionsDesignVM () =
-    inherit GeneralOptionsViewModel ()

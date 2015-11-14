@@ -31,13 +31,13 @@ type XmlDocCommandFilterProvider [<ImportingConstructor>]
     interface IVsTextViewCreationListener with
         member __.VsTextViewCreated textViewAdapter = 
             unitMaybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! wpfTextView = editorFactory.TryGetWpfTextView textViewAdapter
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer wpfTextView.TextBuffer  
-                if generalOptions.XmlDocEnabled then 
-                    XmlDocFilter( textViewAdapter, wpfTextView, doc.FilePath, projectFactory, 
-                        vsLanguageService,OpenDocumentsTracker textDocumentFactoryService, serviceProvider)
-                    |> ignore
+         //       if generalOptions.XmlDocEnabled then 
+                XmlDocFilter( textViewAdapter, wpfTextView, doc.FilePath, projectFactory, 
+                    vsLanguageService,OpenDocumentsTracker textDocumentFactoryService, serviceProvider)
+                |> ignore
             } 
 
 

@@ -20,10 +20,7 @@ open System.Windows.Media
 
 
 module ClassificationTypes =
-    //namespace FSharpVSPowerTools
-    //
-    //    static class ClassificationTypes
-    //    
+
     let [<Literal>] FSharpReferenceType = Constants.fsharpReferenceType 
     let [<Literal>] FSharpValueType     = Constants.fsharpValueType     
     let [<Literal>] FSharpPatternCase   = Constants.fsharpPatternCase   

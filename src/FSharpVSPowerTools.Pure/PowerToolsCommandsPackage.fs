@@ -17,33 +17,30 @@ open System.Diagnostics
 open Microsoft.VisualStudio.ComponentModelHost 
 open FSharpVSPowerTools.Reference              
 
-[<AutoOpen>]
-module internal PackageHelpers =
-    let addService<'a> (serviceContainer:IServiceContainer) page = serviceContainer.AddService<'a> ((fun _ _ -> page :> obj), true)
-
+//[< ProvideAutoLoad (VSConstants.UICONTEXT. NoSolution_string) >]
+//[< ProvideAutoLoad (VSConstants.UICONTEXT.SolutionExists_string) >]
+[< ProvideAutoLoad (VSConstants.UICONTEXT.FSharpProject_string) >]
 [< ProvideBindingPath >]
 [< Guid "1F699E38-7D87-44F4-BC08-6B1DD5A6F926" >]
-[< PackageRegistration (UseManagedResourcesOnly = true) >]
+[< PackageRegistration (UseManagedResourcesOnly = true, RegisterUsing = RegistrationMethod.CodeBase) >]
 [< ProvideMenuResource (resourceID= "Menus.ctmenu", version=1) >]
 [< InstalledProductRegistration ("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400) >]
-[< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "General"        , 0s, 0s, true, 0) >]
+[< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "General", 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<FantomasOptionsPage>      , Resource.vsPackageTitle, "Formatting"     , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<CodeGenerationOptionsPage>, Resource.vsPackageTitle, "Code Generation", 0s, 0s, true, 0) >]
-//[< ProvideOptionPage (typeof<GlobalOptionsPage>        , Resource.vsPackageTitle, "Configuration"  , 0s, 0s, true, 0) >]
+[< ProvideOptionPage (typeof<GlobalOptionsPage>        , Resource.vsPackageTitle, "Configuration"  , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<OutliningOptionsPage>     , Resource.vsPackageTitle, "Outlining"      , 0s, 0s, true, 0) >]
 [< ProvideOptionPage (typeof<Linting.LintOptionsPage>  , Resource.vsPackageTitle, "Lint"           , 0s, 0s, true, 0) >]
 [< ProvideService (typeof<IGeneralOptions>) >]   
 //[< ProvideService (typeof<IFormattingOptions>) >]
 //[< ProvideService (typeof<ICodeGenerationOptions>) >]
-//[< ProvideService (typeof<IGlobalOptions>) >]
+[< ProvideService (typeof<IGlobalOptions>) >]
 [< ProvideService (typeof<ILintOptions>) >]
-[< ProvideAutoLoad (VSConstants.UICONTEXT.SolutionExists_string) >]
-[< ProvideAutoLoad (VSConstants.UICONTEXT.FSharpProject_string) >]
-[< ProvideAutoLoad (VSConstants.UICONTEXT.NoSolution_string) >]
+[<ComVisible true>]
 type PowerToolsCommandsPackage () as self =
     inherit Package ()
 
-    static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
+  //  static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
 
     let mutable pctCookie = 0u
     let mutable objectManagerCookie = 0u
@@ -55,94 +52,109 @@ type PowerToolsCommandsPackage () as self =
     let serviceProvider     = self :> IServiceProvider
     let serviceContainer    = self :> IServiceContainer
 
-    let setupReferenceMenu () =
-        unitMaybe {
-            let! mcs = serviceProvider.TryGetService<OleMenuCommandService,IMenuCommandService> ()
-            (new FsiReferenceCommand (DTE.Value, mcs)).SetupCommands ()
-        }
+    
 
-    let setupFolderMenu () =
-        unitMaybe {
-            let! mcs = serviceProvider.TryGetService<OleMenuCommandService,IMenuCommandService> ()
-            let! shell = serviceProvider.TryGetService<IVsUIShell,SVsUIShell>()
-            let folderMenu = new FolderMenuCommands (DTE.Value, mcs, shell)
-            folderMenu.SetupCommands ()
-            newFolderMenu <- Some folderMenu
-        }
-
-    let registerPriorityCommandTarget () =
-        unitMaybe {
-            let! rpct = serviceProvider.TryGetService<IVsRegisterPriorityCommandTarget,SVsRegisterPriorityCommandTarget>()
-            let! folderMenu = newFolderMenu
-            rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
-        }
-
-    let unregisterPriorityCommandTarget () =
-        unitMaybe {
-            if pctCookie <> 0u then 
-                let! rpct = serviceProvider.TryGetService<IVsRegisterPriorityCommandTarget,SVsRegisterPriorityCommandTarget>()
-                let! folderMenu = newFolderMenu
-                rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
-        }
-
-    let registerLibrary () =
+    member __.RegisterLibrary () =
         unitMaybe {
             if objectManagerCookie = 0u then
-                let! objManager = serviceProvider.TryGetService<IVsObjectManager2,SVsObjectManager> ()
+                let objManager = serviceProvider.GetService(typeof<SVsObjectManager>) :?> IVsObjectManager2
                 let! library = fsharpLibrary
                 ErrorHandler.ThrowOnFailure (objManager.RegisterSimpleLibrary (library, &objectManagerCookie)) |> ignore
         }
 
-    let unregisterLibrary () =
-        unitMaybe {
-            if objectManagerCookie <> 0u then
-                let! objManager = serviceProvider.TryGetService<IVsObjectManager2,SVsObjectManager> ()
-                objManager.UnregisterLibrary (objectManagerCookie) |> ignore
-        }
 
-    let performRegistrations (generalOptions:IGeneralOptions) =
-        if generalOptions.FolderOrganizationEnabled then setupFolderMenu(); registerPriorityCommandTarget()
-        if generalOptions.GenerateReferencesEnabled then setupReferenceMenu()
-        if generalOptions.TaskListCommentsEnabled then
-            try unitMaybe {
-                let! componentModel = serviceProvider.TryGetService<IComponentModel,SComponentModel>()
-                let commentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>()
-                // Debug.Assert(isNotNull taskListCommentManager, "This instance should have been MEF exported")
-                commentManager.Activate ()
-                taskListCommentManager <- Some commentManager
-              }
-            with ex -> Logging.logException ex
+    member __.PerformRegistrations generalOptions =
+        let setupReferenceMenu () =
+            unitMaybe {
+                let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>) :?> OleMenuCommandService
+                (new FsiReferenceCommand (DTE.Value, mcs)).SetupCommands ()
+            }
+
+        let setupFolderMenu () =
+            unitMaybe {
+                let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>)  :?> OleMenuCommandService
+                let shell = serviceProvider.GetService (typeof<SVsUIShell>) :?> IVsUIShell
+                let folderMenu = new FolderMenuCommands (DTE.Value, mcs, shell)
+                folderMenu.SetupCommands ()
+                newFolderMenu <- Some folderMenu
+            }
+
+
+        let registerPriorityCommandTarget () =
+            unitMaybe {
+                let rpct = serviceProvider.GetService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
+                let! folderMenu = newFolderMenu
+                rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
+            }
+
+
+        let performRegistrations (generalOptions:IGeneralOptions) =
+            if generalOptions.FolderOrganizationEnabled then setupFolderMenu(); registerPriorityCommandTarget()
+            if generalOptions.GenerateReferencesEnabled then setupReferenceMenu()
+            if generalOptions.TaskListCommentsEnabled then
+                try unitMaybe {
+                    let componentModel = serviceProvider.GetService (typeof<SComponentModel>) :?> IComponentModel
+                    let commentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>()
+                    // Debug.Assert(isNotNull taskListCommentManager, "This instance should have been MEF exported")
+                    commentManager.Activate ()
+                    taskListCommentManager <- Some commentManager
+                  }
+                with ex -> Logging.logException ex
+
+        performRegistrations generalOptions
+        
+        
 
 
     member __.GetDialogPage<'a> () =  base.GetDialogPage (typeof<'a>)
     
+    member __.CreateService<'page>() = fun _ _ -> self.GetDialogPage<'page>() :> obj
 
     override __.Initialize () =
         base.Initialize ()
 
-        VSUtils.ForegroundThreadGuard.BindThread ()
+        serviceContainer.AddService<IGeneralOptions> (self.CreateService<GeneralOptionsPage> ()) 
+        serviceContainer.AddService<IGlobalOptions> (self.CreateService<GlobalOptionsPage> ()) 
+        serviceContainer.AddService<ILintOptions> (self.CreateService<Linting.LintOptionsPage> ()) 
         
-        self.GetDialogPage<GeneralOptionsPage> () |> addService<IGeneralOptions> serviceContainer
+
 //        self.GetDialogPage<FantomasOptionsPage> () |> addService<IFormattingOptions> 
 //        self.GetDialogPage<CodeGenerationOptionsPage> () |> addService<ICodeGenerationOptions> 
-//        self.GetDialogPage<GlobalOptionsPage> () |> addService<IGlobalOptions>
-        self.GetDialogPage<Linting.LintOptionsPage> () |> addService<ILintOptions> serviceContainer
         //self.GetDialogPage<OutliningOptionsPage> () |> addService<IOutliningOptions> serviceContainer 
 
         let generalOptions = self.GetService<IGeneralOptions> ()
 
-        performRegistrations generalOptions
+        self.PerformRegistrations generalOptions
 
         let library = FSharpLibrary Constants.guidSymbolLibrary
         library.LibraryCapabilities <-  Enum.Parse( typedefof<_LIB_FLAGS2>, _LIB_FLAGS.LF_PROJECT.ToString()) :?> _LIB_FLAGS2
 //        library.LibraryCapabilities <-   asEnum<_LIB_FLAGS2>  _LIB_FLAGS.LF_PROJECT
         fsharpLibrary <- Some library
-        registerLibrary ()
+        self.RegisterLibrary ()
 
+        VSUtils.ForegroundThreadGuard.BindThread ()
+
+    member __.Unregister () =
+        let unregisterLibrary () =
+            unitMaybe {
+                if objectManagerCookie <> 0u then
+                    let objManager = serviceProvider.GetService(typeof<SVsObjectManager>) :?> IVsObjectManager2
+                    objManager.UnregisterLibrary (objectManagerCookie) |> ignore
+            }
+
+        let unregisterPriorityCommandTarget () =
+            unitMaybe {
+                if pctCookie <> 0u then 
+                    let rpct = serviceProvider.GetService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
+                    let! folderMenu = newFolderMenu
+                    rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
+            }
+
+        unregisterPriorityCommandTarget ()
+        unregisterLibrary ()
 
     interface IDisposable with
         member x.Dispose () : unit = 
-            unregisterPriorityCommandTarget ()
-            unregisterLibrary ()
+            self.Unregister()
             taskListCommentManager |> Option.iter dispose
             fsiReferenceMenu |> Option.iter dispose

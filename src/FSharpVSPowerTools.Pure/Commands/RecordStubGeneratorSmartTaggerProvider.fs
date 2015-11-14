@@ -30,8 +30,8 @@ type RecordStubGeneratorSmartTaggerProvider [<ImportingConstructor>]
             maybe {
                 // Only provide the smart tagger on the top-level buffer
                 if textView.TextBuffer <> buffer then return! None else
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
-                if not generalOptions.GenerateRecordStubEnabled then return! None else
+       //         let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+         //       if not generalOptions.GenerateRecordStubEnabled then return! None else
                 let! codeGenOptions = Setting.tryGetCodeGenerationOptions serviceProvider
                 let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else

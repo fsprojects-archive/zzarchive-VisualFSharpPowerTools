@@ -59,24 +59,24 @@
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <None Include="RenameDialog.xaml">
+    <Resource Include="RenameDialog.xaml">
       <Link>RenameDialog.xaml</Link>
-    </None>
-    <None Include="MoveToFolderDialog.xaml">
+    </Resource>
+    <Resource Include="MoveToFolderDialog.xaml">
       <Link>MoveToFolderDialog.xaml</Link>
-    </None>
-    <None Include="QuickInfoMargin.xaml">
+    </Resource>
+    <Resource Include="QuickInfoMargin.xaml">
       <Link>QuickInfoMargin.xaml</Link>
-    </None>
-    <None Include="LintOptionsPageControl.xaml">
+    </Resource>
+    <Resource Include="LintOptionsPageControl.xaml">
       <Link>LintOptionsPageControl.xaml</Link>
-    </None>
-    <None Include="CommonResources.xaml">
+    </Resource>
+    <Resource Include="CommonResources.xaml">
       <Link>CommonResources.xaml</Link>
-    </None>
-    <None Include="FolderNameDialog.xaml">
+    </Resource>
+    <Resource Include="FolderNameDialog.xaml">
       <Link>FolderNameDialog.xaml</Link>
-    </None>
+    </Resource>
     <Compile Include="Common\CommonResources.xaml.fs">
       <Link>Common\CommonResources.xaml.fs</Link>
     </Compile>
@@ -370,7 +370,6 @@
     <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
   </PropertyGroup>
-
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

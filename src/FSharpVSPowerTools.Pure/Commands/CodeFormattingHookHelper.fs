@@ -26,24 +26,18 @@ type CodeFormattingHookHelper [<ImportingConstructor>]
         editorOptionsFactory            :   IEditorOptionsFactoryService,    
         editorOperationsFactoryService  :   IEditorOperationsFactoryService, 
         textBufferUndoManagerProvider   :   ITextBufferUndoManagerProvider,  
-        textDocumentFactoryService      :   ITextDocumentFactoryService     ) as self =
-
-    member private __.GetServices () =
-        CodeFormattingServices
-            (   editorOptionsFactory, editorOperationsFactoryService, textBufferUndoManagerProvider,
-                textDocumentFactoryService, serviceProvider)
-
-    member internal __.RegisterCommandDispatcher (wpfTextView:IWpfTextView) =
-        maybe{
-            let! view = adaptersFactory.TryGetViewAdapter wpfTextView
-            return!
-                StandardCommandDispatcher.Register (view, wpfTextView, self.GetServices ())
-        }
+        textDocumentFactoryService      :   ITextDocumentFactoryService     ) =
 
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated (textView:IWpfTextView) : unit = 
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke
-                (Action (fun () -> (self.RegisterCommandDispatcher textView)|>ignore))
-            |> ignore
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke (Action (fun () -> 
+                maybe{
+                    let! view = adaptersFactory.TryGetViewAdapter textView
+                    return!
+                        StandardCommandDispatcher.Register (view, textView, 
+                                CodeFormattingServices (editorOptionsFactory, editorOperationsFactoryService, 
+                                    textBufferUndoManagerProvider,textDocumentFactoryService, serviceProvider))
+                } |>ignore)
+            ) |> ignore
         
         

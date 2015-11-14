@@ -27,6 +27,9 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
         projectFactory              :   ProjectFactory                  ,
         vsLanguageService           :   VSLanguageService               ) as self = 
 
+
+    let serviceType =  typeof<FindReferencesFilterProvider>
+
     static member AddCommandFilter (viewAdapter:IVsTextView, commandFilter:FindReferencesFilter) =
         if not commandFilter.IsAdded then
             let mutable next = Unchecked.defaultof<IOleCommandTarget>
@@ -40,9 +43,9 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
     member __.RegisterCommandFilter (textView:IWpfTextView, showProgress:bool ) =
         maybe {
             let! textViewAdapter = editorFactory.TryGetViewAdapter textView
-            let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //  let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
 
-            if not generalOptions.FindAllReferencesEnabled then return! None else
+        //    if not generalOptions.FindAllReferencesEnabled then return! None else
 
             let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
             let filter = new FindReferencesFilter ( doc, textView, vsLanguageService, serviceProvider,
@@ -52,15 +55,22 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
             return 
                 filter        
         }
-    member __.TextViewCreated textView =
-        self.RegisterCommandFilter (textView, true) |> ignore
+     
 
-    interface IWpfTextViewConnectionListener with
+    interface IWpfTextViewCreationListener with
+        member __.TextViewCreated textView =
+            self.RegisterCommandFilter (textView, true) |> ignore
         
-        member x.SubjectBuffersConnected(textView, reason, subjectBuffers) = ()
-           
+        
+//            if reason = ConnectionReason.TextViewLifetime then () else 
+//
+//            let mutable commandFilter = Unchecked.defaultof<FindReferencesFilter>
+//
+//            if textView.Properties.TryGetProperty(serviceType, &commandFilter) then
+//                let textViewAdapter = editorFactory.GetViewAdapter textView
+//                let hr = textViewAdapter.RemoveCommandFilter commandFilter 
+//                let success = textView.Properties.RemoveProperty serviceType
+//                Debug.Assert ( (hr = VSConstants.S_OK) , "Should be able to remove adornment from the text view")
 
-        member x.SubjectBuffersDisconnected(textView, reason, subjectBuffers) =  ()
-            
         
 

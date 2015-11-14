@@ -1,4 +1,5 @@
-﻿module FSharpVSPowerTools.GuiUtils
+﻿[<AutoOpen>]
+module FSharpVSPowerTools.GuiUtils
 
 open FsXaml
 open FSharp.ViewModule

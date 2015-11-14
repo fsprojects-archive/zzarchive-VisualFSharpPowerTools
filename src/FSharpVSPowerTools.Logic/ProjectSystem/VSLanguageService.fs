@@ -39,8 +39,8 @@ and IProjectProvider =
 
 type ShowProgress = OperationState -> unit
 
-type EntityCache() =
-    let dic = Dictionary<AssemblyPath, AssemblyContentCacheEntry>()
+type EntityCache () =
+    let dic = Dictionary<AssemblyPath, AssemblyContentCacheEntry> ()
     interface IAssemblyContentCache with
         member __.TryGet assembly =
             match dic.TryGetValue assembly with
@@ -128,7 +128,7 @@ type VSLanguageService
 
     let entityCache = EntityCache()
 
-    member __.GetSymbol(point, fileName, projectProvider) =
+    member __.GetSymbol (point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
 
     member __.GetLongIdentSymbol(point, fileName, projectProvider) =

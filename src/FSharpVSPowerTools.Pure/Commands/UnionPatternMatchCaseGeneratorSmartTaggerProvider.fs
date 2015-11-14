@@ -18,7 +18,7 @@ open Microsoft.VisualStudio.Shell.Interop
 [<TagType (typeof<UnionPatternMatchCaseGeneratorSmartTag>)>]
 type UnionPatternMatchCaseGeneratorSmartTaggerProvider [<ImportingConstructor>]
     ( [<Import(typeof<SVsServiceProvider>)>] 
-        serviceProvider             : IServiceProvider,
+        serviceProvider             :   IServiceProvider,
         textDocumentFactoryService  :   ITextDocumentFactoryService ,
         undoHistoryRegistry         :   ITextUndoHistoryRegistry    ,
         projectFactory              :   ProjectFactory              ,
@@ -28,7 +28,7 @@ type UnionPatternMatchCaseGeneratorSmartTaggerProvider [<ImportingConstructor>]
         member __.CreateTagger (textView, buffer) =
             maybe {
                 if textView.TextBuffer <> buffer then return! None else
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+       //         let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! codeGenOptions = Setting.tryGetCodeGenerationOptions serviceProvider
                 let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else

@@ -19,9 +19,9 @@
     <RootNamespace>FSharpVSPowerTools.Pure</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Pure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+    <!--GeneratePkgDefFile>false</GeneratePkgDefFile-->
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <!--<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>-->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>FSharpVSPowerTools.Pure</Name>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">12</MinimumVisualStudioVersion>
     <VsSdkTargets>$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\VSSDK\Microsoft.VsSDK.targets</VsSdkTargets>
@@ -108,13 +108,24 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <!--
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
-  -->
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="GUI\GlobalOptionsPage.fs" />
+    <Compile Include="GUI\GuiUtils.fs" />
+    <Resource Include="GUI\ResourceDictionary.xaml" />
+    <Compile Include="GUI\ResourceDictionary.xaml.fs" />
+    <Compile Include="GUI\GeneralOptionsViewModel.fs" />
+    <Compile Include="GUI\GeneralOptions.xaml.fs" />
+    <Resource Include="GUI\GeneralOptions.xaml" />
+    <Compile Include="GUI\GeneralOptionsPage.fs" />
+    <Resource Include="GUI\OutliningOptionsPageControl.xaml" />
+    <Resource Include="GUI\CodeGenerationOptions.xaml" />
+    <Compile Include="GUI\CodeGenerationOptions.xaml.fs" />
+    <Resource Include="GUI\FantomasOptions.xaml" />
+    <Compile Include="GUI\FantomasOptions.xaml.fs" />
+    <Resource Include="GUI\GlobalOptions.xaml" />
+    <Compile Include="PowerToolsCommandsPackage.fs" />
     <Compile Include="Commands\SyntaxConstructClassifierProvider.fs" />
     <Compile Include="Commands\StandardCommandDispatcher.fs" />
     <Compile Include="Commands\CodeFormattingHookHelper.fs" />
@@ -135,19 +146,6 @@
     <Compile Include="Commands\FindReferenceFilterProvider.fs" />
     <Compile Include="Commands\DepthColorizerManager.fs" />
     <Compile Include="Commands\OutliningTaggerProvider.fs" />
-    <Compile Include="GUI\GuiUtils.fs" />
-    <Resource Include="GUI\ResourceDictionary.xaml" />
-    <Compile Include="GUI\ResourceDictionary.xaml.fs" />
-    <Compile Include="GUI\GeneralOptionsViewModel.fs" />
-    <Compile Include="GUI\GeneralOptionsControl.xaml.fs" />
-    <Resource Include="GUI\GeneralOptionsControl.xaml" />
-    <Compile Include="GUI\GeneralOptionsPage.fs" />
-    <Resource Include="GUI\OutliningOptionsPageControl.xaml" />
-    <Resource Include="GUI\CodeGenerationOptions.xaml" />
-    <Compile Include="GUI\CodeGenerationOptions.xaml.fs" />
-    <Resource Include="GUI\FantomasOptions.xaml" />
-    <Compile Include="GUI\FantomasOptions.xaml.fs" />
-    <Resource Include="GUI\GlobalOptions.xaml" />
     <None Include="Resources\Images.png" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -156,7 +154,6 @@
       <ManifestResourceName>PowerToolsCommandsPackage</ManifestResourceName>
     </EmbeddedResource>
     <Content Include="Resources\Package.ico" />
-    <Compile Include="PowerToolsCommandsPackage.fs" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -220,14 +217,10 @@
     <Reference Include="Microsoft.VisualStudio.Language.StandardClassification, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>False</Private>
-    </Reference>
+    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>False</Private>
-    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop.9.0, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
@@ -241,11 +234,8 @@
     <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-      <Private>False</Private>
-    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Threading, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.Windows.Design.Interaction, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="mscorlib">
       <Private>False</Private>
     </Reference>
@@ -328,10 +318,8 @@
     </COMReference>
   </ItemGroup>
 -->
-  <!--
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
-  -->
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props') And ($(VisualStudioVersion) == '14.0' )" Label="Paket" />
+  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets') And ($(VisualStudioVersion) == '14.0') " Label="Paket" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
       <ItemGroup>
@@ -417,6 +405,4 @@
       <Paket>True</Paket>
     </Reference>
   </ItemGroup>
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.props')" Label="Paket" />
-  <Import Project="..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets" Condition="Exists('..\..\packages\VSSDK.IDE.Deploy.14\build\VSSDK.IDE.Deploy.14.targets')" Label="Paket" />
 </Project>

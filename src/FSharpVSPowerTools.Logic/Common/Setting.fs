@@ -102,16 +102,30 @@ module Utils =
         member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
         /// Try to use the service provider to get an MEF service via its Interface type
         member x.TryGetService<'T>() = 
-            try x.GetService(typeof<'T>) :?> 'T |> Option.ofNull
-            with _ -> None
-                
+            match x.GetService(typeof<'T>) with
+            | null -> None
+            | svc -> svc :?> 'T |> Some
+
+
+//            try x.GetService(typeof<'T>) :?> 'T |> Option.ofNull
+//            with ex -> 
+//                System.Diagnostics.Debug.WriteLine(ex.Message)
+//                None
+//                
 
         ///  Try to use the service provider to get an MEF Visual Studio service
         ///  and cast it to its Interface type e.g.
         ///  `.GetService<IVsTextManager, SVsTextManager>()`
         member x.TryGetService<'T, 'S>() = 
-            try x.GetService(typeof<'S> ) :?> 'T |> Option.ofNull
-            with _ -> None
+            match x.GetService(typeof<'S>) with
+            | null -> None
+            | svc -> svc :?> 'T |> Some
+            
+
+//            try x.GetService(typeof<'S> ) :?> 'T |> Option.ofNull
+//            with ex -> 
+//                System.Diagnostics.Debug.WriteLine(ex.Message)
+//                None
         
         
          

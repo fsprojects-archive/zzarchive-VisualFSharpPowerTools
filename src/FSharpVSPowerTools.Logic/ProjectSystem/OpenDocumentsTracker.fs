@@ -13,7 +13,7 @@ type OpenDocument =
       Snapshot: ITextSnapshot 
       Encoding: Encoding
       LastChangeTime: DateTime }
-    member x.Text = lazy (x.Snapshot.GetText())
+    member x.Text = lazy (x.Snapshot.GetText ())
     static member Create document snapshot encoding = 
         { Document = document; Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
 
@@ -29,8 +29,8 @@ type IOpenDocumentsTracker =
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
     [<VolatileField>]
     let mutable openDocuments = Map.empty
-    let documentChanged = Event<_>()
-    let documentClosed = Event<_>()
+    let documentChanged = Event<_> ()
+    let documentClosed = Event<_> ()
 
     interface IOpenDocumentsTracker with
         member __.RegisterView(view: IWpfTextView) = 
