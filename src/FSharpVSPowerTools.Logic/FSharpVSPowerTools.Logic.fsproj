@@ -266,9 +266,6 @@
     <Compile Include="Linting\LintQuickInfoSource.fs">
       <Link>Linting\LintQuickInfoSource.fs</Link>
     </Compile>
-    <Compile Include="Linting\LintTagger.fs">
-      <Link>Linting\LintTagger.fs</Link>
-    </Compile>
     <Compile Include="Linting\LintQuickInfoSource.fs">
       <Link>Linting\LintQuickInfoSource.fs</Link>
     </Compile>
