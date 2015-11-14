@@ -96,7 +96,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
             sb.Append("#load ") |> ignore
             let relativePaths = sourceFiles |> Array.map (getRelativePath scriptFolder >> sprintf "\"%s\"")
             sb.AppendLine(String.Join(Environment.NewLine + new String(' ', "#load ".Length), relativePaths)) |> ignore
-        sb.ToString()   
+        sb.ToString()
 
     let getReferenceAssembliesFolderByVersion (project: Project) =
         Option.attempt (fun _ ->
@@ -126,8 +126,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
         // We use compiler options to ensure that assembly references are resolved in the right order.
         projectProvider.CompilerOptions
         |> Seq.choose (fun x -> if x.StartsWith("-r:") then Some (x.[3..].Trim(' ', '"')) else None)
-        |> Seq.choose (fun assemblyPath ->    
-            let assemblyName = Path.GetFileNameWithoutExtension(assemblyPath)        
+        |> Seq.choose (fun assemblyPath ->
+            let assemblyName = Path.GetFileNameWithoutExtension(assemblyPath)
             if not (blackList.Contains assemblyName) && whiteList.Contains assemblyName then
                 let fullPath = Path.GetFullPathSafe(assemblyPath)
                 if File.Exists fullPath then
@@ -151,7 +151,7 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
         String.Join(Environment.NewLine, header, String.Join(Environment.NewLine, refLines))
 
     let getExistingFileRefs project fileName = 
-        let filePath = getFullFilePathInScriptFolder project fileName  
+        let filePath = getFullFilePathInScriptFolder project fileName
         if File.Exists filePath then
             File.ReadLines filePath
             |> Seq.filter (fun (line: string) -> line.StartsWith "#r")
@@ -195,13 +195,15 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
         |> ignore
 
     let generateFsiReferences() =
-        getActiveProject()
-        |> Option.iter (fun project ->
-            // Generate script files
-            if isFSharpProject project then
-                generateReferenceFiles project)
+        protect (fun _ ->
+            getActiveProject()
+            |> Option.iter (fun project ->
+                // Generate script files
+                if isFSharpProject project then
+                    generateReferenceFiles project))
 
-    let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ ->
+    let generateAllFsiReferences() =
+        protect (fun _ ->
             Logging.logInfo (fun _ -> "Checking projects after build done...")
             let dte = dte2 :?> DTE
             listFSharpProjectsInSolution dte
@@ -209,6 +211,8 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
                 if containsReferenceScript project then
                     Logging.logInfo (fun _ -> sprintf "Re-generating reference scripts for '%s'..." project.Name)
                     generateReferenceFiles project))
+
+    let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildDoneEventHandler (fun _ _ -> generateAllFsiReferences())
 
     let events = dte2.Events.BuildEvents
     do events.add_OnBuildDone onBuildDoneHandler
@@ -224,4 +228,3 @@ type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =
     interface IDisposable with
         member __.Dispose() = 
             events.remove_OnBuildDone onBuildDoneHandler
-        
