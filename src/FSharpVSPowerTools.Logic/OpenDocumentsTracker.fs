@@ -6,6 +6,7 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open System.Collections.Generic
+open FSharpVSPowerTools
 
 [<NoComparison>]
 type OpenDocument =
@@ -14,8 +15,8 @@ type OpenDocument =
       Encoding: Encoding
       LastChangeTime: DateTime }
     member x.Text = lazy (x.Snapshot.GetText())
-    static member Create document snapshot encoding = 
-        { Document = document; Snapshot = snapshot; Encoding = encoding; LastChangeTime = DateTime.Now }
+    static member Create document snapshot encoding lastChangeTime = 
+        { Document = document; Snapshot = snapshot; Encoding = encoding; LastChangeTime = lastChangeTime }
 
 type IOpenDocumentsTracker =
     abstract RegisterView: IWpfTextView -> unit
@@ -32,18 +33,24 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
     let documentChanged = Event<_>()
     let documentClosed = Event<_>()
 
+    let tryGetDocument buffer = 
+        match textDocumentFactoryService.TryGetTextDocument buffer with
+        | true, doc -> Some doc
+        | _ -> None
+
     interface IOpenDocumentsTracker with
         member __.RegisterView(view: IWpfTextView) = 
             ForegroundThreadGuard.CheckThread()
-            match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
-            | true, doc ->
+            maybe {
+                let! doc = tryGetDocument view.TextBuffer
                 let path = doc.FilePath
+                
                 let textBufferChanged (args: TextContentChangedEventArgs) =
                     ForegroundThreadGuard.CheckThread()
-                    openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding) openDocuments
+                    openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding DateTime.UtcNow) openDocuments
                     documentChanged.Trigger path
-        
-                let textBufferChangedSubscription: IDisposable = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
+                
+                let textBufferChangedSubscription = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
                 
                 let rec viewClosed _ = 
                     ForegroundThreadGuard.CheckThread()
@@ -51,17 +58,14 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
                     viewClosedSubscription.Dispose()
                     openDocuments <- Map.remove path openDocuments
                     documentClosed.Trigger path
-        
-                and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
                 
-                openDocuments <- Map.add path (OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding) openDocuments
+                and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
+                let! lastWriteTime = File.tryGetLastWriteTime path
+                let openDocument = OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding lastWriteTime
+                openDocuments <- Map.add path openDocument openDocuments 
+            } |> ignore
         
-            | _ -> ()
-        
-        member __.MapOpenDocuments f = 
-            // use current collection snapshot
-            Seq.map f openDocuments
-        
+        member __.MapOpenDocuments f = Seq.map f openDocuments
         member __.TryFindOpenDocument path = Map.tryFind path openDocuments
         member __.TryGetDocumentText path = openDocuments |> Map.tryFind path |> Option.map (fun x -> x.Text.Value)
         member __.DocumentChanged = documentChanged.Publish

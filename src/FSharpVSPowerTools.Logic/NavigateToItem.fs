@@ -15,6 +15,7 @@ open FSharpVSPowerTools.Navigation
 open System.Collections.Concurrent
 open System.IO
 open FSharpVSPowerTools.AsyncMaybe
+open System.Windows.Media.Imaging
 
 module Constants = 
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])
@@ -65,14 +66,14 @@ type NavigationItemIconCache [<ImportingConstructor>] ([<Import>] glyphService: 
         |> Option.getOrTry (fun _ ->
             let icon, bitmap =
                 match glyphService.GetGlyph(glyphGroup, glyphItem) with
-                | :? Windows.Media.Imaging.BitmapSource as bs ->
-                    let bmpEncoder = Windows.Media.Imaging.PngBitmapEncoder()
-                    bmpEncoder.Frames.Add(Windows.Media.Imaging.BitmapFrame.Create bs)
-                    let s = new System.IO.MemoryStream()
+                | :? BitmapSource as bs ->
+                    let bmpEncoder = PngBitmapEncoder()
+                    bmpEncoder.Frames.Add (BitmapFrame.Create bs)
+                    let s = new MemoryStream()
                     bmpEncoder.Save s 
                     s.Position <- 0L
                     let bitmap = new Bitmap(s)
-                    Icon.FromHandle(bitmap.GetHicon()), bitmap
+                    Icon.FromHandle (bitmap.GetHicon()), bitmap
                 | _ -> null, null
             iconCache.[key] <- (icon, bitmap)
             icon)

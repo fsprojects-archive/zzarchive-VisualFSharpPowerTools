@@ -113,8 +113,16 @@ type NavigableItemCache
 
     member __.TryGet (file: FileDescriptor): NavigableItem[] option =
         match cache.TryGetValue file.Path with
-        | true, x when x.Descriptor.LastWriteTime = file.LastWriteTime -> Some x.Items
-        | _ -> None
+        | true, x when x.Descriptor.LastWriteTime = file.LastWriteTime -> 
+            //Logging.logInfo (fun _ -> sprintf "[NavigableItemCache] Found for %s, %O" file.Path file.LastWriteTime)
+            Some x.Items
+        | true, _x ->
+            //Logging.logInfo (fun _ -> sprintf "[NavigableItemCache] Found with different LastWriteTime for %s, %O <> %O" 
+              //                                file.Path x.Descriptor.LastWriteTime file.LastWriteTime)
+            None
+        | _ -> 
+            //Logging.logInfo (fun _ -> sprintf "[NavigableItemCache] Not found for %s" file.Path)
+            None
     
     member __.Add (file: FileDescriptor, items: NavigableItem[]): unit = 
         cache.[file.Path] <- { Descriptor = file; Items = items }
