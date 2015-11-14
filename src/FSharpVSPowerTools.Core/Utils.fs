@@ -636,7 +636,6 @@ module AsyncMaybe =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
-    open System.Diagnostics
     open System.Threading
 
 // Redirect debug output to F# Interactive for debugging purpose.
