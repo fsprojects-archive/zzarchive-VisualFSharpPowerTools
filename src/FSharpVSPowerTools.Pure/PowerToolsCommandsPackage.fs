@@ -40,7 +40,7 @@ open FSharpVSPowerTools.Reference
 type PowerToolsCommandsPackage () as self =
     inherit Package ()
 
-  //  static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
+    static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
 
     let mutable pctCookie = 0u
     let mutable objectManagerCookie = 0u
