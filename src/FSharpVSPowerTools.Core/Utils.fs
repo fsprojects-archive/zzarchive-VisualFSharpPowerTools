@@ -19,13 +19,11 @@ module Prelude =
 
 [<RequireQualifiedAccess>]
 module Null =
-
     let inline fill defaultValue x = 
         if isNull x then null else defaultValue
 
     let inline fillWith (genDefaultValue: unit -> 'T) x = 
         if isNull x then null else genDefaultValue ()
-
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -883,6 +881,11 @@ module Reflection =
         let p = Expr.Parameter(typeof<obj>)
         let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
         lambda.Compile().Invoke
+
+module File =
+    open System.IO
+
+    let tryGetLastWriteTime file = Option.attempt (fun _ -> FileInfo(file).LastWriteTimeUtc)
 
 open System.Text
 open System.Diagnostics

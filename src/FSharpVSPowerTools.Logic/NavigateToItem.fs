@@ -124,7 +124,7 @@ type NavigateToItemProvider
                         | Some (source: Source, descriptor) -> Some (descriptor, fun _ -> Some source)
                         | None ->
                             maybe {
-                                let! lastWriteTime = Option.attempt (fun _ -> File.GetLastWriteTimeUtc file)
+                                let! lastWriteTime = File.tryGetLastWriteTime file
                                 return 
                                     { Path = file; LastWriteTime = lastWriteTime },
                                     fun _ -> Option.attempt (fun _ -> File.ReadAllText file)

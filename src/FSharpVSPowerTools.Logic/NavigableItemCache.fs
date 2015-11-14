@@ -61,14 +61,22 @@ type NavigableItemCache
                     items
                 else [||]
             
-            for item in items do cache.[item.Descriptor.Path] <- item
+            for item in items do
+                match File.tryGetLastWriteTime item.Descriptor.Path with
+                | Some lastWriteTime when item.Descriptor.LastWriteTime = lastWriteTime ->
+                    cache.[item.Descriptor.Path] <- item
+                | _ -> ()
+
             sw.Stop()
             Logging.logInfo <| fun _ -> 
-                sprintf "[NavigableItemCache] Loaded %d items for %d files from %s in %O" 
-                        (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath sw.Elapsed
+                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files. Elapsed %O" 
+                        (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length
+                        (cache.Values |> Seq.sumBy (fun x -> x.Items.Length)) cache.Count
+                        sw.Elapsed
 
     let saveToDisk (solutionPath: FilePath) =
         if !dirty then
+            dirty := false
             VSUtils.protect <| fun _ ->
                 let sw = Stopwatch.StartNew()
                 let items = cache.Values |> Seq.toArray
@@ -76,7 +84,6 @@ type NavigableItemCache
                 Directory.CreateDirectory (Path.GetDirectoryName filePath) |> ignore
                 use file = new FileStream (filePath, FileMode.Create, FileAccess.Write, FileShare.Read)
                 pickler.Serialize (file, items)
-                dirty := false
                 sw.Stop()
                 Logging.logInfo <| fun _ -> 
                     sprintf "[NavigableItemCache] Saved %d items for %d files to %s in %O" 
@@ -90,7 +97,8 @@ type NavigableItemCache
     let dte = lazy(
         let dte = serviceProvider.GetService<DTE, SDTE>()
         afterSolutionClosing <- _dispSolutionEvents_AfterClosingEventHandler (fun () -> cache.Clear())
-        solutionOpened <- _dispSolutionEvents_OpenedEventHandler (fun () -> tryGetSolutionPath dte |> Option.iter loadFromDisk)
+        let tryLoadFromFile() = tryGetSolutionPath dte |> Option.iter loadFromDisk
+        solutionOpened <- _dispSolutionEvents_OpenedEventHandler tryLoadFromFile
         
         match dte.Events with
             | :? Events2 as events ->
@@ -98,6 +106,7 @@ type NavigableItemCache
                 solutionEvents.add_Opened solutionOpened
                 solutionEvents.add_AfterClosing afterSolutionClosing
             | _ -> ()
+        tryLoadFromFile()
         dte)
     
     let saveTimer = new Timer((fun _ -> tryGetSolutionPath dte.Value |> Option.iter saveToDisk), null, 0, 5000)
