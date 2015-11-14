@@ -18,6 +18,7 @@ type NavigableItemKind =
     | Member
     | EnumCase
     | UnionCase
+    override x.ToString() = sprintf "%+A" x
 
 type NavigableItemPos =
     { Row: int

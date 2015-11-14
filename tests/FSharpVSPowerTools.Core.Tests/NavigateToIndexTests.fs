@@ -21,13 +21,13 @@ let ``Index should return all matching entries``() =
           Kind = NavigableItemKind.Type }
     let items =
         [ item "a.fs" "foo"
-          item "a.fs" "Symb"
-          item "a.fs" "SymbolOf"
-          item "a.fs" "Symbol"
-          item "a.fs" "Symbol"
-          item "a.fs" "Symbol"
-          item "a.fs" "GetSymbol"
-          item "a.fs" "bar" ]
+          item "b.fs" "Symb"
+          item "c.fs" "SymbolOf"
+          item "d.fs" "Symbol"
+          item "e.fs" "Symbol"
+          item "f.fs" "Symbol"
+          item "g.fs" "GetSymbol"
+          item "h.fs" "bar" ]
 
     b.Add(items)
     let index = b.BuildIndex()
