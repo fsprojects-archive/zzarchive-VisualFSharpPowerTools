@@ -197,7 +197,7 @@ type public GeneralOptionsViewModel () as self =
     let mkCmd func = self.Factory.CommandSync func
     let mkCmdParam func = self.Factory.CommandSyncParam func
 
- //   let mutable xmlDocEnabled                          = setBacking <@ self.XmlDocEnabled @>  xmlDocData
+    let mutable xmlDocEnabled                          = setBacking <@ self.XmlDocEnabled @>  xmlDocData
     let mutable formattingEnabled                      = setBacking <@ self.FormattingEnabled                         @>  true                       
     //let mutable navBarEnabledInAppConfig               setBacking <@ self.NavBarEnabled                             @>  = ge                                       tNavigationBarConfig()   
     let mutable highlightUsageEnabled                  = setBacking <@ self.HighlightUsageEnabled                     @>  true                       
@@ -222,7 +222,7 @@ type public GeneralOptionsViewModel () as self =
     let mutable outliningEnabled                       = setBacking <@ self.OutliningEnabled                          @>  false         
     
     
-   // member __.XmlDocEnabled                          with get () = xmlDocEnabled                         .Value  and set v =  xmlDocEnabled                          .Value <- v
+    member __.XmlDocEnabled                          with get () = xmlDocEnabled                         .Value  and set v =  xmlDocEnabled                          .Value <- v
     member __.FormattingEnabled                      with get () = formattingEnabled                     .Value  and set v =  formattingEnabled                      .Value <- v
   //  member __.NavBarEnabled                          with get () =le navBarEnabledInAppConfig          .Value    and set v = le navBarEnabledInAppConfig           .Value   <- v
     member __.HighlightUsageEnabled                  with get () = highlightUsageEnabled                 .Value  and set v =  highlightUsageEnabled                  .Value <- v

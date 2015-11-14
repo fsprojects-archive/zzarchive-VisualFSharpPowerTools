@@ -35,15 +35,18 @@ module internal Utils =
 
 [<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<ComVisible true>]
+[<CLSCompliant(false)>]
 [<Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")>]
 type GeneralOptionsPage () as self =
     inherit UIElementDialogPage () 
 
-    let generalOptionsControl = GeneralOptionsControl ()
+    let mutable generalOptionsControl = Unchecked.defaultof<_> 
     
-    do generalOptionsControl.DataContext <- GeneralOptionsViewModel ()
+    let componentModel = Package.GetGlobalService(typeof<SComponentModel>) :?> IComponentModel 
+        
+    
 
-    let [<Literal>] navBarConfig = "fsharp-navigationbar-enabled"
+    let [<Literal>] navBarConfig = "fsharp-navigationbar-enabled"       
 
     let getNavigationBarConfig () =
         maybe {
@@ -86,10 +89,17 @@ type GeneralOptionsPage () as self =
         with get () = generalOptionsControl :> UIElement
 
     override __.OnActivate cancelArgs =
+        generalOptionsControl <- GeneralOptionsControlView ()
+        generalOptionsControl.DataContext <- GeneralOptionsViewModel ()
+        
         base.OnActivate cancelArgs
 
     override __.OnApply pageApplyArgs =
         base.OnApply pageApplyArgs
+
+    [<Browsable(false); DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>]
+    override __.Window
+        with get () = self:> IWin32Window
 
     [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
     member __.XmlDocEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
@@ -139,44 +149,68 @@ type GeneralOptionsPage () as self =
     member __.OutliningEnabled with get() = outliningEnabled and set v = outliningEnabled <- v        
 
     interface IGeneralOptions with
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.XmlDocEnabled                          with get () = self.XmlDocEnabled                           and set v = self.XmlDocEnabled                            <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.FormattingEnabled                      with get () = self.FormattingEnabled                       and set v = self.FormattingEnabled                        <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.NavBarEnabled                          with get () = self.NavBarEnabled                           and set v = self.NavBarEnabled                            <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.HighlightUsageEnabled                  with get () = self.HighlightUsageEnabled                   and set v = self.HighlightUsageEnabled                    <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.RenameRefactoringEnabled               with get () = self.RenameRefactoringEnabled                and set v = self.RenameRefactoringEnabled                 <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.DepthColorizerEnabled                  with get () = self.DepthColorizerEnabled                   and set v = self.DepthColorizerEnabled                    <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.NavigateToEnabled                      with get () = self.NavigateToEnabled                       and set v = self.NavigateToEnabled                        <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.SyntaxColoringEnabled                  with get () = self.SyntaxColoringEnabled                   and set v = self.SyntaxColoringEnabled                    <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.InterfaceImplementationEnabled         with get () = self.InterfaceImplementationEnabled          and set v = self.InterfaceImplementationEnabled           <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.FolderOrganizationEnabled              with get () = self.FolderOrganizationEnabled               and set v = self.FolderOrganizationEnabled                <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.FindAllReferencesEnabled               with get () = self.FindAllReferencesEnabled                and set v = self.FindAllReferencesEnabled                 <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.GenerateRecordStubEnabled              with get () = self.GenerateRecordStubEnabled               and set v = self.GenerateRecordStubEnabled                <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.UnionPatternMatchCaseGenerationEnabled with get () = self.UnionPatternMatchCaseGenerationEnabled  and set v = self.UnionPatternMatchCaseGenerationEnabled   <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.ResolveUnopenedNamespacesEnabled       with get () = self.ResolveUnopenedNamespacesEnabled        and set v = self.ResolveUnopenedNamespacesEnabled         <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.UnusedReferencesEnabled                with get () = self.UnusedReferencesEnabled                 and set v = self.UnusedReferencesEnabled                  <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.UnusedOpensEnabled                     with get () = self.UnusedOpensEnabled                      and set v = self.UnusedOpensEnabled                       <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.TaskListCommentsEnabled                with get () = self.TaskListCommentsEnabled                 and set v = self.TaskListCommentsEnabled                  <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.GoToMetadataEnabled                    with get () = self.GoToMetadataEnabled                     and set v = self.GoToMetadataEnabled                      <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.GenerateReferencesEnabled              with get () = self.GenerateReferencesEnabled               and set v = self.GenerateReferencesEnabled                <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.GoToSymbolSourceEnabled                with get () = self.GoToSymbolSourceEnabled                 and set v = self.GoToSymbolSourceEnabled                  <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.QuickInfoPanelEnabled                  with get () = self.QuickInfoPanelEnabled                   and set v = self.QuickInfoPanelEnabled                    <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.LinterEnabled                          with get () = self.LinterEnabled                           and set v = self.LinterEnabled                            <- v
+        [<DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)>]
         member __.OutliningEnabled                       with get () = self.OutliningEnabled                        and set v = self.OutliningEnabled                         <- v
+
+
         // When user clicks on Apply in Options window, get the path selected from control and set it to property of this class so
         // that Visual Studio saves it.
 //        override __.OnApply (e:DialogPage.PageApplyEventArgs) =
-//            if e.ApplyBehavior = ApplyKind.Apply then
+//            if e.ApplyBehavior = self.ApplyKind.Apply then
 //                if self.NavBarEnabled <> optionsControl.NavBarEnabled then
-//                    if not self.SetNavigationBarConfig (_optionsControl.NavBarEnabled))
+//                    if not self.SetNavigationBarConfig (optionsControl.NavBarEnabled) then
 //                        // Keep the dialog open in the case of errors
 //                        e.ApplyBehavior = ApplyKind.CancelNoNavigate
 //                        base.OnApply(e)
-//                        return
 //
-//                    NavBarEnabled = _optionsControl.NavBarEnabled
-//                    _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled
+//                    //NavBarEnabled = _optionsControl.NavBarEnabled
+//                   // _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled
 //            base.OnApply(e)
-//        }
+//        
 //
 //        private bool IsUserAdministrator()
 //        {

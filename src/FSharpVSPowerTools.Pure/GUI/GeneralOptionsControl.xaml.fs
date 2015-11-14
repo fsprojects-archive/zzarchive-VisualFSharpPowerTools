@@ -6,8 +6,8 @@ open System.Windows.Controls
 open FsXaml
 
 
-type GeneralOptionsControl = XAML< @"GUI/GeneralOptionsControl.xaml",true>
+type GeneralOptionsControlView = XAML< @"GUI/GeneralOptionsControl.xaml",true>
 
 type GeneralOptionsController () =
-    inherit UserControlViewController<GeneralOptionsControl>()
+    inherit UserControlViewController<GeneralOptionsControlView>()
 

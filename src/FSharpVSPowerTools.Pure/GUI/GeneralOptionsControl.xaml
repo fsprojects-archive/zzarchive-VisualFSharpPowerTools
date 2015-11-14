@@ -6,7 +6,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:fsx="clr-namespace:FsXaml;assembly=FsXaml.Wpf"
         xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity" 
-        xmlns:local="clr-namespace:FSharpVSPowerTools"
+        xmlns:local="clr-namespace:FSharpVSPowerTools;assembly=FSharpVSPowerTools.Pure"
         xmlns:ignore = "http://www.galasoft.ch/ignore" 
         x:Name="GeneralOptionsPage"
         mc:Ignorable="d ignore" 
@@ -33,12 +33,18 @@
     </UserControl.Resources>
 
 
- <!--
+         <!--
     <UserControl.DataContext>
         <local:GeneralOptionsControl/>
     </UserControl.DataContext>
-  -->  
-    <Grid Name="RootGrid">
+    -->
+    <UserControl.DataContext>
+        <local:GeneralOptionsControl/>
+    </UserControl.DataContext>
+
+
+
+    <Grid Name="RootGrid" d:DataContext="{x:Type local:GeneralOptionsControl}" >
 
         <Grid.RowDefinitions>
             <RowDefinition Height="30"/>
@@ -48,7 +54,10 @@
         <Label x:Name="ToggleLabel" Content="Toggle Features On/Off" FontWeight="Bold" HorizontalAlignment="Left" Margin="0,1,0,0" Width="142"/>
         <Border BorderThickness="5" Margin="0,0,0,1" Grid.Row="1">
             <WrapPanel x:Name="OptionCheckBoxes" Orientation="Vertical" Margin="0,-5,-5,-5">
-                <CheckBox x:Name="xmlDoc" HorizontalAlignment="Left" VerticalAlignment="Top" Content="{Binding }" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}"/>
+                <CheckBox x:Name="xmlDoc" HorizontalAlignment="Left" VerticalAlignment="Top" 
+                          Content="{Binding Path=XmlDocEnabled.Label}" 
+                          ToolTip="{Binding Path=XmlDocEnabled.Tooltip}" 
+                          Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}"/>
                 <CheckBox x:Name="formatting" Content="Source Code Formatting" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" Width="155" HorizontalAlignment="Left" />
                 <CheckBox x:Name="navigationBar" Content="Navigation Bar ***" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="highlightReferences" Content="Highlight References" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left"/>
