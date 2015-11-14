@@ -255,8 +255,7 @@ type VSLanguageService
                                                     checkForUnusedOpens: bool, profiler: Profiler) = 
         async {
             let! opts = project.GetProjectCheckerOptions instance
-            let! allSymbolsUses = profiler.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
             return allSymbolsUses
         }
 
