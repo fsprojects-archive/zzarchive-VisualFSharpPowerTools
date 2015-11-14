@@ -222,6 +222,13 @@ type NavigateToItemProvider
         
         Async.StartInThreadPoolSafe(searchValueComputations, cancellationToken = ct)
 
+    member __.ProcessNavigableItemsInProject (openDocs, project, ct): Async<NavigableItem list> =
+        async {
+            let result = ResizeArray()
+            do! processNavigableItemsInProject (openDocs, project, (fun items -> result.AddRange items), ct)
+            return List.ofSeq result
+        }  
+
     interface INavigateToItemProvider with
         member __.StartSearch(callback, searchValue) = 
             let token = searchCts.Token

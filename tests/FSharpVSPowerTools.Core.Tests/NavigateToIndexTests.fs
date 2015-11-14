@@ -8,31 +8,33 @@ module FSharpVSPowerTools.Core.Tests.NavigateToIndexTests
 #endif
 
 open NUnit.Framework
-open System.IO
-open System.Collections.Generic
-open Microsoft.FSharp.Compiler
 open FSharpVSPowerTools.Navigation
 
 [<Test>]
 let ``Index should return all matching entries``() =
     let b = Index.Builder()
+    let item filePath name =
+        { FilePath = filePath
+          Name = name
+          Range = { Start = { Row = 1; Col = 1 }; End = { Row = 1; Col = 1 }}
+          IsSignature = false
+          Kind = NavigableItemKind.Type }
     let items =
-        [
-            { Name = "foo"; Range = Range.rangeN "a.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "Symb"; Range = Range.rangeN "b.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "SymbolOf"; Range = Range.rangeN "c.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "Symbol"; Range = Range.rangeN "d.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "Symbol"; Range = Range.rangeN "e.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "Symbol"; Range = Range.rangeN "f.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "GetSymbol"; Range = Range.rangeN "g.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-            { Name = "bar"; Range = Range.rangeN "h.fs" 1; IsSignature = false; Kind = NavigableItemKind.Type }
-        ]
+        [ item "a.fs" "foo"
+          item "a.fs" "Symb"
+          item "a.fs" "SymbolOf"
+          item "a.fs" "Symbol"
+          item "a.fs" "Symbol"
+          item "a.fs" "Symbol"
+          item "a.fs" "GetSymbol"
+          item "a.fs" "bar" ]
+
     b.Add(items)
     let index = b.BuildIndex()
     let results = ResizeArray()
     index.Find("symbol", results.Add)
     assertTrue (results.Count = 5)
     results
-    |> Seq.distinctBy (fun (r, _, _, _) -> r.Range.FileName)
+    |> Seq.distinctBy (fun (r, _, _, _) -> r.FilePath)
     |> Seq.length
     |> (assertTrue << ((=)5))  
