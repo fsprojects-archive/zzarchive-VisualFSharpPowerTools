@@ -44,7 +44,7 @@ type LintTaggerProvider [<ImportingConstructor>]
     interface IViewTaggerProvider with
         member __.CreateTagger (textView, buffer) =
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if not generalOptions.LinterEnabled then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 return buffer.Properties.GetOrCreateSingletonProperty (typeof<LintTagger>, fun () ->

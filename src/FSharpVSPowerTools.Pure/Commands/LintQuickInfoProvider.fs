@@ -23,7 +23,7 @@ type LintQuickInfoProvider [<ImportingConstructor>]
     interface IQuickInfoSourceProvider with
         member __.TryCreateQuickInfoSource textBuffer =
             maybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if not generalOptions.LinterEnabled then return! None else
                 return
                     new LintQuickInfoSource (textBuffer, viewTagAggregatorFactoryService)

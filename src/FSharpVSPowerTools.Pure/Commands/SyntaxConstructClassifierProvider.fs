@@ -339,7 +339,7 @@ type SyntaxConstructClassifierProvider [<ImportingConstructor>]
 
     member __.GetClassifier(textBuffer: ITextBuffer)= 
         maybe{
-            let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+            let generalOptions = Setting.getGeneralOptions serviceProvider
             if not generalOptions.SyntaxColoringEnabled then return! None else
             let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
             let includeUnusedOpens = generalOptions.UnusedOpensEnabled

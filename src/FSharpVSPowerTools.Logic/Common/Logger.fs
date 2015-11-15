@@ -32,11 +32,10 @@ type internal Logger [<ImportingConstructor>]
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
 
     let getShellService() = 
-        serviceProvider.GetService<IVsUIShell, SVsUIShell>()
+        serviceProvider.TryGetService<IVsUIShell, SVsUIShell>()
 
     let getActivityLogService() =
-        let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>() 
-        Option.ofNull service
+        serviceProvider.TryGetService<IVsActivityLog, SVsActivityLog>() 
 
     static let mutable globalServiceProvider: IServiceProvider option = None
 
@@ -51,18 +50,21 @@ type internal Logger [<ImportingConstructor>]
         
     member __.MessageBox(logType, message) =
         let icon = getIcon logType
-        let service = getShellService()
-        let result = ref 0
-        service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
-            OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
+        match getShellService() with
+        | None -> -1
+        | Some service ->
+            let result = ref 0
+            service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
+                OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
+
+
 
 module OutputWindowHelper =
     open Microsoft.VisualStudio
 
-    let tryGetPowerToolsWindowPane(serviceProvider: IServiceProvider) =
-        let outputWindow = serviceProvider.GetService<IVsOutputWindow, SVsOutputWindow>()
+    let getPowerToolsWindowPane(serviceProvider: IServiceProvider) =
+        let outputWindow = serviceProvider.TryGetService<IVsOutputWindow, SVsOutputWindow>()
         outputWindow
-        |> Option.ofNull
         |> Option.bind (fun window ->
             let outputPaneGuid = ref Constants.guidPowerToolsOutputPane
             window.CreatePane(outputPaneGuid, Resource.vsPackageTitle, 1, 1) |> ignore
@@ -77,7 +79,7 @@ module OutputWindowHelper =
         window.OutputString(outputMessage) |> ignore
     
     /// This global output window is initialized once for each Visual Studio session.
-    let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
+    let outputWindowPane = lazy(getPowerToolsWindowPane(Logger.GlobalServiceProvider))
     let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =

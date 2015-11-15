@@ -33,7 +33,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
     interface ITaggerProvider with
         member __.CreateTagger buffer = 
             maybe{
-             //   let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+             //   let generalOptions = Setting.getGeneralOptions serviceProvider
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
             //    if not generalOptions.OutliningEnabled then return! None else
                 return buffer.Properties.GetOrCreateSingletonProperty (fun () ->
@@ -46,7 +46,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView  =  
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider  
+                let generalOptions = Setting.getGeneralOptions serviceProvider  
                 if not generalOptions.OutliningEnabled then return () else
                 let textBuffer = textView.TextBuffer
                 match (self :> ITaggerProvider).CreateTagger<IOutliningRegionTag> textBuffer with

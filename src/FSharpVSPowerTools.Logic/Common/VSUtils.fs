@@ -388,11 +388,16 @@ type ForegroundThreadGuard private() =
         if threadId <> UnassignedThreadId then 
             fail "Thread is already set"
         threadId <- Thread.CurrentThread.ManagedThreadId
+
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
-            fail "Thread not set"
+            Logging.logWarning
+                ( fun _ -> sprintf "ThreadId [%d] = UnassignedThreadId [%d] Thread not set" threadId UnassignedThreadId)
+
         if threadId <> Thread.CurrentThread.ManagedThreadId then
-            fail "Accessed from the wrong thread"
+            Logging.logWarning
+                ( fun _ -> sprintf "ThreadId [%d] <> CurrentThread [%d] \
+                                    Accessed from the wrong thread" threadId Thread.CurrentThread.ManagedThreadId)
 
 type Async with
     /// An equivalence of Async.StartImmediate which catches and logs raised exceptions

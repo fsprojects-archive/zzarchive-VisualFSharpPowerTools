@@ -27,7 +27,7 @@ type QuickInfoMarginProvider [<ImportingConstructor>]
             let textView = wpfTextViewHost.TextView
             let buffer = textView.TextBuffer
             maybe {
-          //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //      let generalOptions = Setting.getGeneralOptions serviceProvider
         //        if not generalOptions.QuickInfoPanelEnabled then return! None else 
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 return

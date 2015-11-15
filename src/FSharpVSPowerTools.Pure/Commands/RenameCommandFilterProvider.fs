@@ -44,7 +44,7 @@ type RenameCommandFilterProvider [<ImportingConstructor>]
         member __.VsTextViewCreated textViewAdapter =
             unitMaybe {
                 let! textView = editorFacotry.TryGetWpfTextView textViewAdapter
-          //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //      let generalOptions = Setting.getGeneralOptions serviceProvider
 
             //    if not generalOptions.RenameRefactoringEnabled then () else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer

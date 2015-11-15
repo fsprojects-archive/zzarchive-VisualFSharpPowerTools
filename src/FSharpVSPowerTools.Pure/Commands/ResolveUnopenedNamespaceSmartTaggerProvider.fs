@@ -29,7 +29,7 @@ type ResolveUnopenedNamespaceSmartTaggerProvider [<ImportingConstructor>]
         member __.CreateTagger (textView, buffer) =
             maybe {
                 if textView.TextBuffer <> buffer then return! None else
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer

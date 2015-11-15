@@ -44,7 +44,7 @@ type DepthColorizerAdornmentManager [<ImportingConstructor>]
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView =
             unitMaybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if not generalOptions.DepthColorizerEnabled then () else
 
                 let tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag> textView
@@ -78,7 +78,7 @@ type DepthColorizerTaggerProvider [<ImportingConstructor>]
     interface ITaggerProvider with
         member __.CreateTagger buffer =
             maybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if not generalOptions.DepthColorizerEnabled then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 return 

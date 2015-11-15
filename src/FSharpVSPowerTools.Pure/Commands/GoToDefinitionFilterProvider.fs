@@ -72,7 +72,7 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
 
     member __.Register (textViewAdapter:IVsTextView, textView:IWpfTextView, fireNavigationEvent:bool) : GoToDefinitionFilter option =
         maybe {
-//            let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+//            let generalOptions = Setting.getGeneralOptions serviceProvider
 //            if  not generalOptions.GoToMetadataEnabled 
 //                && not generalOptions.GoToSymbolSourceEnabled then return! None else
             let preference = 

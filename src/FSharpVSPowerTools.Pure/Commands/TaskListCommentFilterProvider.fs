@@ -29,7 +29,7 @@ type TaskListCommentFilterProvider [<ImportingConstructor>]
         member __.VsTextViewCreated textViewAdapter =
             unitMaybe {
                 let! textView = editorFactory.TryGetWpfTextView textViewAdapter
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if not generalOptions.TaskListCommentsEnabled then () else
                 taskCommentFilter <- new TaskListCommentFilter 
                                         (   textView, serviceProvider, taskListManager, 

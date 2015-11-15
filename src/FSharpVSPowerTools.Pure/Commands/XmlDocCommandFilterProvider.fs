@@ -31,7 +31,7 @@ type XmlDocCommandFilterProvider [<ImportingConstructor>]
     interface IVsTextViewCreationListener with
         member __.VsTextViewCreated textViewAdapter = 
             unitMaybe {
-          //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //      let generalOptions = Setting.getGeneralOptions serviceProvider
                 let! wpfTextView = editorFactory.TryGetWpfTextView textViewAdapter
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer wpfTextView.TextBuffer  
          //       if generalOptions.XmlDocEnabled then 

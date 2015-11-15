@@ -43,7 +43,7 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
     member __.RegisterCommandFilter (textView:IWpfTextView, showProgress:bool ) =
         maybe {
             let! textViewAdapter = editorFactory.TryGetViewAdapter textView
-          //  let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+          //  let generalOptions = Setting.getGeneralOptions serviceProvider
 
         //    if not generalOptions.FindAllReferencesEnabled then return! None else
 
