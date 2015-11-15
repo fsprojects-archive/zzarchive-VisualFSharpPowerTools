@@ -89,68 +89,114 @@ type IOutliningOptions =
     abstract AttributesCollapsedByDefault: bool with get, set
     abstract TooltipZoomLevel: int with get, set
 
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.Shell
+open System.Diagnostics
+
+
+type SVFPTPackageService = class end
+
+
+type Initializer [<ImportingConstructor>]
+    (vfptPackage: SVFPTPackageService) =
+    do Debug.WriteLine <| sprintf "Initializer Started with %A" vfptPackage
+
 
 
 [<AutoOpen>]
 module Utils =
-    type System.IServiceProvider with
-        /// Use the service provider to get an MEF service via its Interface type
-        member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
-        ///  Use the service provider to get an MEF Visual Studio service
-        ///  and cast it to its Interface type e.g.
-        ///  `.GetService<IVsTextManager, SVsTextManager>()`
-        member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
-        /// Try to use the service provider to get an MEF service via its Interface type
-        member x.TryGetService<'T>() = 
-            match x.GetService(typeof<'T>) with
-            | null -> None
-            | svc -> svc :?> 'T |> Some
+
+    type Package with
+        static member GetService<'ifc> () = Package.GetGlobalService(typeof<'ifc>) :?> 'ifc
+        static member GetService<'svs,'ivs> () = Package.GetGlobalService(typeof<'svs>) :?> 'ivs
+
+        static member TryGetService<'ifc>() = 
+            match Package.GetGlobalService(typeof<'ifc>) with
+            | null -> None | svc -> svc :?> 'ifc |> Some
+
+        static member TryGetService<'svs,'ivs>() = 
+            match Package.GetGlobalService(typeof<'svs>) with
+            | null -> None | svc -> svc :?> 'ivs |> Some
 
 
-//            try x.GetService(typeof<'T>) :?> 'T |> Option.ofNull
-//            with ex -> 
-//                System.Diagnostics.Debug.WriteLine(ex.Message)
-//                None
-//                
-
-        ///  Try to use the service provider to get an MEF Visual Studio service
-        ///  and cast it to its Interface type e.g.
-        ///  `.GetService<IVsTextManager, SVsTextManager>()`
-        member x.TryGetService<'T, 'S>() = 
-            match x.GetService(typeof<'S>) with
-            | null -> None
-            | svc -> svc :?> 'T |> Some
+//
+//    type System.IServiceProvider with
+//        /// Use the service provider to get an MEF service via its Interface type
+//        member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
+//        ///  Use the service provider to get an MEF Visual Studio service
+//        ///  and cast it to its Interface type e.g.
+//        ///  `.GetService<IVsTextManager, SVsTextManager>()`
+//        member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
+//        /// Try to use the service provider to get an MEF service via its Interface type
+//        member x.TryGetService<'T>() = 
+//            match x.GetService(typeof<'T>) with
+//            | null -> None
+//            | svc -> svc :?> 'T |> Some
+//
+//        ///  Try to use the service provider to get an MEF Visual Studio service
+//        ///  and cast it to its Interface type e.g.
+//        ///  `.GetService<IVsTextManager, SVsTextManager>()`
+//        member x.TryGetService<'T, 'S>() = 
+//            match x.GetService(typeof<'S>) with
+//            | null -> None
+//            | svc -> svc :?> 'T |> Some
             
-
-//            try x.GetService(typeof<'S> ) :?> 'T |> Option.ofNull
-//            with ex -> 
-//                System.Diagnostics.Debug.WriteLine(ex.Message)
-//                None
-        
-        
-         
 
 [<RequireQualifiedAccess>]
 module Setting =
     open System
      
-    let getGeneralOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IGeneralOptions>()
+//    let getGeneralOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<IGeneralOptions>()
+//
+//    let tryGetGeneralOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.TryGetService<IGeneralOptions>()
+//
+//    let getFormattingOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<IFormattingOptions>()
+//
+//    let tryGetFormattingOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.TryGetService<IFormattingOptions>()
+//
+//    let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<ICodeGenerationOptions>()
+//
+//    let tryGetCodeGenerationOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.TryGetService<ICodeGenerationOptions>()
+//
+//    let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
+//        match codeGenOptions.CodeGenerationOptions with
+//        | CodeGenerationKinds.Failwith -> "failwith \"Not implemented yet\""
+//        | CodeGenerationKinds.NotImplementedYet -> "raise (System.NotImplementedException())"
+//        | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
+//        | _ -> codeGenOptions.DefaultBody
+//
+//    let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
+//        IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
+//
+//    let getGlobalOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<IGlobalOptions>()
+//
+//    let tryGetGlobalOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.TryGetService<IGlobalOptions>()
+//        
+//    let getLintOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<ILintOptions>()
+//
+//    let getOutliningOptions (serviceProvider: IServiceProvider) =
+//        serviceProvider.GetService<IOutliningOptions>()
 
-    let tryGetGeneralOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.TryGetService<IGeneralOptions>()
+    let getGeneralOptions () = Package.GetService<IGeneralOptions>()
 
-    let getFormattingOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IFormattingOptions>()
+    let tryGetGeneralOptions () = Package.TryGetService<IGeneralOptions>()
 
-    let tryGetFormattingOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.TryGetService<IFormattingOptions>()
+    let getFormattingOptions () = Package.GetService<IFormattingOptions>()
 
-    let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<ICodeGenerationOptions>()
+    let tryGetFormattingOptions () = Package.TryGetService<IFormattingOptions>()
 
-    let tryGetCodeGenerationOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.TryGetService<ICodeGenerationOptions>()
+    let getCodeGenerationOptions () = Package.GetService<ICodeGenerationOptions>()
+
+    let tryGetCodeGenerationOptions () = Package.TryGetService<ICodeGenerationOptions>()
 
     let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
         match codeGenOptions.CodeGenerationOptions with
@@ -162,14 +208,10 @@ module Setting =
     let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
         IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
 
-    let getGlobalOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IGlobalOptions>()
+    let getGlobalOptions () = Package.GetService<IGlobalOptions>()
 
-    let tryGetGlobalOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.TryGetService<IGlobalOptions>()
+    let tryGetGlobalOptions () = Package.TryGetService<IGlobalOptions>()
         
-    let getLintOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<ILintOptions>()
+    let getLintOptions () = Package.GetService<ILintOptions>()
 
-    let getOutliningOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IOutliningOptions>()
+    let getOutliningOptions () = Package.GetService<IOutliningOptions>()

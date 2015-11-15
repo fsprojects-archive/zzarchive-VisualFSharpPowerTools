@@ -5,6 +5,7 @@ open System.IO
 open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
@@ -17,7 +18,6 @@ type LintTag(tooltip) =
 
 type LintTagger(textDocument: ITextDocument,
                 vsLanguageService: VSLanguageService, 
-                serviceProvider: IServiceProvider,
                 projectFactory: ProjectFactory,
                 openDocumentsTracker: IOpenDocumentsTracker) as self =
     let tagsChanged = Event<_, _>()
@@ -25,7 +25,7 @@ type LintTagger(textDocument: ITextDocument,
     let buffer = textDocument.TextBuffer
 
     let lintData = lazy(
-        let lintOptions = Setting.getLintOptions serviceProvider
+        let lintOptions = Setting.getLintOptions() // serviceProvider
         lintOptions.UpdateDirectories()
         let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
         let shouldFileBeIgnored =
@@ -37,7 +37,7 @@ type LintTagger(textDocument: ITextDocument,
             | None -> false
         config, shouldFileBeIgnored)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = Package.GetService<SDTE,EnvDTE.DTE>()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =

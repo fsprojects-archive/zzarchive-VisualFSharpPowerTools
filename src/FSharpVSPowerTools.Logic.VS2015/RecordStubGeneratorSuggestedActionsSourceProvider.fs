@@ -10,55 +10,65 @@ open Microsoft.VisualStudio.Utilities
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading.Tasks
 open FSharpVSPowerTools.Refactoring
-open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
+open Microsoft.VisualStudio.Shell
+
+
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Record Stub Generator Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type RecordStubGeneratorSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
+type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
+//    [<Import; DefaultValue>]
+//    val mutable FSharpVsLanguageService: VSLanguageService
+//
+//    [<Import; DefaultValue>]
+//    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
+//
+//    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
+//    val mutable ServiceProvider: IServiceProvider
+//
+//    [<Import; DefaultValue>]
+//    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
+//
+//    [<Import; DefaultValue>]
+//    val mutable ProjectFactory: ProjectFactory
+//
+//    [<Import; DefaultValue>]
+//    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
+//
+//    [<Import; DefaultValue>]
+//    val mutable OpenDocumentsTracker: IOpenDocumentsTracker
 
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
+    (FSharpVsLanguageService: VSLanguageService,
+     TextDocumentFactoryService: ITextDocumentFactoryService,
+     UndoHistoryRegistry: ITextUndoHistoryRegistry,
+     ProjectFactory: ProjectFactory,
+     //EditorOptionsFactory: IEditorOptionsFactoryService,
+     OpenDocumentsTracker: IOpenDocumentsTracker) =
 
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
-
-    [<Import; DefaultValue>]
-    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
-
-    [<Import; DefaultValue>]
-    val mutable OpenDocumentsTracker: IOpenDocumentsTracker
 
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions x.ServiceProvider
+                let generalOptions = Setting.getGeneralOptions()// x.ServiceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions()// x.ServiceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.GenerateRecordStubEnabled then null
                 else 
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let generator = 
                             new RecordStubGenerator(
                                   doc, textView,
-                                  x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                  x.FSharpVsLanguageService, x.ServiceProvider,
-                                  x.ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  x.OpenDocumentsTracker)
+                                  UndoHistoryRegistry.RegisterHistory(buffer),
+                                  FSharpVsLanguageService,
+                                  ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  OpenDocumentsTracker)
                     
                         new RecordStubGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null

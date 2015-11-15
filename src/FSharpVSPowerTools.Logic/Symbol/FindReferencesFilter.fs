@@ -6,6 +6,7 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress
@@ -17,13 +18,12 @@ open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 type FindReferencesFilter(textDocument: ITextDocument, 
                           view: IWpfTextView, 
                           vsLanguageService: VSLanguageService, 
-                          serviceProvider: System.IServiceProvider,
                           projectFactory: ProjectFactory,
                           showProgress: bool,
                           fileSystem: IFileSystem) =    
     let getDocumentState (progress: ShowProgress) =
         async {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
             let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
@@ -69,7 +69,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
 
     let findReferences () = 
         async {
-            use status = new StatusHandler(serviceProvider, StatusIcon.Find, true)
+            use status = new StatusHandler (StatusIcon.Find, true)
             let progress = 
                 if showProgress then status.Report
                 else (fun _ -> ())
@@ -93,17 +93,17 @@ type FindReferencesFilter(textDocument: ITextDocument,
                         let nodes =
                             // There are duplications from FCS, we remove duplications by checking text representation
                             references 
-                            |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, serviceProvider, fileSystem, reference))
+                            |> Seq.map (fun reference -> FSharpLibraryNode(symbol.Text, fileSystem, reference))
                             |> Seq.distinctBy (fun node -> node.GetTextWithOwnership(VSTREETEXTOPTIONS.TTO_DEFAULT))
 
-                        let findResults = FSharpLibraryNode("Find Symbol Results", serviceProvider, fileSystem)
+                        let findResults = FSharpLibraryNode("Find Symbol Results", fileSystem)
                         for node in nodes do
                             findResults.AddNode(node)
                         findResults
                     | None ->
-                        FSharpLibraryNode("Find Symbol Results", serviceProvider, fileSystem)
+                        FSharpLibraryNode("Find Symbol Results", fileSystem)
 
-                let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
+                let findService = Package.GetService<SVsObjectSearch,IVsFindSymbol>()
                 let searchCriteria = 
                     VSOBSEARCHCRITERIA2(
                         dwCustom = Constants.findReferencesResults,
@@ -117,8 +117,8 @@ type FindReferencesFilter(textDocument: ITextDocument,
             | Choice2Of2 msg -> 
                 // Clear cursor after finishing
                 progress(OperationState.Idle)
-                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                statusBar.SetText(msg) |> ignore 
+                let statusBar = Package.GetService<SVsStatusbar,IVsStatusbar>()
+                statusBar.SetText msg |> ignore 
         } |> Async.StartImmediateSafe
 
     member val IsAdded = false with get, set

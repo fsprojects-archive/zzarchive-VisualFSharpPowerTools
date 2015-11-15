@@ -49,6 +49,6 @@ type RenameCommandFilterProvider [<ImportingConstructor>]
             //    if not generalOptions.RenameRefactoringEnabled then () else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
                 RenameCommandFilterProvider.AddCommandFilter ( textViewAdapter, 
-                        new RenameCommandFilter( doc, textView, vsLanguageService, serviceProvider, projectFactory))
+                        new RenameCommandFilter( doc, textView, vsLanguageService, projectFactory))
             } 
 

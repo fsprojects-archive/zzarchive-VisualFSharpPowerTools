@@ -12,47 +12,55 @@ open System.Threading.Tasks
 open FSharpVSPowerTools.Refactoring
 open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Utils
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Implement Interface Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type ImplementInterfaceSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
+type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>] 
+//    [<Import; DefaultValue>]
+//    val mutable FSharpVsLanguageService: VSLanguageService
+//
+//    [<Import; DefaultValue>]
+//    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
+//
+//    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
+//    val mutable ServiceProvider: IServiceProvider
+//
+//    [<Import; DefaultValue>]
+//    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
+//
+//    [<Import; DefaultValue>]
+//    val mutable ProjectFactory: ProjectFactory
+//
+//    [<Import; DefaultValue>]
+//    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
 
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
 
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
-
-    [<Import; DefaultValue>]
-    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
+    (   FSharpVsLanguageService: VSLanguageService,
+        TextDocumentFactoryService: ITextDocumentFactoryService,
+        UndoHistoryRegistry: ITextUndoHistoryRegistry,
+        ProjectFactory: ProjectFactory,
+        EditorOptionsFactory: IEditorOptionsFactoryService ) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions x.ServiceProvider
+                let generalOptions = Setting.getGeneralOptions ()// x.ServiceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions ()//x.ServiceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else 
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let implementInterface = 
                             new ImplementInterface(
                                   doc, textView,
-                                  x.EditorOptionsFactory, x.UndoHistoryRegistry.RegisterHistory buffer,
-                                  x.FSharpVsLanguageService, x.ServiceProvider, x.ProjectFactory,
+                                  EditorOptionsFactory, UndoHistoryRegistry.RegisterHistory buffer,
+                                  FSharpVsLanguageService, ProjectFactory,
                                   Setting.getInterfaceMemberIdentifier codeGenOptions,
                                   Setting.getDefaultMemberBody codeGenOptions)
                     

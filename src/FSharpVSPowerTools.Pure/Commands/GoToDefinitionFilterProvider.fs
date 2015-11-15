@@ -28,9 +28,7 @@ type DotNetReferenceSourceProvider () =
 [<ContentType "F#">]
 [<TextViewRole (PredefinedTextViewRoles.Editable)>]
 type  GoToDefinitionFilterProvider [<ImportingConstructor>]
-    (   [<Import (typeof<SVsServiceProvider>)>] 
-        serviceProvider                 :   IServiceProvider                ,
-        editorFactory                   :   IVsEditorAdaptersFactoryService ,
+    (   editorFactory                   :   IVsEditorAdaptersFactoryService ,
         editorOptionsFactory            :   IEditorOptionsFactoryService    ,
         textDocumentFactoryService      :   ITextDocumentFactoryService     ,
         textEditorFactoryService        :   ITextEditorFactoryService       ,
@@ -44,8 +42,8 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
     let serviceType = typeof<GoToDefinitionFilterProvider>
     
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
-    let events = dte.Events  :?> Events2
+    let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+    let events = dte.Events :?> Events2
 //    do 
 //        if isNotNull events then
 //            solutionEvents <- events.SolutionEvents
@@ -85,7 +83,7 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
             let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
             let commandFilter = 
                 new GoToDefinitionFilter (doc, textView, editorOptionsFactory, vsLanguageService,
-                        serviceProvider, projectFactory, referenceSourceProvider, preference, fireNavigationEvent)
+                        projectFactory, referenceSourceProvider, preference, fireNavigationEvent)
             if not referenceSourceProvider.IsActivated 
           //   && generalOptions.GoToSymbolSourceEnabled 
                 then

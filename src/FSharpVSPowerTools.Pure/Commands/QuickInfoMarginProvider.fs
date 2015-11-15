@@ -16,9 +16,9 @@ open System.ComponentModel.Composition
 [<ContentType "F#">]
 [<TextViewRole (PredefinedTextViewRoles.Document)>]
 type QuickInfoMarginProvider [<ImportingConstructor>] 
-    (   [<Import(typeof<SVsServiceProvider>)>] 
-        serviceProvider                 :   IServiceProvider            ,
-        textDocumentFactoryService      :   ITextDocumentFactoryService ,
+//    (   [<Import(typeof<SVsServiceProvider>)>] 
+//        serviceProvider                 :   IServiceProvider            ,
+       (textDocumentFactoryService      :   ITextDocumentFactoryService ,
         projectFactory                  :   ProjectFactory              ,
         vsLanguageService               :   VSLanguageService           ) =
 
@@ -29,8 +29,11 @@ type QuickInfoMarginProvider [<ImportingConstructor>]
             maybe {
           //      let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
         //        if not generalOptions.QuickInfoPanelEnabled then return! None else 
+                let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
+                
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
+
                 return
-                    new QuickInfoMargin( doc, textView, vsLanguageService, serviceProvider, projectFactory)
+                    new QuickInfoMargin( doc, textView, vsLanguageService, projectFactory)
                     :> IWpfTextViewMargin
             } |> Option.getOrElse marginContainer

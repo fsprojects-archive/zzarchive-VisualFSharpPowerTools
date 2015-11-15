@@ -42,10 +42,9 @@ type private ProjectUniqueName = string
 [<Export>]
 type ProjectFactory
     [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-     openDocumentsTracker: IOpenDocumentsTracker,
+    (openDocumentsTracker: IOpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = Package.GetService< SDTE, DTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
 
@@ -74,7 +73,7 @@ type ProjectFactory
         cache.Clear()
         vsLanguageService.ClearCaches()
 
-    let solutionBuildEventListener = new SolutionBuildEventListener(serviceProvider)
+    let solutionBuildEventListener = new SolutionBuildEventListener()
     // When active configuration changes, all project providers are stale so we clear our own caches
     do solutionBuildEventListener.ActiveConfigChanged.Add(fun _ -> clearCaches())
 

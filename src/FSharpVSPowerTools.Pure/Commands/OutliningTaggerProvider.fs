@@ -21,9 +21,9 @@ open FSharpVSPowerTools.Outlining
 [<ContentType("F#")>]
 [<TextViewRole(PredefinedTextViewRoles.Structured)>]
 type OutliningTaggerProvider [<ImportingConstructor>]
-    ( [<Import(typeof<SVsServiceProvider>)>] 
-        serviceProvider : IServiceProvider,
-        textDocumentFactoryService      :   ITextDocumentFactoryService           ,
+   // ( [<Import(typeof<SVsServiceProvider>)>] 
+     //   serviceProvider : IServiceProvider,
+    (   textDocumentFactoryService      :   ITextDocumentFactoryService           ,
         textEditorFactoryService        :   ITextEditorFactoryService             ,
         projectionBufferFactoryService  :   IProjectionBufferFactoryService       ,
         outliningManagerService         :   IOutliningManagerService              ,
@@ -36,8 +36,10 @@ type OutliningTaggerProvider [<ImportingConstructor>]
              //   let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
             //    if not generalOptions.OutliningEnabled then return! None else
+                let serviceProvider = (Package.GetService<IServiceProvider>())
+
                 return buffer.Properties.GetOrCreateSingletonProperty (fun () ->
-                    new OutliningTagger (doc, serviceProvider, textEditorFactoryService, 
+                    new OutliningTagger (doc, textEditorFactoryService, 
                             projectionBufferFactoryService, projectFactory, vsLanguageService)
                 ) :> obj :?> _
             } |> Option.getOrElse null
@@ -46,7 +48,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView  =  
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider  
+                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider  
                 if not generalOptions.OutliningEnabled then return () else
                 let textBuffer = textView.TextBuffer
                 match (self :> ITaggerProvider).CreateTagger<IOutliningRegionTag> textBuffer with

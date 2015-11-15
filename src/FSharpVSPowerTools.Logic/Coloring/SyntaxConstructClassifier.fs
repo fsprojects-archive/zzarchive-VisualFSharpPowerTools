@@ -5,6 +5,7 @@ open System.IO
 open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
@@ -79,7 +80,6 @@ type SyntaxConstructClassifier
         buffer: ITextBuffer,
         classificationRegistry: IClassificationTypeRegistryService,
         vsLanguageService: VSLanguageService,
-        serviceProvider: IServiceProvider,
         projectFactory: ProjectFactory,
         includeUnusedReferences: bool,
         includeUnusedOpens: bool
@@ -118,7 +118,7 @@ type SyntaxConstructClassifier
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull textDocument
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = Package.GetService<SDTE,EnvDTE.DTE>()
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
             return! projectFactory.CreateForDocument buffer doc }
 
@@ -456,7 +456,7 @@ type SyntaxConstructClassifier
             } |> Async.Ignore
         else async.Return ()
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = Package.GetService<SDTE,EnvDTE.DTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {

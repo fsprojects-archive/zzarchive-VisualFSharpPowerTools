@@ -7,6 +7,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading
 open System.Diagnostics
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.AsyncMaybe
 
@@ -27,7 +28,6 @@ type DepthTagger
      (
          doc: ITextDocument, 
          buffer: ITextBuffer, 
-         serviceProvider: System.IServiceProvider, 
          projectFactory: ProjectFactory, 
          languageService: VSLanguageService,
          openDocumentsTracker: IOpenDocumentsTracker
@@ -41,7 +41,7 @@ type DepthTagger
     let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = Package.GetService<SDTE,EnvDTE.DTE>()
             let! document = dte.GetCurrentDocument doc.FilePath
             let! project = projectFactory.CreateForDocument buffer document
             let! parseResults = languageService.ParseFileInProject (doc.FilePath, project)

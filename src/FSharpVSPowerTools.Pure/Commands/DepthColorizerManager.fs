@@ -44,7 +44,7 @@ type DepthColorizerAdornmentManager [<ImportingConstructor>]
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView =
             unitMaybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
                 if not generalOptions.DepthColorizerEnabled then () else
 
                 let tagAggregator = viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag> textView
@@ -69,20 +69,20 @@ type DepthColorizerAdornmentManager [<ImportingConstructor>]
 [<ContentType "F#">]
 [<TagType (typeof<DepthRegionTag>)>]
 type DepthColorizerTaggerProvider [<ImportingConstructor>]
-    ( [<Import (typeof<SVsServiceProvider>)>] 
-    serviceProvider             :   IServiceProvider            ,
-    textDocumentFactoryService  :   ITextDocumentFactoryService ,
+    //( [<Import (typeof<SVsServiceProvider>)>] 
+  //  serviceProvider             :   IServiceProvider            ,
+   (textDocumentFactoryService  :   ITextDocumentFactoryService ,
     projectFactory              :   ProjectFactory              ,
     vsLanguageService           :   VSLanguageService           ) =
         
     interface ITaggerProvider with
         member __.CreateTagger buffer =
             maybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
                 if not generalOptions.DepthColorizerEnabled then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 return 
-                    new DepthTagger (doc, buffer, serviceProvider, projectFactory, 
+                    new DepthTagger (doc, buffer, projectFactory, 
                             vsLanguageService, OpenDocumentsTracker textDocumentFactoryService)
                     :> obj :?> _
             } |> Option.getOrElse null

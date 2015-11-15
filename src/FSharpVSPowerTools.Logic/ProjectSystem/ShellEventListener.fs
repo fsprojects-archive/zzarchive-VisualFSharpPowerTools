@@ -9,9 +9,8 @@ open Microsoft.VisualStudio.Shell
 
 /// Encapsulate listening for shell events.
 [<Export>]
-type ShellEventListener [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) as self =
-    let shellService = serviceProvider.GetService<IVsShell, SVsShell>() |> Option.ofNull
+type ShellEventListener () as self =
+    let shellService = Package.GetService<SVsShell, IVsShell>() |> Option.ofNull
     let broadcastEventCookie = ref 0u
     do shellService 
        |> Option.iter (fun shell ->

@@ -5,6 +5,7 @@ open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
@@ -25,7 +26,6 @@ type QuickInfoViewModel() as self =
 type QuickInfoMargin (textDocument: ITextDocument,
                       view: ITextView,
                       vsLanguageService: VSLanguageService,
-                      serviceProvider: IServiceProvider,
                       projectFactory: ProjectFactory) =
 
     let updateLock = obj()
@@ -100,7 +100,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
             | Some point, _ ->
                 let projectAndDoc =
                     maybe {
-                        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                        let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
                         let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                         let! project = projectFactory.CreateForDocument buffer doc
                         return project, doc }

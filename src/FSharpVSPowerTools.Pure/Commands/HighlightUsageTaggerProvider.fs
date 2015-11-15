@@ -30,6 +30,6 @@ type HighlightUsageTaggerProvider [<ImportingConstructor>]
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
             //    if not generalOptions.HighlightUsageEnabled then return! None else
                 return buffer.Properties.GetOrCreateSingletonProperty (fun () ->
-                    new HighlightUsageTagger (doc, textView, vsLanguageService, serviceProvider, projectFactory)
+                    new HighlightUsageTagger (doc, textView, vsLanguageService, projectFactory)
                 ) :> obj :?> _
             } |> Option.getOrElse null

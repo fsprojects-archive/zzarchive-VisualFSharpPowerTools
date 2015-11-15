@@ -20,14 +20,14 @@ open FSharpVSPowerTools.SyntaxColoring
 [<MarginContainer (PredefinedMarginNames.VerticalScrollBarContainer)>]
 [<TextViewRole (PredefinedTextViewRoles.PrimaryDocument)>]
 type UnusedDeclarationMarginProvider [<ImportingConstructor>]
-    ( [<Import(typeof<SVsServiceProvider>)>] 
-    serviceProvider : IServiceProvider,
-    viewTagAggregatorFactoryService :   IViewTagAggregatorFactoryService ) =
+   /// ( [<Import(typeof<SVsServiceProvider>)>] 
+ //   serviceProvider : IServiceProvider,
+    ( viewTagAggregatorFactoryService :   IViewTagAggregatorFactoryService ) =
 
     interface IWpfTextViewMarginProvider with
         member __.CreateMargin (wpfTextViewHost, marginContainer) =
             maybe {
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
                 if  not generalOptions.UnusedReferencesEnabled 
                     ||  generalOptions.UnusedOpensEnabled then return! None else 
                 let textView = wpfTextViewHost.TextView

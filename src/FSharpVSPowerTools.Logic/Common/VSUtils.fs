@@ -202,10 +202,11 @@ open Microsoft.VisualStudio.ComponentModelHost
 // This is for updating documents after refactoring
 // Reference at https://pytools.codeplex.com/SourceControl/latest#Python/Product/PythonTools/PythonToolsPackage.cs
 
-type DocumentUpdater(serviceProvider: IServiceProvider) = 
+type DocumentUpdater() = 
     member __.OpenDocument(fileName: string, [<Out>] viewAdapter: byref<IVsTextView>, pWindowFrame: byref<IVsWindowFrame>) = 
         let hierarchy = ref null
         let itemId = ref 0u
+        let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider> ()
         VsShellUtilities.OpenDocument(serviceProvider, fileName, Guid.Empty, hierarchy, itemId, &pWindowFrame, &viewAdapter)
 
     member x.GetBufferForDocument(fileName: string) = 
@@ -216,12 +217,12 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
         let lines = ref null
         ErrorHandler.ThrowOnFailure((!viewAdapter).GetBuffer(lines)) |> ignore
 
-        let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
-        let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
+    //    let componentModel = Package.GetService<SComponentModel,IComponentModel>()
+        let adapter = Package.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
     member __.BeginGlobalUndo(key: string) = 
-        let linkedUndo = serviceProvider.GetService<IVsLinkedUndoTransactionManager, SVsLinkedUndoTransactionManager>()
+        let linkedUndo = Package.GetService<SVsLinkedUndoTransactionManager,IVsLinkedUndoTransactionManager>()
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
@@ -386,13 +387,13 @@ type ForegroundThreadGuard private() =
     static let mutable threadId = UnassignedThreadId
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
-            fail "Thread is already set"
+            Logging.logWarning( fun _ ->  sprintf "ThreadId [ %d ] doesn't match UnassignedThreadId [ %d ], Thread is already set" threadId UnassignedThreadId  )
         threadId <- Thread.CurrentThread.ManagedThreadId
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
-            fail "Thread not set"
+            Logging.logWarning( fun _ ->  sprintf "ThreadId [ %d ] = UnassignedThreadId [ %d ], Thread was not set" threadId UnassignedThreadId  )
         if threadId <> Thread.CurrentThread.ManagedThreadId then
-            fail "Accessed from the wrong thread"
+            Logging.logWarning( fun _ ->  sprintf "ThreadId [ %d ] doesn't match CurrentThreadId [ %d ], Accessed from the wrong thread" threadId UnassignedThreadId  )
 
 type Async with
     /// An equivalence of Async.StartImmediate which catches and logs raised exceptions
@@ -495,12 +496,13 @@ type IVsEditorAdaptersFactoryService with
 
 
 
-type IServiceProvider with
+type Package with
     /// Go to exact location in a given file.
-    member serviceProvider.NavigateTo (fileName, startRow, startCol, endRow, endCol) =
+    static member NavigateTo (fileName, startRow, startCol, endRow, endCol) =
         let mutable hierarchy = Unchecked.defaultof<_>
         let mutable itemId = Unchecked.defaultof<_>
         let mutable windowFrame = Unchecked.defaultof<_>
+        let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
         let isOpened = 
             VsShellUtilities.IsDocumentOpen(
                 serviceProvider, 
@@ -528,7 +530,7 @@ type IServiceProvider with
             |> ensureSucceeded
 
             let vsTextView = VsShellUtilities.GetTextView windowFrame
-            let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+            let vsTextManager = Package.GetService<SVsTextManager,IVsTextManager>()
             let mutable vsTextBuffer = Unchecked.defaultof<_>
             vsTextView.GetBuffer (&vsTextBuffer)
             |> ensureSucceeded
@@ -537,25 +539,26 @@ type IServiceProvider with
             |> ensureSucceeded
 
     /// Get the IWPFTextView of a document if it is open
-    member serviceProvider.GetWPFTextViewOfDocument fileName =
+    static member GetWPFTextViewOfDocument fileName =
         maybe {
             let mutable hierarchy = Unchecked.defaultof<_>
             let mutable itemId = Unchecked.defaultof<_>
             let mutable windowFrame = Unchecked.defaultof<_>
+            let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
             if VsShellUtilities.IsDocumentOpen
                    (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
                 let vsTextView = VsShellUtilities.GetTextView windowFrame 
-                let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
-                let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
+               // let componentModel = Package.GetService<SComponentModel,IComponentModel>()
+                let vsEditorAdapterFactoryService =  Package.GetService<IVsEditorAdaptersFactoryService>()            
                 return
                     (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
             else 
                 return! None      
         }
 
-    member serviceProvider.GetDocumentFromBuffer (textBuffer:ITextBuffer) =
+    static member GetDocumentFromBuffer (textBuffer:ITextBuffer) =
         maybe{
-            let! documentService = serviceProvider.TryGetService<ITextDocumentFactoryService>()
+            let! documentService = Package.TryGetService<ITextDocumentFactoryService>()
             let mutable doc = Unchecked.defaultof<ITextDocument>
             return! 
                 match documentService.TryGetTextDocument ( textBuffer, &doc) with
@@ -564,27 +567,29 @@ type IServiceProvider with
         }
 
 
-    member serviceProvider.GetViewAndDocumentFromBuffer (textBuffer:ITextBuffer) =
+    static member GetViewAndDocumentFromBuffer (textBuffer:ITextBuffer) =
         maybe{
-            let! doc = serviceProvider.GetDocumentFromBuffer textBuffer
-            let! view = serviceProvider.GetWPFTextViewOfDocument doc.FilePath
+            let! doc = Package.GetDocumentFromBuffer textBuffer
+            let! view = Package.GetWPFTextViewOfDocument doc.FilePath
             return view, doc
         }
 
 
-    member serviceProvider.GetActiveViewAndDocument () =
+    static member GetActiveViewAndDocument () =
         maybe {
-            let! documentService     = serviceProvider.TryGetService<ITextDocumentFactoryService>()
-            let! dte                 = serviceProvider.TryGetService<EnvDTE.DTE, SDTE> ()
+            let! documentService     = Package.TryGetService<ITextDocumentFactoryService>()
+            let! dte                 = Package.TryGetService<SDTE,EnvDTE.DTE> ()
             let! doc = dte.GetActiveDocument ()
             let! wpfview =
                 let mutable hierarchy   = Unchecked.defaultof<_>
                 let mutable itemId      = Unchecked.defaultof<_>
                 let mutable windowFrame = Unchecked.defaultof<_>
+                let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
+
                 if VsShellUtilities.IsDocumentOpen
                    (serviceProvider, doc.FullName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
                     let vsTextView      = VsShellUtilities.GetTextView windowFrame 
-                    let componentModel  = serviceProvider.GetService<IComponentModel, SComponentModel>()
+                    let componentModel  = Package.GetService<SComponentModel,IComponentModel>()
                     let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
                     Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
                 else None            

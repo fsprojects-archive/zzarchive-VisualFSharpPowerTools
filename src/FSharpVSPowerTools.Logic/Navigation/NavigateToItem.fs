@@ -28,14 +28,12 @@ type NavigateToItemProviderFactory
     [<ImportingConstructor>]
     (
         openDocumentsTracker: IOpenDocumentsTracker,
-        [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         fsharpLanguageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
         vsCompositionService: ICompositionService,
         projectFactory: ProjectFactory
     ) =
-    
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
     let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
     let itemDisplayFactory = 
         let candidate =
@@ -51,22 +49,20 @@ type NavigateToItemProviderFactory
             instance :> _
 
     interface INavigateToItemProviderFactory with
-        member __.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
+        member __.TryCreateNavigateToItemProvider(_, provider) = 
             let navigateToEnabled = 
-                let generalOptions = Setting.getGeneralOptions(serviceProvider)
+                let generalOptions = Setting.getGeneralOptions()
                 generalOptions.NavigateToEnabled
             if not navigateToEnabled then
                 provider <- null
                 false
             else
-                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, fsharpLanguageService, itemDisplayFactory,
-                                                       projectFactory)
+                provider <- new NavigateToItemProvider(openDocumentsTracker, fsharpLanguageService, itemDisplayFactory, projectFactory)
                 true
 and
     NavigateToItemProvider
         (
             openDocumentsTracker: IOpenDocumentsTracker,
-            serviceProvider: IServiceProvider,
             fsharpLanguageService: VSLanguageService,
             itemDisplayFactory: INavigateToItemDisplayFactory,
             projectFactory: ProjectFactory
@@ -76,8 +72,9 @@ and
     
     let projectIndexes = 
         lazy
+            let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
             let listFSharpProjectsInSolution() = 
-                projectFactory.ListFSharpProjectsInSolution(serviceProvider.GetService<DTE, SDTE>()) 
+                projectFactory.ListFSharpProjectsInSolution dte
                 |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
@@ -87,7 +84,7 @@ and
             let projects = 
                 match listFSharpProjectsInSolution() with
                 | [] -> maybe {
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                            let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
                             let! doc = dte.GetActiveDocument()
                             let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
                             let buffer = openDoc.Document.TextBuffer
@@ -222,17 +219,14 @@ and
     [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2012)>]
     VS2012NavigateToItemDisplayFactory() =
 
-        [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-        val mutable serviceProvider: IServiceProvider
-        [<Import; DefaultValue>]
-        val mutable iconCache: NavigationItemIconCache
+        let iconCache = Package.GetService<NavigationItemIconCache>()
         
         interface INavigateToItemDisplayFactory with
             member x.CreateItemDisplay(item) = 
-                let icon = x.iconCache.GetIconForNavigationItemKind(item.Kind)
-                NavigateToItemDisplay(item, icon, x.serviceProvider) :> _
+                let icon = iconCache.GetIconForNavigationItemKind(item.Kind)
+                NavigateToItemDisplay(item, icon) :> _
 and
-    NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IServiceProvider) =
+    NavigateToItemDisplay(item: NavigateToItem, icon) =
         let extraData: NavigateToItemExtraData = unbox item.Tag
         interface INavigateToItemDisplay with
             member __.Name = item.Name
@@ -242,5 +236,5 @@ and
             member __.DescriptionItems = Constants.EmptyReadOnlyCollection
             member __.NavigateTo() = 
                 let (startRow, startCol), (endRow, endCol) = extraData.Span
-                serviceProvider.NavigateTo(extraData.FileName, startRow, startCol, endRow, endCol)
+                Package.NavigateTo(extraData.FileName, startRow, startCol, endRow, endCol)
 

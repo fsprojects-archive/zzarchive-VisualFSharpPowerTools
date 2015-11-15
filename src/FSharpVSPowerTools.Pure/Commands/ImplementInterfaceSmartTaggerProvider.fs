@@ -17,9 +17,9 @@ open Microsoft.VisualStudio.Shell.Interop
 [<ContentType "F#">]
 [<TagType(typeof<ImplementInterfaceSmartTag>)>]
 type  ImplementInterfaceSmartTaggerProvider[<ImportingConstructor>]
-    ( [<Import(typeof<SVsServiceProvider>)>] 
-        serviceProvider : IServiceProvider,
-        textDocumentFactoryService  :   ITextDocumentFactoryService     ,
+//    ( [<Import(typeof<SVsServiceProvider>)>] 
+//        serviceProvider : IServiceProvider,
+       (textDocumentFactoryService  :   ITextDocumentFactoryService     ,
         textEditorFactoryService    :   ITextEditorFactoryService       ,
         undoHistoryRegistry         :   ITextUndoHistoryRegistry        ,
         editorOptionsFactory        :   IEditorOptionsFactoryService    ,
@@ -29,15 +29,16 @@ type  ImplementInterfaceSmartTaggerProvider[<ImportingConstructor>]
     interface IViewTaggerProvider with
         member __.CreateTagger (textView, buffer) =
             maybe {
+                let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
                 if textView.TextBuffer <> buffer then return! None else
-                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
-                let! codeGenOptions = Setting.tryGetCodeGenerationOptions serviceProvider
-                let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
+                let! generalOptions = Setting.tryGetGeneralOptions() //serviceProvider
+                let! codeGenOptions = Setting.tryGetCodeGenerationOptions() //serviceProvider
+                let dte = Package.GetService<SDTE,EnvDTE.DTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 let implementInterface = 
                     new ImplementInterface (doc, textView, editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer, 
-                        vsLanguageService, serviceProvider, projectFactory, Setting.getInterfaceMemberIdentifier codeGenOptions,
+                        vsLanguageService,projectFactory, Setting.getInterfaceMemberIdentifier codeGenOptions,
                         Setting.getDefaultMemberBody codeGenOptions)
                 return
                     new ImplementInterfaceSmartTagger (buffer, implementInterface) :> obj :?> _

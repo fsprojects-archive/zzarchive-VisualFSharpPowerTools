@@ -17,12 +17,14 @@ open System.Diagnostics
 open Microsoft.VisualStudio.ComponentModelHost 
 open FSharpVSPowerTools.Reference              
 
+
+
 //[< ProvideAutoLoad (VSConstants.UICONTEXT. NoSolution_string) >]
 //[< ProvideAutoLoad (VSConstants.UICONTEXT.SolutionExists_string) >]
 [< ProvideAutoLoad (VSConstants.UICONTEXT.FSharpProject_string) >]
 [< ProvideBindingPath >]
 [< Guid "1F699E38-7D87-44F4-BC08-6B1DD5A6F926" >]
-[< PackageRegistration (UseManagedResourcesOnly = true, RegisterUsing = RegistrationMethod.CodeBase) >]
+[< PackageRegistration (UseManagedResourcesOnly = true) >]
 [< ProvideMenuResource (resourceID= "Menus.ctmenu", version=1) >]
 [< InstalledProductRegistration ("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400) >]
 [< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "General", 0s, 0s, true, 0) >]
@@ -36,11 +38,13 @@ open FSharpVSPowerTools.Reference
 //[< ProvideService (typeof<ICodeGenerationOptions>) >]
 [< ProvideService (typeof<IGlobalOptions>) >]
 [< ProvideService (typeof<ILintOptions>) >]
+[<ProvideService (typeof<SVFPTPackageService>)>]
 [<ComVisible true>]
 type PowerToolsCommandsPackage () as self =
     inherit Package ()
 
-    static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
+    //static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
+    static let DTE = Package.GetService<DTE,DTE2> ()
 
     let mutable pctCookie = 0u
     let mutable objectManagerCookie = 0u
@@ -67,14 +71,16 @@ type PowerToolsCommandsPackage () as self =
         let setupReferenceMenu () =
             unitMaybe {
                 let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>) :?> OleMenuCommandService
-                (new FsiReferenceCommand (DTE.Value, mcs)).SetupCommands ()
+//                (new FsiReferenceCommand (DTE.Value, mcs)).SetupCommands ()
+                (new FsiReferenceCommand (DTE, mcs)).SetupCommands ()
             }
 
         let setupFolderMenu () =
             unitMaybe {
                 let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>)  :?> OleMenuCommandService
                 let shell = serviceProvider.GetService (typeof<SVsUIShell>) :?> IVsUIShell
-                let folderMenu = new FolderMenuCommands (DTE.Value, mcs, shell)
+//                let folderMenu = new FolderMenuCommands (DTE.Value, mcs, shell)
+                let folderMenu = new FolderMenuCommands (DTE, mcs, shell)
                 folderMenu.SetupCommands ()
                 newFolderMenu <- Some folderMenu
             }
@@ -110,6 +116,7 @@ type PowerToolsCommandsPackage () as self =
     
     member __.CreateService<'page>() = fun _ _ -> self.GetDialogPage<'page>() :> obj
 
+   
     override __.Initialize () =
         base.Initialize ()
 
@@ -122,7 +129,7 @@ type PowerToolsCommandsPackage () as self =
 //        self.GetDialogPage<CodeGenerationOptionsPage> () |> addService<ICodeGenerationOptions> 
         //self.GetDialogPage<OutliningOptionsPage> () |> addService<IOutliningOptions> serviceContainer 
 
-        let generalOptions = self.GetService<IGeneralOptions> ()
+        let generalOptions = Package.GetService<IGeneralOptions> ()
 
         self.PerformRegistrations generalOptions
 

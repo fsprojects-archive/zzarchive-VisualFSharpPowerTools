@@ -32,20 +32,20 @@ type internal FileChangeMonitor() =
         
 [<Export>]
 type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
-     [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
+    ([<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      taskListManager: TaskListManager,
      projectFactory: ProjectFactory) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
     let events = dte.Events :?> Events2
     let projectItemsEvents = events.ProjectItemsEvents
     let solutionEvents = events.SolutionEvents
 
-    let optionsReader = OptionsReader(serviceProvider)
-    let optionsMonitor = new OptionsMonitor(serviceProvider)
+
+    let optionsReader = OptionsReader ()
+    let optionsMonitor = new OptionsMonitor ()
     let mutable options = optionsReader.GetOptions()
 
-    let fileChangeService = serviceProvider.GetService<IVsFileChangeEx, SVsFileChangeEx>()
+    let fileChangeService = Package.GetService<SVsFileChangeEx,IVsFileChangeEx>()
     let fileChangeMonitor = FileChangeMonitor()
     
     let fileChangeCookies = Dictionary()
