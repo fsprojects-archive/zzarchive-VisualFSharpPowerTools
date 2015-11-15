@@ -276,12 +276,12 @@ type NavigateToItemProviderFactory
         languageService: VSLanguageService,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
         vsCompositionService: ICompositionService,
-        projectFactory: ProjectFactory,
-        [<Import(typeof<NavigableItemCache>)>] navigableItemCache: NavigableItemCache
+        projectFactory: ProjectFactory
     ) = 
     
     let dte = serviceProvider.GetService<DTE, SDTE>()
     let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
+    
     let itemDisplayFactory = 
         let candidate =
             itemDisplayFactories
@@ -294,6 +294,8 @@ type NavigateToItemProviderFactory
             vsCompositionService.SatisfyImportsOnce instance |> ignore
             upcast instance
 
+    let navigableItemCache = lazy new NavigableItemCache(serviceProvider)
+
     interface INavigateToItemProviderFactory with
         member __.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
             let navigateToEnabled = 
@@ -304,5 +306,5 @@ type NavigateToItemProviderFactory
                 false
             else
                 provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, 
-                                    languageService, itemDisplayFactory, projectFactory, navigableItemCache)
+                                    languageService, itemDisplayFactory, projectFactory, navigableItemCache.Value)
                 true

@@ -27,13 +27,7 @@ type FileNavigableItems =
     { Descriptor: FileDescriptor
       Items: NavigableItem[] }
 
-[<Export>]
-type NavigableItemCache
-    [<ImportingConstructor>]
-    (
-        [<Import(typeof<SVsServiceProvider>)>] serviceProvider: System.IServiceProvider
-    ) =
-    
+type NavigableItemCache (serviceProvider: System.IServiceProvider) =
     let cache = ConcurrentDictionary<FilePath, FileNavigableItems>()
     let dirty = ref false
     let pickler = FsPickler.CreateBinarySerializer()
@@ -49,67 +43,65 @@ type NavigableItemCache
         root </> solutionHash </> "navigable_items.cache"
 
     let loadFromDisk (solutionPath: FilePath) =
-        VSUtils.protect <| fun _ ->
+        protect <| fun _ ->
             cache.Clear()
-            let sw = Stopwatch.StartNew()
+            let pf = Profiler()
             let filePath = cacheFilePath solutionPath
-            
-            let items =
+            let items = pf.Time "Read from file" <| fun _ ->
                 if File.Exists filePath then
                     use file = File.OpenRead filePath
                     let items: FileNavigableItems[] = pickler.Deserialize file
                     items
                 else [||]
-            
-            for item in items do
-                match File.tryGetLastWriteTime item.Descriptor.Path with
-                | Some lastWriteTime when item.Descriptor.LastWriteTime = lastWriteTime ->
-                    cache.[item.Descriptor.Path] <- item
-                | _ -> ()
+                
+            let items = pf.Time "Filter by LastWriteTime" <| fun _ ->
+                for item in items do
+                    match File.tryGetLastWriteTime item.Descriptor.Path with
+                    | Some lastWriteTime when item.Descriptor.LastWriteTime = lastWriteTime ->
+                        cache.[item.Descriptor.Path] <- item
+                    | _ -> ()
+                items
 
-            sw.Stop()
+            pf.Stop()
             Logging.logInfo <| fun _ -> 
-                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files. Elapsed %O" 
+                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files %s" 
                         (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length
                         (cache.Values |> Seq.sumBy (fun x -> x.Items.Length)) cache.Count
-                        sw.Elapsed
+                        pf.Result
 
     let saveToDisk (solutionPath: FilePath) =
         if !dirty then
             dirty := false
-            VSUtils.protect <| fun _ ->
-                let sw = Stopwatch.StartNew()
-                let items = cache.Values |> Seq.toArray
+            protect <| fun _ ->
                 let filePath = cacheFilePath solutionPath
-                Directory.CreateDirectory (Path.GetDirectoryName filePath) |> ignore
-                use file = new FileStream (filePath, FileMode.Create, FileAccess.Write, FileShare.Read)
-                pickler.Serialize (file, items)
-                sw.Stop()
+                let pf = Profiler()
+                let items = pf.Time "Save to file" <| fun _ ->
+                    let items = cache.Values |> Seq.toArray
+                    Directory.CreateDirectory (Path.GetDirectoryName filePath) |> ignore
+                    use file = new FileStream (filePath, FileMode.Create, FileAccess.Write, FileShare.Read)
+                    pickler.Serialize (file, items)
+                    items
+                pf.Stop()
                 Logging.logInfo <| fun _ -> 
-                    sprintf "[NavigableItemCache] Saved %d items for %d files to %s in %O" 
-                            (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath sw.Elapsed
+                    sprintf "[NavigableItemCache] Saved %d items for %d files to %s %s" 
+                            (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath pf.Result
 
+    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let tryGetSolutionPath() = Option.attempt (fun () -> dte.Solution.FullName)  
+    let afterSolutionClosing = _dispSolutionEvents_AfterClosingEventHandler (fun () -> cache.Clear())
+    let tryLoadFromFile() = tryGetSolutionPath() |> Option.iter loadFromDisk
+    let solutionOpened = _dispSolutionEvents_OpenedEventHandler tryLoadFromFile
     let mutable solutionEvents: SolutionEvents = null
-    let mutable afterSolutionClosing: _dispSolutionEvents_AfterClosingEventHandler = null
-    let mutable solutionOpened: _dispSolutionEvents_OpenedEventHandler = null
-    let tryGetSolutionPath (dte: DTE) = Option.attempt (fun () -> dte.Solution.FullName)  
     
-    let dte = lazy(
-        let dte = serviceProvider.GetService<DTE, SDTE>()
-        afterSolutionClosing <- _dispSolutionEvents_AfterClosingEventHandler (fun () -> cache.Clear())
-        let tryLoadFromFile() = tryGetSolutionPath dte |> Option.iter loadFromDisk
-        solutionOpened <- _dispSolutionEvents_OpenedEventHandler tryLoadFromFile
-        
-        match dte.Events with
-            | :? Events2 as events ->
-                solutionEvents <- events.SolutionEvents
-                solutionEvents.add_Opened solutionOpened
-                solutionEvents.add_AfterClosing afterSolutionClosing
-            | _ -> ()
-        tryLoadFromFile()
-        dte)
-    
-    let saveTimer = new Timer((fun _ -> tryGetSolutionPath dte.Value |> Option.iter saveToDisk), null, 0, 5000)
+    do match dte.Events with
+       | :? Events2 as events ->
+           solutionEvents <- events.SolutionEvents
+           solutionEvents.add_Opened solutionOpened
+           solutionEvents.add_AfterClosing afterSolutionClosing
+       | _ -> ()
+    do tryLoadFromFile()
+
+    let saveTimer = new Timer((fun _ -> tryGetSolutionPath() |> Option.iter saveToDisk), null, 0, 5000)
 
     member __.TryGet (file: FileDescriptor): NavigableItem[] option =
         match cache.TryGetValue file.Path with
