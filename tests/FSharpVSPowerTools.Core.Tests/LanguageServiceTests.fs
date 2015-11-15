@@ -9,23 +9,21 @@ module FSharpVSPowerTools.Core.Tests.LanguageServiceTests
 
 open NUnit.Framework
 open System.IO
-open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
+open System.Threading
 
 [<Literal>]
-let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
-type dataFolder = FSharp.Management.FileSystem<dataFolderName>
- 
-let fileName = dataFolder.``LanguageServiceSampleFile.fs``
+let DataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
 
+type DataFolder = FSharp.Management.FileSystem<DataFolderName>
+ 
+let fileName = DataFolder.``LanguageServiceSampleFile.fs``
 let source = File.ReadAllText(fileName)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
-
 let sourceFiles = [| fileName |]
 let args = LanguageServiceTestHelper.argsDotNET451
-
 let compilerVersion = FSharpCompilerVersion.FSharp_3_1
 let languageService = LanguageService()
 let opts = languageService.GetProjectCheckerOptions(projectFileName, sourceFiles, args, [||])
@@ -305,11 +303,6 @@ let ``should instantiate types correctly``() =
     let specificType = (specificSymbolUse.Value.Symbol :?> FSharpMemberOrFunctionOrValue).FullType
     let specificParams = specificType.GenericArguments
     let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
-//    printfn "Generic type: %A" genericType
-//    printfn "Specific type: %A" specificType
-//    printfn "Generic params: %A" genericParams
-//    printfn "Specific params: %A" specificParams
-//    printfn "Instantiated type: %A" instantiatedType
     instantiatedType.Format context |> assertEqual (specificType.Format context)
 
 [<Test>]
@@ -323,89 +316,4 @@ let ``should instantiate types on a single entity``() =
     let currentMember = entity.MembersFunctionsAndValues.[5]
     let genericType = currentMember.FullType
     let instantiatedType = genericType.Instantiate(Seq.zip genericParams specificParams |> Seq.toList)
-//    printfn "Checking member: %O" currentMember.DisplayName
-//    printfn "Generic type: %A" genericType
-//    printfn "Generic params: %A" genericParams
-//    printfn "Specific params: %A" specificParams
-//    printfn "Instantiated type: %A" instantiatedType
     instantiatedType.Format context |> assertEqual "KeyValuePair<'TKey,'TValue> [] * int -> unit"
-
-#if INTERACTIVE
-``should instantiate types on a single entity``();;
-``should instantiate types correctly``();;
-#endif
-
-type ITempSource = 
-    inherit System.IDisposable
-    abstract FilePath: string
-
-let private tempSource content = 
-    let path = Path.GetTempPath();
-    let path = Path.ChangeExtension(path, "fs")
-    File.WriteAllText(path, content)
-    {
-        new ITempSource with
-            member this.FilePath = path
-            member this.Dispose() = File.Delete(path)
-    }
-
-[<Test>]
-let ``ProcessParseTree should be called for all files in project``() =
-    use f1 = tempSource "module M1"
-    use f2 = tempSource "module M2"
-    let seen = ResizeArray()
-    languageService.ProcessParseTrees(
-        projectFileName, 
-        Map.empty, 
-        [| f1.FilePath; f2.FilePath |], 
-        args, 
-        compilerVersion, 
-        seen.Add,
-        System.Threading.CancellationToken.None) |> Async.RunSynchronously
-
-    assertTrue (seen.Count = 2)
-    assertEqual seen.[0].Range.FileName f1.FilePath
-    assertEqual seen.[1].Range.FileName f2.FilePath
-
-[<Test>]
-let ``ProcessParseTree should prefer open documents``() =
-    use f1 = tempSource "module Foo"
-    let seen = ResizeArray()
-    languageService.ProcessParseTrees(
-        projectFileName,
-        [f1.FilePath, "module Bar"] |> Map.ofList, 
-        [| f1.FilePath|], 
-        args, 
-        compilerVersion, 
-        seen.Add,
-        System.Threading.CancellationToken.None)
-    |> Async.RunSynchronously
-
-    assertTrue (seen.Count = 1)
-    match seen.[0] with
-    | Ast.ParsedInput.ImplFile(Ast.ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, [m], _)) -> 
-        match m with
-        | Ast.SynModuleOrNamespace([name], _isModule, _decls, _xmldoc, _attributes, _access, _range) ->
-            assertEqual name.idText "Bar"
-        | x -> 
-            Assert.Fail (sprintf "Expected empty module named Bar got %+A" x)
-    | _ -> 
-        Assert.Fail("Impl file expected")
-
-[<Test>]
-let ``ProcessParseTree should react on cancellation``() =
-    use f1 = tempSource "module Foo"
-    let seen = ResizeArray()
-    let cts = new System.Threading.CancellationTokenSource()
-    cts.Cancel()
-    languageService.ProcessParseTrees(
-        projectFileName,
-        Map.empty, 
-        [| f1.FilePath|], 
-        args, 
-        compilerVersion, 
-        seen.Add,
-        cts.Token)
-    |> Async.RunSynchronously
-
-    assertTrue (seen.Count = 0)

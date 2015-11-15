@@ -26,16 +26,18 @@ module Index =
                 CultureInfo.CurrentCulture.CompareInfo.IndexOf(str, s, offset, s.Length, CompareOptions.IgnoreCase) = offset
         member private __.DebugString() = sprintf "%s (offset %d) (%s)" (str.Substring offset) offset str
 
-    let private IndexEntryComparer =
+    let private indexEntryComparer =
         {
             new IComparer<IndexEntry> with
                 member __.Compare(a, b) = 
                     let res = CultureInfo.CurrentCulture.CompareInfo.Compare(a.String, a.Offset, b.String, b.Offset, CompareOptions.IgnoreCase)
                     if res = 0 then a.Offset.CompareTo(b.Offset) else res
         }
+
+    type NavigableItemProcessor = NavigableItem * string * bool * MatchKind -> unit
         
     type IIndexedNavigableItems =
-        abstract Find: searchValue: string * itemProcessor: (NavigableItem * string * bool * MatchKind-> unit) -> unit
+        abstract Find: searchValue: string * itemProcessor: NavigableItemProcessor -> unit
 
     type Builder() =
         let entries = ResizeArray()
@@ -51,14 +53,14 @@ module Index =
                     entries.Add(IndexEntry(name, i, item, isOperator))
 
         member __.BuildIndex() =
-            entries.Sort(IndexEntryComparer)
+            entries.Sort(indexEntryComparer)
             {
                 new IIndexedNavigableItems with
                     member __.Find(searchValue, processor) =
                         if entries.Count > 0 then 
                             let entryToFind = IndexEntry(searchValue, 0, Unchecked.defaultof<_>, Unchecked.defaultof<_>)
                             let initial = 
-                                let p = entries.BinarySearch(entryToFind, IndexEntryComparer)
+                                let p = entries.BinarySearch(entryToFind, indexEntryComparer)
                                 if p < 0 then ~~~p else p
                             let handle index = 
                                 let entry = entries.[index]

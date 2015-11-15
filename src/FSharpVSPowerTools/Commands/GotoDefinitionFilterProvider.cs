@@ -49,7 +49,7 @@ namespace FSharpVSPowerTools
             IEditorOptionsFactoryService editorOptionsFactory,
             ITextDocumentFactoryService textDocumentFactoryService,
             [Import(typeof(DotNetReferenceSourceProvider))] ReferenceSourceProvider referenceSourceProvider,
-            VSLanguageService fsharpVsLanguageService,
+            VSLanguageService languageService,
             ProjectFactory projectFactory)
         {
             _serviceProvider = serviceProvider;
@@ -57,7 +57,7 @@ namespace FSharpVSPowerTools
             _editorOptionsFactory = editorOptionsFactory;
             _textDocumentFactoryService = textDocumentFactoryService;
             _referenceSourceProvider = referenceSourceProvider;
-            _fsharpVsLanguageService = fsharpVsLanguageService;
+            _fsharpVsLanguageService = languageService;
             _projectFactory = projectFactory;
 
             var dte = serviceProvider.GetService(typeof(SDTE)) as DTE;

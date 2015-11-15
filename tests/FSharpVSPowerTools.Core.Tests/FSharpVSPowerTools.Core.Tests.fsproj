@@ -65,6 +65,7 @@
     <Compile Include="UtilsTests.fs" />
     <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
+    <Compile Include="NavigableItemsCollectorTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
     <Compile Include="IdentifierDetectionTests.fs" />
     <Compile Include="RenameTests.fs" />
@@ -98,14 +99,6 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
       <ItemGroup>
@@ -267,4 +260,12 @@
       <Paket>True</Paket>
     </Reference>
   </ItemGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.paket\paket.targets" />
 </Project>

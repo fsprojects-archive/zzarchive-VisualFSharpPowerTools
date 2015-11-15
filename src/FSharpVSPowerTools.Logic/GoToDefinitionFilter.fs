@@ -19,7 +19,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 open SourceLink.SymbolStore
 open System.Diagnostics
-open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open System.Text

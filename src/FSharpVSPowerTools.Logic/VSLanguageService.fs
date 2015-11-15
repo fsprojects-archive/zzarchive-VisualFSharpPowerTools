@@ -144,22 +144,18 @@ type VSLanguageService
             return! instance.ParseFileInProject(opts, fileName, source) |> liftAsync
         }
 
+    member __.ParseFileInProject (fileName, source, projectProvider: IProjectProvider) =
+        async {
+            let! opts = projectProvider.GetProjectCheckerOptions instance
+            return! instance.ParseFileInProject(opts, fileName, source)
+        }
+
     member __.ParseAndCheckFileInProject (currentFile: string, projectProvider: IProjectProvider) =
         asyncMaybe {
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
             return! instance.ParseAndCheckFileInProject(opts, currentFile, source, AllowStaleResults.No) |> liftAsync
         }
-
-    member __.ProcessNavigableItemsInProject(openDocuments, projectProvider: IProjectProvider, processNavigableItems, ct) =
-        instance.ProcessParseTrees(
-            projectProvider.ProjectFileName, 
-            openDocuments, 
-            projectProvider.SourceFiles, 
-            projectProvider.CompilerOptions, 
-            projectProvider.CompilerVersion |> Option.getOrElse FSharpCompilerVersion.FSharp_3_1, 
-            (Navigation.NavigableItemsCollector.collect >> processNavigableItems), 
-            ct)        
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         asyncMaybe {
@@ -259,12 +255,11 @@ type VSLanguageService
                                                     checkForUnusedOpens: bool, profiler: Profiler) = 
         async {
             let! opts = project.GetProjectCheckerOptions instance
-            let! allSymbolsUses = profiler.TimeAsync "instance.GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
             return allSymbolsUses
         }
 
-     member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
+    member __.GetSymbolDeclProjects getSymbolDeclLocation currentProject (symbol: FSharpSymbol) =
          async {
              let projects =
                  match getSymbolDeclLocation symbol with
@@ -282,15 +277,15 @@ type VSLanguageService
              | None -> return None
          }
 
-     member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
+    member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
 
-     member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+    member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
         async {
             let! opts = currentProject.GetProjectCheckerOptions instance
             return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
         }
 
-     member __.GetAllEntities (fileName, project: IProjectProvider) =
+    member __.GetAllEntities (fileName, project: IProjectProvider) =
         asyncMaybe { 
             let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             let! source = openDocumentsTracker.TryGetDocumentText fileName
@@ -311,7 +306,7 @@ type VSLanguageService
         }
 
     member __.GetOpenDeclarationTooltip (line, colAtEndOfNames, lineStr, names, project: IProjectProvider, file) =
-        asyncMaybe {    
+        asyncMaybe {
             let! source = openDocumentsTracker.TryGetDocumentText file
             let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             try return! instance.GetIdentTooltip (line, colAtEndOfNames, lineStr, names, opts, file, source)

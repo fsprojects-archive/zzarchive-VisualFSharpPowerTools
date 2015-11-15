@@ -281,7 +281,7 @@ type SyntaxConstructClassifier
                 let! lexer = vsLanguageService.CreateLexer(textDocument.FilePath, snapshot, project.CompilerOptions)
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
-                let! checkResults = pf.Time "parseFileInProject" <| fun _ ->
+                let! checkResults = pf.Time "ParseAndCheckFileInProject" <| fun _ ->
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
                      
                 let! ast = checkResults.GetUntypedAst()
@@ -387,7 +387,7 @@ type SyntaxConstructClassifier
                 do! checkAst "Fast stage" ast
                 let! lexer = vsLanguageService.CreateLexer(textDocument.FilePath, snapshot, currentProject.CompilerOptions)
 
-                let! allSymbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
+                let! allSymbolsUses =
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
                         snapshot, textDocument.FilePath, currentProject, AllowStaleResults.No, false, pf)
 

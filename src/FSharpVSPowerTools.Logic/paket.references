@@ -5,3 +5,4 @@ FSharp.ViewModule.Core
 FsXaml.Wpf
 SourceLink.SymbolStore
 FSharpLint.Core
+FsPickler
