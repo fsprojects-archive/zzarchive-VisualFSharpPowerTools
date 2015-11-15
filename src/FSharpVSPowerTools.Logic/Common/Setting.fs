@@ -117,55 +117,30 @@ module Utils =
             | null -> None | svc -> svc :?> 'T |> Some
             
     type DefaultGeneralOptions() = 
-        let mutable xmlDocEnabled= true
-        let mutable formattingEnabled= true
-//        let mutable navBarEnabled= true
-//        let mutable highlightUsageEnabled= true
-//        let mutable renameRefactoringEnabled= true
-//        let mutable depthColorizerEnabled= true
-//        let mutable navigateToEnabled= true
-//        let mutable syntaxColoringEnabled= true
-//        let mutable interfaceImplementationEnabled= true
-//        let mutable folderOrganizationEnabled= true
-//        let mutable findAllReferencesEnabled= true
-//        let mutable generateRecordStubEnabled= true
-//        let mutable unionPatternMatchCaseGenerationEnabled= true
-//        let mutable resolveUnopenedNamespacesEnabled= true
-//        let mutable unusedReferencesEnabled= true
-//        let mutable unusedOpensEnabled= true
-//        let mutable taskListCommentsEnabled= true
-//        let mutable goToMetadataEnabled= true
-//        let mutable generateReferencesEnabled= true
-//        let mutable goToSymbolSourceEnabled= true
-//        let mutable quickInfoPanelEnabled= true
-//        let mutable linterEnabled= true
-//        let mutable outliningEnabled= true
-
-
         interface IGeneralOptions with
-            member __.XmlDocEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.FormattingEnabled with get() = formattingEnabled and set v = formattingEnabled <- v
-            member __.NavBarEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.HighlightUsageEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.RenameRefactoringEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.DepthColorizerEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.NavigateToEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.SyntaxColoringEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.InterfaceImplementationEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.FolderOrganizationEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.FindAllReferencesEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.GenerateRecordStubEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.UnionPatternMatchCaseGenerationEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.ResolveUnopenedNamespacesEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.UnusedReferencesEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.UnusedOpensEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.TaskListCommentsEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.GoToMetadataEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.GenerateReferencesEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.GoToSymbolSourceEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.QuickInfoPanelEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.LinterEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
-            member __.OutliningEnabled with get() = xmlDocEnabled and set v = xmlDocEnabled <- v
+            member __.XmlDocEnabled                          with get()  = true  and set _ = ()
+            member __.FormattingEnabled                      with get()  = true  and set _ = ()
+            member __.NavBarEnabled                          with get()  = true  and set _ = ()
+            member __.HighlightUsageEnabled                  with get()  = true  and set _ = ()
+            member __.RenameRefactoringEnabled               with get()  = true  and set _ = ()
+            member __.DepthColorizerEnabled                  with get()  = false and set _ = ()
+            member __.NavigateToEnabled                      with get()  = true  and set _ = ()
+            member __.SyntaxColoringEnabled                  with get()  = true  and set _ = ()
+            member __.InterfaceImplementationEnabled         with get()  = true  and set _ = ()
+            member __.FolderOrganizationEnabled              with get()  = true  and set _ = ()
+            member __.FindAllReferencesEnabled               with get()  = true  and set _ = ()
+            member __.GenerateRecordStubEnabled              with get()  = true  and set _ = ()
+            member __.UnionPatternMatchCaseGenerationEnabled with get()  = true  and set _ = ()
+            member __.ResolveUnopenedNamespacesEnabled       with get()  = true  and set _ = ()
+            member __.UnusedReferencesEnabled                with get()  = true  and set _ = ()
+            member __.UnusedOpensEnabled                     with get()  = true  and set _ = ()
+            member __.TaskListCommentsEnabled                with get()  = true  and set _ = ()
+            member __.GoToMetadataEnabled                    with get()  = true  and set _ = ()
+            member __.GenerateReferencesEnabled              with get()  = true  and set _ = ()
+            member __.GoToSymbolSourceEnabled                with get()  = true  and set _ = ()
+            member __.QuickInfoPanelEnabled                  with get()  = true  and set _ = ()
+            member __.LinterEnabled                          with get()  = false and set _ = ()
+            member __.OutliningEnabled                       with get()  = true  and set _ = ()
 
 
 
