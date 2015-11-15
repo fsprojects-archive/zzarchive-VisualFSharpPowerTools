@@ -4,7 +4,7 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
-open Fantomas.CodeFormatter
+open Fantomas
 open FSharpVSPowerTools.ProjectSystem
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
@@ -14,12 +14,14 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
         use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
-    override __.GetFormatted(isSignatureFile: bool, source: string, config: FormatConfig) =
-        let formattedText = formatSourceString isSignatureFile source config
+    override __.GetFormatted(filePath, source, config, projectOptions, checker) =
+        async {
+            let! formattedText = CodeFormatter.FormatDocumentAsync(filePath, source, config, projectOptions, checker)
 
-        { OldTextStartIndex = 0
-          OldTextLength = source.Length
-          NewText = formattedText }
+            return { OldTextStartIndex = 0
+                     OldTextLength = source.Length
+                     NewText = formattedText }
+        }
 
     override x.SetNewCaretPosition(caretPos, scrollBarPos, originalSnapshot) =
         let caretLine = originalSnapshot.GetLineFromPosition(caretPos.Position)

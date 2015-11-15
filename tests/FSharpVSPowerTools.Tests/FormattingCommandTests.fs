@@ -18,7 +18,10 @@ type FormattingCommandHelper() =
                             editorOperationsFactoryService = base.EditorOperationsFactoryService,
                             textBufferUndoManagerProvider = base.TextBufferUndoManagerProvider,
                             textDocumentFactoryService = base.DocumentFactoryService,
-                            serviceProvider = base.ServiceProvider)
+                            serviceProvider = base.ServiceProvider,
+                            projectFactory = base.ProjectFactory,
+                            vsLanguageService = base.VsLanguageService,
+                            openDocumentTracker = base.OpenDocumentsTracker)
 
     member __.GetCommand(wpfTextView: IWpfTextView) =
         command.RegisterCommandDispatcher(wpfTextView)
