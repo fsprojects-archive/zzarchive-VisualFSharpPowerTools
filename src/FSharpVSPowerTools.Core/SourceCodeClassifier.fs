@@ -334,7 +334,7 @@ module SourceCodeClassifier =
 //                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames r.StartLine r.StartColumn r.EndLine r.EndColumn
 //            symbolUses
 
-        let ast = checkResults.GetUntypedAst()
+        let ast = checkResults.ParseTree
 
         let unusedOpenDeclarationSpans =
             OpenDeclarationGetter.getUnusedOpenDeclarations ast allSymbolsUses openDeclarations allEntities

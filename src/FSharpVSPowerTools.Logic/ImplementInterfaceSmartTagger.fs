@@ -114,7 +114,7 @@ type ImplementInterface
             let membersAndRanges = InterfaceStubGenerator.getMemberNameAndRanges state.InterfaceData
             let interfaceMembers = InterfaceStubGenerator.getInterfaceMembers entity
             let hasTypeCheckError = 
-                match results.GetErrors() with
+                match results.CheckErrors with
                 | Some errors -> errors |> Array.exists (fun e -> e.Severity = FSharpErrorSeverity.Error)
                 | None -> false
             // This comparison is a bit expensive
