@@ -70,7 +70,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
-                    return Some (project, fileScopedCheckResults.GetUntypedAst(), span, fsSymbolUse, findDeclResult) 
+                    return Some (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse, findDeclResult) 
                 | _ -> return None
             | _ -> return None
         }

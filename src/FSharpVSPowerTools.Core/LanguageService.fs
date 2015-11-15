@@ -13,25 +13,19 @@ open AsyncMaybe
 /// various IntelliSense functions (such as completion & tool tips). Provides default
 /// empty/negative results if information is missing.
 type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpParseFileResults) option) =
-
     new (checkResults, parseResults) = ParseAndCheckResults(Some (checkResults, parseResults))
-
-    static member Empty = ParseAndCheckResults(None)
+    static member Empty = ParseAndCheckResults None
 
     member __.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
-        async {
-            match infoOpt with 
-            | None -> 
-                return None
-            | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
+        asyncMaybe {
+            let! checkResults, _ = infoOpt 
+            return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
     member __.GetUsesOfSymbolInFile(symbol) =
         async {
             match infoOpt with 
-            | None -> 
-                return [| |]
+            | None -> return [||]
             | Some (checkResults, _parseResults) -> 
                 return! checkResults.GetUsesOfSymbolInFile(symbol)
         }
@@ -39,57 +33,45 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
     member __.GetAllUsesOfAllSymbolsInFile() =
         async {
             match infoOpt with
-            | None -> 
-                return [||]
+            | None -> return [||]
             | Some (checkResults, _) -> 
                 return! checkResults.GetAllUsesOfAllSymbolsInFile()
         }
 
-    member __.GetUntypedAst() =
-        match infoOpt with 
-        | None -> None
-        | Some (_, parseResults) -> parseResults.ParseTree
-
-    member __.GetCheckResults() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _) -> Some checkResults
+    member __.ParseTree = infoOpt |> Option.bind (fun (_, parseResults) -> parseResults.ParseTree)
+    member __.CheckResults = infoOpt |> Option.map fst
+    member __.CheckErrors = infoOpt |> Option.map (fun (checkResults, _) -> checkResults.Errors)
+    member __.ParseErrors = infoOpt |> Option.map (fun (_, parseResults) -> parseResults.Errors)
+    
+    member x.HasParseOrCheckErrors =
+        x.ParseErrors 
+        |> Option.getOrElse [||]
+        |> Array.append (x.CheckErrors |> Option.getOrElse [||]) <> [||]
 
     member __.GetFormatSpecifierLocations() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _) -> Some (checkResults.GetFormatSpecifierLocations())
-
-    member __.GetErrors() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _parseResults) -> Some checkResults.Errors
+        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocations())
 
     member __.GetNavigationItems() =
         match infoOpt with 
-        | None -> [| |]
+        | None -> [||]
         | Some (_checkResults, parseResults) -> 
            // GetNavigationItems is not 100% solid and throws occasional exceptions
             try parseResults.GetNavigationItems().Declarations
             with _ -> 
                 fail "Couldn't update navigation items, ignoring"
-                [| |]
+                [||]
 
-    member __.GetPartialAssemblySignature() =
+    member __.PartialAssemblySignature =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
 
     member __.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
 
     member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
-        async {
-            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
-            match result with
-            | Some symbolUse ->
-                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
-                return Some(symbolUse.Symbol, ident, refs)
-            | None -> 
-                return None
+        asyncMaybe {
+            let! symbolUse = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
+            let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol) |> liftAsync
+            return symbolUse.Symbol, ident, refs
         }
 
     member __.GetDeclarationLocation(line, col, lineStr, ident, preferSignature) =
@@ -102,13 +84,12 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         }
             
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
-        Debug.Assert(not (List.isEmpty names), "The names should not be empty (for which GetToolTip raises exceptions).")
+        Debug.Assert(names <> [], "The names should not be empty (for which GetToolTip raises exceptions).")
         asyncMaybe {
-            match infoOpt with
-            | Some (checkResults, _) -> 
-                let tokenTag = FSharpTokenTag.IDENT
-                return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
-            | None -> return! None
+            let! checkResults, _ = infoOpt 
+            let tokenTag = FSharpTokenTag.IDENT
+            return! 
+                checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
         }
 
 [<RequireQualifiedAccess>]
@@ -540,7 +521,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
-                Some [ match checkResults.GetPartialAssemblySignature() with
+                Some [ match checkResults.PartialAssemblySignature with
                        | Some signature -> 
                            yield! AssemblyContentProvider.getAssemblySignatureContent AssemblyContentType.Full signature
                        | None -> ()

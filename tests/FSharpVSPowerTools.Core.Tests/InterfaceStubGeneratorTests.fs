@@ -65,7 +65,7 @@ let private isInterfaceDeclarationAt line col =
         vsLanguageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.MatchingSource)
         |> Async.RunSynchronously
     
-    let ast = results.GetUntypedAst()
+    let ast = results.ParseTree
     let pos = Range.Pos.fromZ (line-1) col
     (ast |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)).IsSome
 
@@ -100,7 +100,7 @@ let getInterfaceStub typeParams line col lineStr idents verboseMode =
         |> Async.RunSynchronously
     let symbolUse = results.GetSymbolUseAtLocation(line, col, lineStr, idents) |> Async.RunSynchronously
     let typeParams = 
-        let ast = results.GetUntypedAst()
+        let ast = results.ParseTree
         let pos = Range.Pos.fromZ (line-1) col
         ast
         |> Option.bind (InterfaceStubGenerator.tryFindInterfaceDeclaration pos)

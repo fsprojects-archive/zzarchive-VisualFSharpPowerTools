@@ -79,7 +79,7 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
         }
 
         let openDeclarations = 
-            OpenDeclarationGetter.getOpenDeclarations (checkResults.GetUntypedAst()) entities qualifyOpenDeclarations
+            OpenDeclarationGetter.getOpenDeclarations checkResults.ParseTree entities qualifyOpenDeclarations
             |> Async.RunSynchronously
 
         let allEntities =
@@ -117,7 +117,7 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
     
     try actual |> Collection.assertEquiv expected
     with _ -> 
-        debug "AST: %A" (checkResults.GetUntypedAst())
+        debug "AST: %A" checkResults.ParseTree
         for x in actual do
             debug "Actual: %A" x
         reraise()

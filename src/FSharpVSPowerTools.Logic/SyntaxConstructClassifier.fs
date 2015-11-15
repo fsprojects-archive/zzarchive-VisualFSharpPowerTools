@@ -11,7 +11,7 @@ open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.AsyncMaybe
-open Microsoft.VisualStudio.Text.Tagging 
+open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
@@ -51,6 +51,7 @@ type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSna
 type private FastStageData =
     { Snapshot: ITextSnapshot
       Spans: CategorizedSnapshotSpan[]
+      HasErrors: bool
       SingleSymbolsProjects: CheckingProject list } 
 
 [<NoComparison>]
@@ -284,12 +285,12 @@ type SyntaxConstructClassifier
                 let! checkResults = pf.Time "ParseAndCheckFileInProject" <| fun _ ->
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
                      
-                let! ast = checkResults.GetUntypedAst()
+                let! ast = checkResults.ParseTree
                 do! checkAst "Slow stage" ast
 
                 let! entities, openDecls =
                     if includeUnusedOpens() then
-                        getOpenDeclarations textDocument.FilePath project (checkResults.GetUntypedAst()) getTextLineOneBased pf
+                        getOpenDeclarations textDocument.FilePath project checkResults.ParseTree getTextLineOneBased pf
                     else async { return None, [] }
                     |> liftAsync
 
@@ -383,7 +384,7 @@ type SyntaxConstructClassifier
                 let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
                     vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, currentProject)
 
-                let! ast = checkResults.GetUntypedAst()
+                let! ast = checkResults.ParseTree
                 do! checkAst "Fast stage" ast
                 let! lexer = vsLanguageService.CreateLexer(textDocument.FilePath, snapshot, currentProject.CompilerOptions)
 
@@ -439,6 +440,7 @@ type SyntaxConstructClassifier
                     FastStage.Data
                         { Snapshot = snapshot
                           Spans = spans
+                          HasErrors = checkResults.HasParseOrCheckErrors
                           SingleSymbolsProjects = singleSymbolsProjects }) |> ignore
 
                 do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers" 
