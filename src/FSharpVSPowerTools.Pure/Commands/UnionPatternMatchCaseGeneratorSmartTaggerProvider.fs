@@ -17,9 +17,9 @@ open Microsoft.VisualStudio.Shell.Interop
 [<ContentType "F#">]
 [<TagType (typeof<UnionPatternMatchCaseGeneratorSmartTag>)>]
 type UnionPatternMatchCaseGeneratorSmartTaggerProvider [<ImportingConstructor>]
-  //  ( [<Import(typeof<SVsServiceProvider>)>] 
-    //    serviceProvider             :   IServiceProvider,
-      ( textDocumentFactoryService  :   ITextDocumentFactoryService ,
+    ( [<Import(typeof<SVsServiceProvider>)>] 
+        serviceProvider             :   IServiceProvider,
+        textDocumentFactoryService  :   ITextDocumentFactoryService ,
         undoHistoryRegistry         :   ITextUndoHistoryRegistry    ,
         projectFactory              :   ProjectFactory              ,
         vsLanguageService           :   VSLanguageService           ) =
@@ -29,13 +29,13 @@ type UnionPatternMatchCaseGeneratorSmartTaggerProvider [<ImportingConstructor>]
             maybe {
                 if textView.TextBuffer <> buffer then return! None else
        //         let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
-                let! codeGenOptions = Setting.tryGetCodeGenerationOptions () //serviceProvider
-                let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+                let! codeGenOptions = Setting.tryGetCodeGenerationOptions serviceProvider
+                let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 let generator = 
                     new UnionPatternMatchCaseGenerator (doc, textView, undoHistoryRegistry.RegisterHistory buffer, 
-                        vsLanguageService, projectFactory, Setting.getDefaultMemberBody codeGenOptions, OpenDocumentsTracker textDocumentFactoryService )
+                        vsLanguageService, serviceProvider, projectFactory, Setting.getDefaultMemberBody codeGenOptions, OpenDocumentsTracker textDocumentFactoryService )
                 return
                     new UnionPatternMatchCaseGeneratorSmartTagger (buffer, generator) :> obj :?> _
             } |> Option.getOrElse null

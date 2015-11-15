@@ -16,9 +16,9 @@ open Microsoft.VisualStudio.TextManager.Interop
 [<ContentType "F#">]
 [<TextViewRole (PredefinedTextViewRoles.Editable)>]
 type TaskListCommentFilterProvider [<ImportingConstructor>]
-   // ( [<Import (typeof<SVsServiceProvider>)>] 
-     //   serviceProvider             :   IServiceProvider                ,
-    (   editorFactory               :   IVsEditorAdaptersFactoryService ,
+    ( [<Import (typeof<SVsServiceProvider>)>] 
+        serviceProvider             :   IServiceProvider                ,
+        editorFactory               :   IVsEditorAdaptersFactoryService ,
         textDocumentFactoryService  :   ITextDocumentFactoryService     ,
         taskListManager             :   TaskListManager                 ) =
 
@@ -28,12 +28,10 @@ type TaskListCommentFilterProvider [<ImportingConstructor>]
 
         member __.VsTextViewCreated textViewAdapter =
             unitMaybe {
-                let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
-
                 let! textView = editorFactory.TryGetWpfTextView textViewAdapter
-                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 if not generalOptions.TaskListCommentsEnabled then () else
                 taskCommentFilter <- new TaskListCommentFilter 
-                                        (   textView, taskListManager, 
+                                        (   textView, serviceProvider, taskListManager, 
                                             OpenDocumentsTracker textDocumentFactoryService )
             } 

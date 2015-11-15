@@ -57,11 +57,11 @@ type VSLanguageService
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: IOpenDocumentsTracker,
-     [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem) =
-     //[<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+     [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
+     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let instance = 
-        match Setting.tryGetGlobalOptions() with // serviceProvider with
+        match Setting.tryGetGlobalOptions serviceProvider with
         | Some globalOptions -> 
             LanguageService (globalOptions.BackgroundCompilation, globalOptions.ProjectCacheSize, fileSystem)
         | None ->
@@ -71,7 +71,7 @@ type VSLanguageService
     /// Clean up instructions are displayed on status bar.
     let suggestRecoveryAfterFailure ex fileName _source opts =
         Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
-        let statusBar = Package.GetService<SVsStatusbar,IVsStatusbar>()
+        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
         statusBar.SetText Resource.languageServiceErrorMessage |> ignore 
                 
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure

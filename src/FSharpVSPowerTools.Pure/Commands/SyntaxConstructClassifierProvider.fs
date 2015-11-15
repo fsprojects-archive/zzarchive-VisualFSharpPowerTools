@@ -318,9 +318,9 @@ module  ClassificationFormats =
 [<ContentType("F#")>]
 [<TextViewRole(PredefinedTextViewRoles.Document)>]
 type SyntaxConstructClassifierProvider [<ImportingConstructor>]
-//    (   [<Import(typeof<SVsServiceProvider>)>]
-//        serviceProvider           : IServiceProvider,
-       (shellEventListener        : ShellEventListener,
+    (   [<Import(typeof<SVsServiceProvider>)>]
+        serviceProvider           : IServiceProvider,
+        shellEventListener        : ShellEventListener,
         classificationColorManager: ClassificationColorManager,
         classificationRegistry    : IClassificationTypeRegistryService,
         textDocumentFactoryService: ITextDocumentFactoryService,
@@ -339,9 +339,7 @@ type SyntaxConstructClassifierProvider [<ImportingConstructor>]
 
     member __.GetClassifier(textBuffer: ITextBuffer)= 
         maybe{
-            let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
-            let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
-
+            let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
             if not generalOptions.SyntaxColoringEnabled then return! None else
             let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
             let includeUnusedOpens = generalOptions.UnusedOpensEnabled
@@ -351,7 +349,7 @@ type SyntaxConstructClassifierProvider [<ImportingConstructor>]
             return textBuffer.Properties.GetOrCreateSingletonProperty (serviceType, fun () ->
                 new SyntaxConstructClassifier
                     (   doc, textBuffer, classificationRegistry,
-                        fsharpVsLanguageService, projectFactory,
+                        fsharpVsLanguageService, serviceProvider, projectFactory,
                         includeUnusedReferences, includeUnusedOpens))
         }
 

@@ -5,7 +5,6 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
@@ -71,7 +70,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
         let isSignatureFile = x.IsSignatureFile(x.TextBuffer)
 
         let config = getConfig()
-        let statusBar = Package.GetService<SVsStatusbar,IVsStatusbar>()
+        let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
         try
             let formattingResult = x.GetFormatted(isSignatureFile, source, config)

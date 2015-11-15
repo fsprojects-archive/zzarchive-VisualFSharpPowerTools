@@ -6,7 +6,6 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.Shell
 open System
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
@@ -31,6 +30,7 @@ type ImplementInterface
          editorOptionsFactory: IEditorOptionsFactoryService, 
          textUndoHistory: ITextUndoHistory,
          vsLanguageService: VSLanguageService, 
+         serviceProvider: IServiceProvider,
          projectFactory: ProjectFactory,
          objectIdentifier: string,
          defaultBody: string) as self =
@@ -93,7 +93,7 @@ type ImplementInterface
                        startColumn indentSize typeParams objectIdentifier defaultBody
                        displayContext implementedMemberSignatures entity verboseMode
         if String.IsNullOrEmpty stub then
-            let statusBar = Package.GetService<SVsStatusbar,IVsStatusbar>()
+            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
         else
             use transaction = textUndoHistory.CreateTransaction(Resource.implementInterfaceCommandName)
@@ -154,7 +154,7 @@ type ImplementInterface
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = Package.GetService<SDTE,EnvDTE.DTE>()
+                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, symbol = vsLanguageService.GetSymbol (point, doc.FullName, project) 

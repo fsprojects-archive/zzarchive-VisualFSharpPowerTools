@@ -11,7 +11,6 @@ open System
 open System.Diagnostics
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
@@ -21,12 +20,14 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Shell.Interop
 
 type XmlDocFilter 
-     (  textView: IVsTextView, 
+     (
+        textView: IVsTextView, 
         wpfTextView: IWpfTextView, 
         fileName: string, 
         projectFactory: ProjectFactory,
         languageService: VSLanguageService,
-        openDocumentsTracker: IOpenDocumentsTracker
+        openDocumentsTracker: IOpenDocumentsTracker,
+        serviceProvider: System.IServiceProvider
      ) as self =
     
     let mutable passThruToEditor: IOleCommandTarget = null
@@ -53,7 +54,7 @@ type XmlDocFilter
                         asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let dte = Package.GetService<SDTE,EnvDTE.DTE>()
+                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                             let! document = dte.GetCurrentDocument fileName
                             let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
                             let! parseResults = languageService.ParseFileInProject (fileName, project)

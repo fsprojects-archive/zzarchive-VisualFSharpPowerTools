@@ -17,9 +17,9 @@ open Microsoft.VisualStudio.Shell.Interop
 [<ContentType "F#">]
 [<TagType(typeof<RecordStubGeneratorSmartTag>)>]
 type RecordStubGeneratorSmartTaggerProvider [<ImportingConstructor>]
-    //( [<Import(typeof<SVsServiceProvider>)>] 
-    //    serviceProvider             :   IServiceProvider            ,
-   (    textDocumentFactoryService  :   ITextDocumentFactoryService ,
+    ( [<Import(typeof<SVsServiceProvider>)>] 
+        serviceProvider             :   IServiceProvider            ,
+        textDocumentFactoryService  :   ITextDocumentFactoryService ,
         textEditorFactoryService    :   ITextEditorFactoryService   ,
         undoHistoryRegistry         :   ITextUndoHistoryRegistry    ,
         projectFactory              :   ProjectFactory              ,
@@ -32,13 +32,13 @@ type RecordStubGeneratorSmartTaggerProvider [<ImportingConstructor>]
                 if textView.TextBuffer <> buffer then return! None else
        //         let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
          //       if not generalOptions.GenerateRecordStubEnabled then return! None else
-                let! codeGenOptions = Setting.tryGetCodeGenerationOptions () //serviceProvider
-                let dte = Package.GetService<SDTE,EnvDTE.DTE>()
+                let! codeGenOptions = Setting.tryGetCodeGenerationOptions serviceProvider
+                let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 let generator = 
                     new RecordStubGenerator (doc, textView, undoHistoryRegistry.RegisterHistory buffer, 
-                        vsLanguageService, projectFactory, 
+                        vsLanguageService, serviceProvider, projectFactory, 
                         Setting.getDefaultMemberBody codeGenOptions, OpenDocumentsTracker textDocumentFactoryService)
                 return
                     new RecordStubGeneratorSmartTagger (buffer, generator) :> obj :?> _

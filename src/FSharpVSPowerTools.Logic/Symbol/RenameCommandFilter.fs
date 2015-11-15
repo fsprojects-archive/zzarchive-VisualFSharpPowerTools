@@ -7,7 +7,6 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.Range
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
@@ -22,15 +21,16 @@ type private DocumentState =
 type RenameCommandFilter(textDocument: ITextDocument,
                          view: IWpfTextView, 
                          vsLanguageService: VSLanguageService, 
+                         serviceProvider: System.IServiceProvider,
                          projectFactory: ProjectFactory) =
     let mutable state = None
-    let documentUpdater = DocumentUpdater()
+    let documentUpdater = DocumentUpdater(serviceProvider)
 
     let canRename() = 
         state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 return { Word = vsLanguageService.GetSymbol(caretPos, doc.FullName, project); File = doc.FullName; Project = project }
@@ -42,7 +42,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
             let newText = IdentifierUtils.encapsulateIdentifier symbolKind newText
             let undo = documentUpdater.BeginGlobalUndo "Rename Refactoring"
             try
-                let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 dte.GetActiveDocument()
                 |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
@@ -77,7 +77,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
         let! cw, symbol = state.Word
         // cancellation token source used to cancel all async operations throughout the rename process
         use cts = new System.Threading.CancellationTokenSource()
-        let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
         // This is the workflow used to initialize the rename operation.  It should return the appropriate scope and symbols on success, and cancel on failure
         let initialContext = 
             asyncMaybe {
@@ -138,7 +138,7 @@ type RenameCommandFilter(textDocument: ITextDocument,
     }
 
     member __.ShowDialog (wnd: Window) =
-        let vsShell = Package.GetService<SVsUIShell,IVsUIShell>()
+        let vsShell = serviceProvider.GetService<IVsUIShell, SVsUIShell>()
         try
             if ErrorHandler.Failed(vsShell.EnableModeless(0)) then
                 Some false

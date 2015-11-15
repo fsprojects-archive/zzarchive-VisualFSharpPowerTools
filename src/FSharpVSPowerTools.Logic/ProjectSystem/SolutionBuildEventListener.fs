@@ -1,14 +1,13 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open System
 
 /// Listen to events related to solution builds
-type SolutionBuildEventListener () as self = //(serviceProvider: IServiceProvider) as self =
-    let solutionBuildManager = Package.GetService<SVsSolutionBuildManager,IVsSolutionBuildManager2>()
+type SolutionBuildEventListener(serviceProvider: IServiceProvider) as self =
+    let solutionBuildManager = serviceProvider.GetService<IVsSolutionBuildManager2, SVsSolutionBuildManager>()
     let mutable updateSolutionEventsCookie = 0u
     do solutionBuildManager.AdviseUpdateSolutionEvents(self, &updateSolutionEventsCookie) |> ignore
     let activeConfigChanged = Event<_>()

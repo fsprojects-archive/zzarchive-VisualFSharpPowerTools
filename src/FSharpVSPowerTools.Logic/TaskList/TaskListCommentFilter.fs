@@ -8,9 +8,10 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 
 type TaskListCommentFilter(view: IWpfTextView,
+                           serviceProvider: IServiceProvider,
                            taskListManager: TaskListManager,
                            openDocumentTracker: IOpenDocumentsTracker) =
-    let optionsReader = OptionsReader()
+    let optionsReader = OptionsReader(serviceProvider)
 
     let onTextChanged (CallInUIContext callInUIContext) =
         asyncMaybe {

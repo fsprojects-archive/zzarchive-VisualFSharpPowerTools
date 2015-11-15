@@ -3,17 +3,16 @@
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio
 open System
-open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.ComponentModel.Composition
 
 [<Export>]
-type TaskListManager () =
-    let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
+type TaskListManager [<ImportingConstructor>]
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     let taskProvider = new TaskProvider(serviceProvider)
 
     let navigateTo file line column =
-        Package.NavigateTo(file, line, column, line, column)
+        serviceProvider.NavigateTo(file, line, column, line, column)
 
     let convertCommentToTask (taskListComment: Comment) =
         let task = new Task()

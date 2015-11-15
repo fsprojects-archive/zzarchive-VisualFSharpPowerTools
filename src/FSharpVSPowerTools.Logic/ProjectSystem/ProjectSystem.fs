@@ -75,11 +75,9 @@ type Expr = System.Linq.Expressions.Expression
 exception AssemblyMissingException of string
 
 [<Export>]
-type FSharpLanguageService () = // [<ImportingConstructor>] 
-    //([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
-
-
-    let dte = Package.GetService<SDTE,EnvDTE.DTE>()
+type FSharpLanguageService [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
     let assemblyInfo = 
         let version = VisualStudioVersion.fromDTEVersion dte.Version

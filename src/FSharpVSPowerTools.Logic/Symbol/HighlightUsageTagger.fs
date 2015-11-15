@@ -5,7 +5,6 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
@@ -24,6 +23,7 @@ type HighlightUsageTag() =
 type HighlightUsageTagger(textDocument: ITextDocument,
                           view: ITextView, 
                           vsLanguageService: VSLanguageService, 
+                          serviceProvider: IServiceProvider,
                           projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
@@ -88,7 +88,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 return!

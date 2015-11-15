@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools
 
 open System
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
@@ -18,9 +17,9 @@ type StatusIcon =
     | Find
 
 /// Handler for reporting status information to the Visual Studio status bar area
-type StatusHandler(statusIcon: StatusIcon, overrideCursor) =
+type StatusHandler(serviceProvider: IServiceProvider, statusIcon: StatusIcon, overrideCursor) =
     // Get our status bar service up front
-    let statusBar = Package.GetService<SVsStatusbar,IVsStatusbar>()
+    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
     // This tracks the last known state, so we can handle tracking identifiers correctly
     let mutable lastState = OperationState.Idle

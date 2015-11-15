@@ -18,10 +18,8 @@ type LogType =
         | Error -> "Error"
 
 [<Export>]
-//type internal Logger [<ImportingConstructor>] 
-//    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
-type internal Logger () =
-
+type internal Logger [<ImportingConstructor>] 
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let getEntryTypeInt = function
         | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
@@ -34,18 +32,18 @@ type internal Logger () =
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
 
     let getShellService() = 
-        Package.GetService<SVsUIShell,IVsUIShell>()
+        serviceProvider.GetService<IVsUIShell, SVsUIShell>()
 
     let getActivityLogService() =
-        let service = Package.GetService<SVsActivityLog,IVsActivityLog>() 
+        let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>() 
         Option.ofNull service
 
-//    static let mutable globalServiceProvider: IServiceProvider option = None
-//
-//    /// Quick and dirty global service provider for testing purpose.
-//    static member internal GlobalServiceProvider 
-//        with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
-//        and set v = globalServiceProvider <- Some v
+    static let mutable globalServiceProvider: IServiceProvider option = None
+
+    /// Quick and dirty global service provider for testing purpose.
+    static member internal GlobalServiceProvider 
+        with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
+        and set v = globalServiceProvider <- Some v
 
     member __.Log(logType, message) =
         getActivityLogService()
@@ -61,9 +59,8 @@ type internal Logger () =
 module OutputWindowHelper =
     open Microsoft.VisualStudio
 
-    let tryGetPowerToolsWindowPane () = // (serviceProvider: IServiceProvider) =
-        //let outputWindow = serviceProvider.GetService<IVsOutputWindow, SVsOutputWindow>()
-        let outputWindow = Package.GetService<SVsOutputWindow,IVsOutputWindow>()
+    let tryGetPowerToolsWindowPane(serviceProvider: IServiceProvider) =
+        let outputWindow = serviceProvider.GetService<IVsOutputWindow, SVsOutputWindow>()
         outputWindow
         |> Option.ofNull
         |> Option.bind (fun window ->
@@ -80,8 +77,8 @@ module OutputWindowHelper =
         window.OutputString(outputMessage) |> ignore
     
     /// This global output window is initialized once for each Visual Studio session.
-    let outputWindowPane = lazy(tryGetPowerToolsWindowPane()) //    Package.GetService(s) (Logger.GlobalServiceProvider))
-    let globalOptions = lazy(Setting.getGlobalOptions()) //   (Logger.GlobalServiceProvider))
+    let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
+    let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =
         outputWindowPane.Value 
@@ -92,7 +89,7 @@ module Logging =
     open OutputWindowHelper
 
     /// This is a global logger, please make sure that it is executed after the package is loaded.
-    let internal logger = lazy (Logger ()) // (Logger.GlobalServiceProvider))
+    let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
 
     let internal log logType (produceMessage: _ -> string) = 
         // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.

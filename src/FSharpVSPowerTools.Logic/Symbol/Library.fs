@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Navigation
 
+open System
 open System.IO
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell
@@ -10,13 +11,11 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open System
 
-
-type FSharpLibraryNode (name: string, fileSystem: IFileSystem, ?symbolUse: FSharpSymbolUse) =
-    inherit LibraryNode (name)
+type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, ?symbolUse: FSharpSymbolUse) =
+    inherit LibraryNode(name)
     do base.CanGoToSource <- true
-    let serviceProvider = Package.GetService<SVsServiceProvider,IServiceProvider>()
+
     let navigationData = lazy (
         match symbolUse with 
         | Some symbolUse ->
@@ -48,7 +47,7 @@ type FSharpLibraryNode (name: string, fileSystem: IFileSystem, ?symbolUse: FShar
                     with _ -> false
             if canShow then
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                let vsTextManager = Package.GetService<SVsTextManager,IVsTextManager>()
+                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                 let mutable vsTextBuffer = Unchecked.defaultof<_>
                 vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
                 Some (windowFrame, vsTextManager, vsTextBuffer)

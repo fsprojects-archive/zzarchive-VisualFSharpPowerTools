@@ -51,9 +51,10 @@
         <Border BorderThickness="5" Margin="0,0,0,1" Grid.Row="1">
             <WrapPanel x:Name="OptionCheckBoxes" Orientation="Vertical" Margin="0,-5,-5,-5">
                 <CheckBox x:Name="xmlDoc" HorizontalAlignment="Left" VerticalAlignment="Top" 
-                          Content="Xml Documentation Comments"
+                          Content="{Binding Path=XmlDocEnabled.Label}" 
+                          ToolTip="{Binding Path=XmlDocEnabled.Tooltip}" 
                           Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}"/>
-                <CheckBox x:Name="formatting" Content="Source Code Formatting" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left" />
+                <CheckBox x:Name="formatting" Content="Source Code Formatting" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" Width="155" HorizontalAlignment="Left" />
                 <CheckBox x:Name="navigationBar" Content="Navigation Bar ***" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="highlightReferences" Content="Highlight References" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left"/>
                 <CheckBox x:Name="renameRefactoring" Content="Rename Refactoring" Style="{DynamicResource VFPTGeneralOptionsCheckBoxStyle}" HorizontalAlignment="Left"/>

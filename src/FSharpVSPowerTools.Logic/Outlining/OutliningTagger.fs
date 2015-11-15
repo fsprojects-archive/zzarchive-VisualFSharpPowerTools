@@ -7,7 +7,6 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
@@ -73,6 +72,7 @@ let inline scaleToFit (view: IWpfTextView) =
 
 type OutliningTagger
     (textDocument: ITextDocument,
+     serviceProvider : IServiceProvider,
      textEditorFactoryService: ITextEditorFactoryService,
      projectionBufferFactoryService: IProjectionBufferFactoryService,
      projectFactory: ProjectFactory,
@@ -108,7 +108,7 @@ type OutliningTagger
         | Some _, emptyTree when emptyTree.Range.IsEmpty -> false 
         | Some _, _ -> true
 
-    //let outliningOptions = lazy(Setting.getOutliningOptions()) // serviceProvider)
+    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
 
 //    let outliningEnabled scope =
 //        let options = outliningOptions.Value
@@ -161,7 +161,7 @@ type OutliningTagger
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
-            let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
@@ -213,14 +213,13 @@ type OutliningTagger
             minIndent
 
 
-    let wpfTextView = lazy(Package.GetWPFTextViewOfDocument textDocument.FilePath)
+    let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
 
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
-        //let zoomLevel = float (outliningOptions.Value.TooltipZoomLevel) / 100.0
-        let zoomLevel = float 85 / 100.0
+        let zoomLevel = float (outliningOptions.Value.TooltipZoomLevel) / 100.0
         wpfTextView.Value
         |>  Option.iterElse (fun cv -> view.ZoomLevel <- zoomLevel * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- zoomLevel * view.ZoomLevel)

@@ -48,7 +48,7 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
         //    if not generalOptions.FindAllReferencesEnabled then return! None else
 
             let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
-            let filter = new FindReferencesFilter ( doc, textView, vsLanguageService, 
+            let filter = new FindReferencesFilter ( doc, textView, vsLanguageService, serviceProvider,
                                                     projectFactory, showProgress, fileSystem)
 
             FindReferencesFilterProvider.AddCommandFilter (textViewAdapter, filter)

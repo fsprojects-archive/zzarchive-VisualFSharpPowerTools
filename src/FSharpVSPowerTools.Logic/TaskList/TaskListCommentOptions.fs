@@ -3,13 +3,12 @@
 open System
 open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.Shell
 open FSharpVSPowerTools.ProjectSystem
 open System.Windows.Threading
 open FSharpVSPowerTools
 
-type internal OptionsReader() =
-    let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+type internal OptionsReader(serviceProvider: IServiceProvider) =
+    let dte = serviceProvider.GetService<DTE, SDTE>()
     
     member __.GetOptions() =
         dte.TryGetProperty("Environment", "TaskList", "CommentTokens")
@@ -39,8 +38,8 @@ type internal OptionsChangedEventArgs(newOptions: CommentOption[]) =
     member __.NewOptions = newOptions
 
 
-type internal OptionsMonitor () =
-    let optionsReader = OptionsReader()
+type internal OptionsMonitor(serviceProvider: IServiceProvider) =
+    let optionsReader = OptionsReader(serviceProvider)
 
     let mutable currentOptions = optionsReader.GetOptions()
     let haveOptionsChanged newOptions =

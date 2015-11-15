@@ -35,21 +35,21 @@ let internal  LintErrorTypeDefinition : ErrorTypeDefinition = null
 [<ContentType "F#">]
 [<TagType (typeof<LintTag>)>]
 type LintTaggerProvider [<ImportingConstructor>]
-   // ( [<Import(typeof<SVsServiceProvider>)>] 
-     //   serviceProvider                 : IServiceProvider              ,
-    (   textDocumentFactoryService      :   ITextDocumentFactoryService ,
+    ( [<Import(typeof<SVsServiceProvider>)>] 
+        serviceProvider                 : IServiceProvider              ,
+        textDocumentFactoryService      :   ITextDocumentFactoryService ,
         projectFactory                  :   ProjectFactory              ,
         vsLanguageService               :   VSLanguageService           ) =
 
     interface IViewTaggerProvider with
         member __.CreateTagger (textView, buffer) =
             maybe{
-                let! generalOptions = Setting.tryGetGeneralOptions ()// serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 if not generalOptions.LinterEnabled then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 return buffer.Properties.GetOrCreateSingletonProperty (typeof<LintTagger>, fun () ->
                     new LintTagger 
-                       (doc, vsLanguageService, projectFactory, 
-                       OpenDocumentsTracker textDocumentFactoryService)
+                       (doc, vsLanguageService, serviceProvider, 
+                        projectFactory, OpenDocumentsTracker textDocumentFactoryService)
                 ) :> obj :?> _
             } |> Option.getOrElse null

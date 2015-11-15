@@ -16,14 +16,14 @@ open System.ComponentModel.Composition
 [<ContentType "F#">]
 
 type LintQuickInfoProvider [<ImportingConstructor>]
-    //( [<Import(typeof<SVsServiceProvider>)>] 
-     //   serviceProvider : IServiceProvider,
-    (    viewTagAggregatorFactoryService : IViewTagAggregatorFactoryService ) =
+    ( [<Import(typeof<SVsServiceProvider>)>] 
+        serviceProvider : IServiceProvider,
+        viewTagAggregatorFactoryService : IViewTagAggregatorFactoryService ) =
 
     interface IQuickInfoSourceProvider with
         member __.TryCreateQuickInfoSource textBuffer =
             maybe {
-                let! generalOptions = Setting.tryGetGeneralOptions()// serviceProvider
+                let! generalOptions = Setting.tryGetGeneralOptions serviceProvider
                 if not generalOptions.LinterEnabled then return! None else
                 return
                     new LintQuickInfoSource (textBuffer, viewTagAggregatorFactoryService)

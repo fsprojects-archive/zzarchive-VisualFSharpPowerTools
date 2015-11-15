@@ -36,7 +36,7 @@ type XmlDocCommandFilterProvider [<ImportingConstructor>]
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer wpfTextView.TextBuffer  
          //       if generalOptions.XmlDocEnabled then 
                 XmlDocFilter( textViewAdapter, wpfTextView, doc.FilePath, projectFactory, 
-                    vsLanguageService,OpenDocumentsTracker textDocumentFactoryService)
+                    vsLanguageService,OpenDocumentsTracker textDocumentFactoryService, serviceProvider)
                 |> ignore
             } 
 

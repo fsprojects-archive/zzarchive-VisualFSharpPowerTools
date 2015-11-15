@@ -8,9 +8,9 @@ open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
-open Microsoft.VisualStudio.Shell
-open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.OLE.Interop
+open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
@@ -23,7 +23,6 @@ open System.Net.Http
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open System.Text
-open System.ComponentModel
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -38,19 +37,20 @@ type internal UrlChangeEventArgs(url: string) =
 type GoToDefinitionFilter(textDocument: ITextDocument,
                           view: IWpfTextView, 
                           editorOptionsFactory: IEditorOptionsFactoryService, 
-                          vsLanguageService: VSLanguageService,                         
+                          vsLanguageService: VSLanguageService, 
+                          serviceProvider: System.IServiceProvider,                          
                           projectFactory: ProjectFactory,
                           referenceSourceProvider: ReferenceSourceProvider,
                           navigationPreference: NavigationPreference,
                           fireNavigationEvent: bool) =
-    let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs> ()) else None
+    let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
 
     let getCurrentFilePathProjectAndDoc () =
         maybe {
             let filepath = textDocument.FilePath
-            let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
-            let! doc = dte.GetCurrentDocument filepath
+            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! doc = dte.GetCurrentDocument(filepath)
             let! project = projectFactory.CreateForDocument view.TextBuffer doc
             return (filepath, project, doc)
         }
@@ -78,7 +78,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     // Use a single cache across text views
     static let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
-    let xmlIndexService = Package.GetService<SVsXMLMemberIndexService,IVsXMLMemberIndexService>()
+    let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
 
     /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
     /// Otherwise, escape it and surround it with <summary></summary>
@@ -211,7 +211,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
             match matchedSymbol with
             | Some symbol ->
-                let vsTextManager = Package.GetService<SVsTextManager,IVsTextManager>()
+                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
                 symbol.DeclarationLocation
                 |> Option.iter (fun r -> 
                     let (startRow, startCol) = (r.StartLine-1, r.StartColumn)
@@ -234,11 +234,9 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let subFolder = string (uint32 (hash fileName))
 
             let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
-            let statusBar = Package.GetService< SVsStatusbar,IVsStatusbar>()
+            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
             let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
             let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
-            let serviceProvider = Package.GetService<SVsServiceProvider,System.IServiceProvider>()
-
             match VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Constants.guidLogicalTextView) with
             | true, _hierarchy, _itemId, windowFrame ->
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
@@ -317,8 +315,8 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     let replace (b:string) c (a:string) = a.Replace(b, c)
 
-    let getSymbolCacheDir () = 
-        let dte = Package.GetService<SDTE,EnvDTE.DTE> ()
+    let getSymbolCacheDir() = 
+        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
         let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
                                     dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toString)
         use key = Registry.CurrentUser.OpenSubKey(keyName)
@@ -432,7 +430,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                     match directive with
                     | Some fileToOpen ->
                         // directive found, navigate to the file at first line
-                        Package.NavigateTo(fileToOpen, 0, 0, 0, 0)
+                        serviceProvider.NavigateTo(fileToOpen, 0, 0, 0, 0)
                     | None ->
                         // Run the operation on UI thread since continueCommandChain may access UI components.
                         do! Async.SwitchToContext uiContext
@@ -468,7 +466,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                     if shouldGenerateDefinition symbol then
                                         return! navigateToMetadata project span parseTree fsSymbolUse
                                 | _ ->
-                                    let statusBar = Package.GetService<SVsStatusbar, IVsStatusbar>()
+                                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                                     statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
                                     return ()
             }

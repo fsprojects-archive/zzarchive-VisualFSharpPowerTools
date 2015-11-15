@@ -41,7 +41,7 @@ type StandardCommandDispatcher private () as self =
     member __.GetConfig () =
         let editorOptions = self.codeServices.EditorOptionsFactory.GetOptions self.textView.TextBuffer
         let indentSize    = editorOptions.GetOptionValue (IndentSize ()).Key
-        let customOptions = Setting.getFormattingOptions () //self.codeServices.ServiceProvider
+        let customOptions = Setting.getFormattingOptions self.codeServices.ServiceProvider
 
         FormatConfig.FormatConfig.create
             (   indentSize                              ,

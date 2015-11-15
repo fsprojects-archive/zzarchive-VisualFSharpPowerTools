@@ -5,9 +5,6 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Shell
-
-
 
 type VSDocument(source: string, doc: EnvDTE.Document, snapshot: ITextSnapshot) =
     interface IDocument with
@@ -70,8 +67,8 @@ module ResourceProvider =
     open System.Windows.Media
     open Microsoft.VisualStudio
 
-    let getRefactoringIcon (kind: RefactoringIconKind) =
-        let manager = Package.GetService<SVsResourceManager,IVsResourceManager>()
+    let getRefactoringIcon (serviceProvider: IServiceProvider) (kind: RefactoringIconKind) =
+        let manager = serviceProvider.GetService<IVsResourceManager, SVsResourceManager>()
         let cmdDefUiPackageGuid = Guid "{44E07B02-29A5-11D3-B882-00C04F79F802}"
         let IDBMP_REFACTOR_IMAGES = "#2029"        
         match manager.LoadResourceBitmap(ref cmdDefUiPackageGuid, 0, IDBMP_REFACTOR_IMAGES) with
