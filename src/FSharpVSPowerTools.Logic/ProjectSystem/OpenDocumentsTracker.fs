@@ -34,7 +34,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
 
     interface IOpenDocumentsTracker with
         member __.RegisterView(view: IWpfTextView) = 
-            //ForegroundThreadGuard.CheckThread()
+            ForegroundThreadGuard.CheckThread()
             match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
             | true, doc ->
                 let path = doc.FilePath

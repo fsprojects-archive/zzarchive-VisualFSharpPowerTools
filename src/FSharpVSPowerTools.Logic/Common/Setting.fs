@@ -1,5 +1,12 @@
 ﻿namespace FSharpVSPowerTools
 
+type SettingsStore =
+
+
+    static member Load () = ()
+
+
+
 type IGeneralOptions =
     abstract XmlDocEnabled: bool with get, set
     abstract FormattingEnabled: bool with get, set
@@ -162,30 +169,28 @@ type DefaultGlobalOptions() =
 [<RequireQualifiedAccess>]
 module Setting =
     open System
+
+    let generalOptions = DefaultGeneralOptions() 
+
+    let codeGenOptions = DefaultCodeGenerationOptions() 
+    
+    let globalOptions = DefaultGlobalOptions ()
      
-    let getGeneralOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.GetService<IGeneralOptions>()
-        match serviceProvider.GetService(typeof<IGeneralOptions>) with
-        | null -> DefaultGeneralOptions() :> IGeneralOptions
-        | opts -> opts :?> IGeneralOptions 
+    let getGeneralOptions _ = generalOptions :> IGeneralOptions
+    let getGlobalOptions _ = globalOptions :> IGlobalOptions
+    let getCodeGenerationOptions _ = codeGenOptions :> ICodeGenerationOptions
 
     let getFormattingOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IFormattingOptions>()
+        serviceProvider.GetService<IFormattingOptions>()    
+        
 
-    let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
+
     //    serviceProvider.GetService<ICodeGenerationOptions>()
-        match serviceProvider.GetService(typeof<ICodeGenerationOptions>) with
-        | null -> DefaultCodeGenerationOptions() :> ICodeGenerationOptions
-        | opts -> opts :?> ICodeGenerationOptions
+//        match serviceProvider.GetService(typeof<ICodeGenerationOptions>) with
+//        | null -> DefaultCodeGenerationOptions() :> ICodeGenerationOptions
+//        | opts -> opts :?> ICodeGenerationOptions
 
-//    let tryGetGeneralOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<IGeneralOptions>()
-//
-//    let tryGetFormattingOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<IFormattingOptions>()
-//
-//    let tryGetCodeGenerationOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<ICodeGenerationOptions>()
+
 
     let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
         match codeGenOptions.CodeGenerationOptions with
@@ -197,11 +202,14 @@ module Setting =
     let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
         IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
 
-    let getGlobalOptions (serviceProvider: IServiceProvider) =
-        //serviceProvider.GetService<IGlobalOptions>()
-        match serviceProvider.GetService(typeof<IGlobalOptions>) with
-        | null -> DefaultGlobalOptions() :> IGlobalOptions
-        | opts -> opts :?> IGlobalOptions
+
+              
+
+//
+//        //serviceProvider.GetService<IGlobalOptions>()
+//        match serviceProvider.GetService(typeof<IGlobalOptions>) with
+//        | null ->  :> IGlobalOptions
+//        | opts -> opts :?> IGlobalOptions
 
 
     let getLintOptions (serviceProvider: IServiceProvider) =
@@ -210,12 +218,3 @@ module Setting =
     let getOutliningOptions (serviceProvider: IServiceProvider) =
         serviceProvider.GetService<IOutliningOptions>()
 
-
-//    let tryGetGlobalOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<IGlobalOptions>()
-//        
-//    let tryGetLintOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<ILintOptions>()
-//
-//    let tryGetOutliningOptions (serviceProvider: IServiceProvider) =
-//        serviceProvider.TryGetService<IOutliningOptions>()

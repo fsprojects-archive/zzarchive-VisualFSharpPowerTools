@@ -18,143 +18,89 @@ open Microsoft.VisualStudio.ComponentModelHost
 open FSharpVSPowerTools.Reference              
 
 //[< ProvideAutoLoad (VSConstants.UICONTEXT. NoSolution_string) >]
-//[< ProvideAutoLoad (VSConstants.UICONTEXT.SolutionExists_string) >]
-[< ProvideAutoLoad (VSConstants.UICONTEXT.FSharpProject_string) >]
+[< ProvideAutoLoad (VSConstants.UICONTEXT.SolutionExists_string) >]
+//[< ProvideAutoLoad (VSConstants.UICONTEXT.FSharpProject_string) >]
 [< ProvideBindingPath >]
 [< Guid "1F699E38-7D87-44F4-BC08-6B1DD5A6F926" >]
-[< PackageRegistration (UseManagedResourcesOnly = true, RegisterUsing = RegistrationMethod.CodeBase) >]
+[< PackageRegistration (UseManagedResourcesOnly = true) >]
 [< ProvideMenuResource (resourceID= "Menus.ctmenu", version=1) >]
 [< InstalledProductRegistration ("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400) >]
-[< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "General", 0s, 0s, true, 0) >]
+[< ProvideOptionPage (typeof<GeneralOptionsPage>, Resource.vsPackageTitle, "Pure General", 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<FantomasOptionsPage>      , Resource.vsPackageTitle, "Formatting"     , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<CodeGenerationOptionsPage>, Resource.vsPackageTitle, "Code Generation", 0s, 0s, true, 0) >]
-[< ProvideOptionPage (typeof<GlobalOptionsPage>        , Resource.vsPackageTitle, "Configuration"  , 0s, 0s, true, 0) >]
+[< ProvideOptionPage (typeof<GlobalOptionsPage>        , Resource.vsPackageTitle, "Pure Configuration"  , 0s, 0s, true, 0) >]
 //[< ProvideOptionPage (typeof<OutliningOptionsPage>     , Resource.vsPackageTitle, "Outlining"      , 0s, 0s, true, 0) >]
-[< ProvideOptionPage (typeof<Linting.LintOptionsPage>  , Resource.vsPackageTitle, "Lint"           , 0s, 0s, true, 0) >]
-[< ProvideService (typeof<IGeneralOptions>) >]   
-//[< ProvideService (typeof<IFormattingOptions>) >]
-//[< ProvideService (typeof<ICodeGenerationOptions>) >]
-[< ProvideService (typeof<IGlobalOptions>) >]
-[< ProvideService (typeof<ILintOptions>) >]
+[< ProvideOptionPage (typeof<Linting.LintOptionsPage>  , Resource.vsPackageTitle, "Pure Lint"           , 0s, 0s, true, 0) >]
 [<ComVisible true>]
 type PowerToolsCommandsPackage () as self =
     inherit Package ()
 
-    static let DTE = Lazy<DTE2> (fun () -> ServiceProvider.GlobalProvider.GetService<DTE2,DTE> ())
+    // NOTE - THIS PART OF THE CONSTRUCTOR RUNS BEFORE `INITIALIZE` IS CALLED UNLIKE IN C# CLASSES
+    //        IT CANNOT CONNECT TO ANY OF VISUAL STUDIO'S SERVICES
 
     let mutable pctCookie = 0u
     let mutable objectManagerCookie = 0u
-    let mutable newFolderMenu : FolderMenuCommands option = None
+
+    // Store items created by VFPT to be disposed later 
     let mutable fsharpLibrary : FSharpLibrary option = None
     let mutable fsiReferenceMenu : FsiReferenceCommand option = None
-    let mutable taskListCommentManager : CrossSolutionTaskListCommentManager option = None
 
-    let serviceProvider     = self :> IServiceProvider
-    let serviceContainer    = self :> IServiceContainer
-
-    
-
-    member __.RegisterLibrary () =
-        unitMaybe {
-            if objectManagerCookie = 0u then
-                let objManager = serviceProvider.GetService(typeof<SVsObjectManager>) :?> IVsObjectManager2
-                let! library = fsharpLibrary
-                ErrorHandler.ThrowOnFailure (objManager.RegisterSimpleLibrary (library, &objectManagerCookie)) |> ignore
-        }
-
-
-    member __.PerformRegistrations generalOptions =
-        let setupReferenceMenu () =
-            unitMaybe {
-                let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>) :?> OleMenuCommandService
-                (new FsiReferenceCommand (DTE.Value, mcs)).SetupCommands ()
-            }
-
-        let setupFolderMenu () =
-            unitMaybe {
-                let mcs = serviceProvider.GetService (typeof<OleMenuCommandService>)  :?> OleMenuCommandService
-                let shell = serviceProvider.GetService (typeof<SVsUIShell>) :?> IVsUIShell
-                let folderMenu = new FolderMenuCommands (DTE.Value, mcs, shell)
-                folderMenu.SetupCommands ()
-                newFolderMenu <- Some folderMenu
-            }
-
-
-        let registerPriorityCommandTarget () =
-            unitMaybe {
-                let rpct = serviceProvider.GetService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
-                let! folderMenu = newFolderMenu
-                rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
-            }
-
-
-        let performRegistrations (generalOptions:IGeneralOptions) =
-            if generalOptions.FolderOrganizationEnabled then setupFolderMenu(); registerPriorityCommandTarget()
-            if generalOptions.GenerateReferencesEnabled then setupReferenceMenu()
-            if generalOptions.TaskListCommentsEnabled then
-                try unitMaybe {
-                    let componentModel = serviceProvider.GetService (typeof<SComponentModel>) :?> IComponentModel
-                    let commentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>()
-                    // Debug.Assert(isNotNull taskListCommentManager, "This instance should have been MEF exported")
-                    commentManager.Activate ()
-                    taskListCommentManager <- Some commentManager
-                  }
-                with ex -> Logging.logException ex
-
-        performRegistrations generalOptions
-        
-        
-
-
-    member __.GetDialogPage<'a> () =  base.GetDialogPage (typeof<'a>)
-    
-    member __.CreateService<'page>() = fun _ _ -> self.GetDialogPage<'page>() :> obj
 
     override __.Initialize () =
         base.Initialize ()
 
-        serviceContainer.AddService<IGeneralOptions> (self.CreateService<GeneralOptionsPage> ()) 
-        serviceContainer.AddService<IGlobalOptions> (self.CreateService<GlobalOptionsPage> ()) 
-        serviceContainer.AddService<ILintOptions> (self.CreateService<Linting.LintOptionsPage> ()) 
-        
+        let dte = Package.GetGlobalService (typeof<DTE>) :?> DTE2 
+    //    let mcs = Package.GetGlobalService (typeof<IMenuCommandService>) :?> OleMenuCommandService
 
-//        self.GetDialogPage<FantomasOptionsPage> () |> addService<IFormattingOptions> 
-//        self.GetDialogPage<CodeGenerationOptionsPage> () |> addService<ICodeGenerationOptions> 
-        //self.GetDialogPage<OutliningOptionsPage> () |> addService<IOutliningOptions> serviceContainer 
 
-        let generalOptions = self.GetService<IGeneralOptions> ()
+        // Setup the menu commands
+        //-------------------------
+        //let mcs = Package.GetGlobalService (typeof<IMenuCommandService>) :?> OleMenuCommandService
+  //      let refMenu  = new FsiReferenceCommand (dte, mcs)
+  //      refMenu.SetupCommands ()
+   //     fsiReferenceMenu <- Some refMenu
 
-        self.PerformRegistrations generalOptions
+        // Setup the folder menu
+        //-----------------------
+        let shell = Package.GetGlobalService (typeof<SVsUIShell>) :?> IVsUIShell
+     //   let folderMenu = new FolderMenuCommands (dte, mcs, shell)
+   //     folderMenu.SetupCommands ()
 
+
+        // Register the Command Targets
+        //-----------------------------
+        let rpct = Package.GetGlobalService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
+    //    rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
+
+        // Create and Register the F# Library
+        //-----------------------------------
         let library = FSharpLibrary Constants.guidSymbolLibrary
-        library.LibraryCapabilities <-  Enum.Parse( typedefof<_LIB_FLAGS2>, _LIB_FLAGS.LF_PROJECT.ToString()) :?> _LIB_FLAGS2
-//        library.LibraryCapabilities <-   asEnum<_LIB_FLAGS2>  _LIB_FLAGS.LF_PROJECT
+        library.LibraryCapabilities  <-  enum<_LIB_FLAGS2> (int _LIB_FLAGS.LF_PROJECT)
+        let objManager = Package.GetGlobalService (typeof<SVsObjectManager>) :?> IVsObjectManager2
+        if objectManagerCookie = 0u then
+            ErrorHandler.ThrowOnFailure (objManager.RegisterSimpleLibrary (library, &objectManagerCookie)) |> ignore
         fsharpLibrary <- Some library
-        self.RegisterLibrary ()
+
 
         VSUtils.ForegroundThreadGuard.BindThread ()
 
+
+
+
+
     member __.Unregister () =
-        let unregisterLibrary () =
-            unitMaybe {
-                if objectManagerCookie <> 0u then
-                    let objManager = serviceProvider.GetService(typeof<SVsObjectManager>) :?> IVsObjectManager2
-                    objManager.UnregisterLibrary (objectManagerCookie) |> ignore
-            }
+        // unregisterLibrary
+        //------------------
+        if objectManagerCookie <> 0u then
+            let objManager = Package.GetGlobalService (typeof<SVsObjectManager>) :?> IVsObjectManager2
+            objManager.UnregisterLibrary (objectManagerCookie) |> ignore
 
-        let unregisterPriorityCommandTarget () =
-            unitMaybe {
-                if pctCookie <> 0u then 
-                    let rpct = serviceProvider.GetService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
-                    let! folderMenu = newFolderMenu
-                    rpct.RegisterPriorityCommandTarget (0u,folderMenu, &pctCookie) |> ignore
-            }
-
-        unregisterPriorityCommandTarget ()
-        unregisterLibrary ()
+        // unregisterPriorityCommandTarget
+        //--------------------------------
+        let rpct = Package.GetGlobalService (typeof<SVsRegisterPriorityCommandTarget>) :?> IVsRegisterPriorityCommandTarget
+        rpct.UnregisterPriorityCommandTarget pctCookie |> ignore
 
     interface IDisposable with
         member x.Dispose () : unit = 
             self.Unregister()
-            taskListCommentManager |> Option.iter dispose
             fsiReferenceMenu |> Option.iter dispose

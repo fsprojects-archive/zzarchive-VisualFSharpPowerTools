@@ -36,15 +36,24 @@ module internal Utils =
 [<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<ComVisible true>]
 [<Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")>]
-type GeneralOptionsPage () =
+type GeneralOptionsPage () as self =
     inherit UIElementDialogPage () 
     //inherit DialogPage()
 
     let generalOptionsControl = GeneralOptionsView ()
     do generalOptionsControl.DataContext <- GeneralOptionsViewModel ()
     
-    let componentModel = Package.GetGlobalService(typeof<SComponentModel>) :?> IComponentModel 
+    let componentModel = 
+
+        Package.GetGlobalService(typeof<SComponentModel>) :?> IComponentModel 
         
+(* refrence from encouragements
+          IEncouragements GetEncouragements()
+        {
+            var componentModel = (IComponentModel)(Site.GetService(typeof(SComponentModel)));
+            return componentModel.DefaultExportProvider.GetExportedValue<IEncouragements>();
+        }
+*)
     
 
     let [<Literal>] navBarConfig = "fsharp-navigationbar-enabled"       
