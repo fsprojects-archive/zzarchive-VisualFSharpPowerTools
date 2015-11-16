@@ -328,7 +328,6 @@ type VSLanguageService
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
         instance.RawChecker.CheckProjectInBackground opts
 
-    member __.CheckerAsync x = instance.CheckerAsync x
     member __.RawChecker = instance.RawChecker
 
     /// This value is used for testing when VS lex cache isn't available

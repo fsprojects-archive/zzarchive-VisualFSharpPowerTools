@@ -328,7 +328,7 @@ module Array =
             resultList1.ToArray (),
             resultList2.ToArray ()
 
-    let toHexString (bytes: byte[]) =
+    let toShortHexString (bytes: byte[]) =
         let length = bytes.Length
         let chars = Array.zeroCreate length
         for i in 0..length/2-1 do
@@ -388,7 +388,6 @@ module Option =
         match x with
         | Some x -> [x]
         | None -> []
-
 
     let inline iterElse someAction noneAction opt =
         match opt with
