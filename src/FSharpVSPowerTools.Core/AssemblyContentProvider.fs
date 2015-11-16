@@ -181,7 +181,10 @@ module AssemblyContentProvider =
                           Namespace = ns }
 
                     if entity.IsFSharpModule then
-                        yield! traverseMemberFunctionAndValues ns currentParent entity.MembersFunctionsAndValues
+                        match Option.attempt (fun _ -> entity.MembersFunctionsAndValues) with
+                        | Some membersFunctionsAndValues ->
+                            yield! traverseMemberFunctionAndValues ns currentParent membersFunctionsAndValues
+                        | None -> ()
 
                     for e in (try entity.NestedEntities :> _ seq with _ -> Seq.empty) do
                         yield! traverseEntity contentType currentParent e 

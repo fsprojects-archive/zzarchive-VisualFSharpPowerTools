@@ -52,7 +52,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
                 
                 let textBufferChangedSubscription = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
                 
-                let rec viewClosed _ = 
+                let rec viewClosed _ =
                     ForegroundThreadGuard.CheckThread()
                     textBufferChangedSubscription.Dispose()
                     viewClosedSubscription.Dispose()
@@ -67,6 +67,8 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
         
         member __.MapOpenDocuments f = Seq.map f openDocuments
         member __.TryFindOpenDocument path = Map.tryFind path openDocuments
-        member __.TryGetDocumentText path = openDocuments |> Map.tryFind path |> Option.map (fun x -> x.Text.Value)
+        member __.TryGetDocumentText path = 
+            let doc = openDocuments |> Map.tryFind path 
+            doc |> Option.map (fun x -> x.Text.Value)
         member __.DocumentChanged = documentChanged.Publish
         member __.DocumentClosed = documentClosed.Publish
