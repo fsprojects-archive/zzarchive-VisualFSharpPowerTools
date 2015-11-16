@@ -371,14 +371,15 @@ let private generateSignature ctx (mem: FSharpMemberOrFunctionOrValue) =
     | _ -> ""
 
 let private hasVisibleConstructor (typ: FSharpEntity) =
-    typ.MembersFunctionsAndValues
+    typ.TryGetMembersFunctionsAndValues
+    |> Option.getOrElse ([||] :> _)
     |> Seq.exists (function
         | Constructor _ -> true
         | _             -> false)
 
 let private tryGetNeededTypeDefSyntaxDelimiter (typ: FSharpEntity) =
     let isStruct = typ.IsValueType && not typ.IsEnum
-    let hasMembers = typ.MembersFunctionsAndValues.Count > 0
+    let hasMembers = (typ.TryGetMembersFunctionsAndValues |> Option.getOrElse ([||] :> _)).Count > 0
 
     if not hasMembers && not typ.IsFSharpModule then
         if typ.IsClass then Some "class"
@@ -423,9 +424,10 @@ let rec internal writeModule isTopLevel ctx (modul: FSharpEntity) =
             ctx.Writer.WriteLine("module {0} = ", QuoteIdentifierIfNeeded modul.LogicalName)   
             ctx.Writer.Indent ctx.Indentation
 
-        if modul.MembersFunctionsAndValues.Count > 0 then
+        if (modul.TryGetMembersFunctionsAndValues |> Option.getOrElse ([||] :> _)).Count > 0 then
             ctx.Writer.WriteBlankLines ctx.BlankLines.BeforeMembersFunctionsAndValues
-        for value in modul.MembersFunctionsAndValues do
+        
+        for value in modul.TryGetMembersFunctionsAndValues |> Option.getOrElse ([||] :> _) do
             writeFunctionOrValue ctx value
 
         if not (Seq.isEmpty modul.PublicNestedEntities) then
@@ -498,7 +500,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
         && neededTypeDefSyntaxDelimiter <> Some "class"
 
     let isStruct = typ.IsValueType && not typ.IsEnum
-    let hasMembers = typ.MembersFunctionsAndValues.Count > 0
+    let hasMembers = (typ.TryGetMembersFunctionsAndValues |> Option.getOrElse ([||] :> _)).Count > 0
 
     if classAttributeHasToBeAdded then
         ctx.Writer.WriteLine("[<Class>]")
@@ -574,7 +576,7 @@ and internal writeType isNestedEntity ctx (typ: FSharpEntity) =
         else
             ctx.Writer.WriteLine("interface {0}", name))
 
-    let membersPartition = MembersPartition.Create(typ.MembersFunctionsAndValues)
+    let membersPartition = MembersPartition.Create(typ.TryGetMembersFunctionsAndValues |> Option.getOrElse ([||] :> _))
 
     // Constructors
     for constr in membersPartition.Constructors do

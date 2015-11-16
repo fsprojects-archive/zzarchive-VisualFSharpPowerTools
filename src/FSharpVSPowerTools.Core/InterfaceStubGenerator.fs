@@ -389,7 +389,9 @@ module InterfaceStubGenerator =
     let getInterfaceMembers (e: FSharpEntity) = 
         seq {
             for (iface, instantiations) in getInterfaces e do
-                yield! iface.MembersFunctionsAndValues |> Seq.choose (fun m -> 
+                yield! iface.TryGetMembersFunctionsAndValues
+                       |> Option.getOrElse ([||] :> _)
+                       |> Seq.choose (fun m -> 
                            // Use this hack when FCS doesn't return enough information on .NET properties and events
                            if m.IsProperty || m.IsEventAddMethod || m.IsEventRemoveMethod then 
                                None 

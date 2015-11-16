@@ -86,6 +86,7 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
+    open FSharpVSPowerTools
 
     type AssemblyContentCacheEntry =
         { FileWriteTime: DateTime 
@@ -181,7 +182,7 @@ module AssemblyContentProvider =
                           Namespace = ns }
 
                     if entity.IsFSharpModule then
-                        match Option.attempt (fun _ -> entity.MembersFunctionsAndValues) with
+                        match entity.TryGetMembersFunctionsAndValues with
                         | Some membersFunctionsAndValues ->
                             yield! traverseMemberFunctionAndValues ns currentParent membersFunctionsAndValues
                         | None -> ()
