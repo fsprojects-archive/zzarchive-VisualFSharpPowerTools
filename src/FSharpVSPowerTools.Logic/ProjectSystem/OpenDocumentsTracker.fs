@@ -5,6 +5,7 @@ open System.Text
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
+open System.Collections.Concurrent
 open System.Collections.Generic
 
 [<NoComparison>]
@@ -28,7 +29,7 @@ type IOpenDocumentsTracker =
 [<Export(typeof<IOpenDocumentsTracker>)>]
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
     [<VolatileField>]
-    let mutable openDocuments = Map.empty
+    let mutable openDocuments = ConcurrentDictionary<string,OpenDocument>()
     let documentChanged = Event<_> ()
     let documentClosed = Event<_> ()
 
@@ -40,7 +41,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
                 let path = doc.FilePath
                 let textBufferChanged (args: TextContentChangedEventArgs) =
                     ForegroundThreadGuard.CheckThread()
-                    openDocuments <- Map.add path (OpenDocument.Create doc args.After doc.Encoding) openDocuments
+                    openDocuments.TryAdd(path,(OpenDocument.Create doc args.After doc.Encoding)) |> ignore
                     documentChanged.Trigger path
         
                 let textBufferChangedSubscription: IDisposable = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
@@ -49,12 +50,12 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
                     ForegroundThreadGuard.CheckThread()
                     textBufferChangedSubscription.Dispose()
                     viewClosedSubscription.Dispose()
-                    openDocuments <- Map.remove path openDocuments
+                    openDocuments.TryRemove path  |> ignore
                     documentClosed.Trigger path
         
                 and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
                 
-                openDocuments <- Map.add path (OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding) openDocuments
+                openDocuments.TryAdd(path,(OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding)) |> ignore
         
             | _ -> ()
         
@@ -62,7 +63,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
             // use current collection snapshot
             Seq.map f openDocuments
         
-        member __.TryFindOpenDocument path = Map.tryFind path openDocuments
-        member __.TryGetDocumentText path = openDocuments |> Map.tryFind path |> Option.map (fun x -> x.Text.Value)
+        member __.TryFindOpenDocument path = if openDocuments.ContainsKey path then Some openDocuments.[path] else None
+        member __.TryGetDocumentText path = if openDocuments.ContainsKey path then Some openDocuments.[path].Text.Value else None
         member __.DocumentChanged = documentChanged.Publish
         member __.DocumentClosed = documentClosed.Publish
