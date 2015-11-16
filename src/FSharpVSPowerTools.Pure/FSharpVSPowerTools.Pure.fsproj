@@ -19,7 +19,7 @@
     <RootNamespace>FSharpVSPowerTools.Pure</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Pure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>FSharpVSPowerTools.Pure</Name>

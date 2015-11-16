@@ -31,25 +31,25 @@ type internal LintFormatDefinition () =
 let internal  LintErrorTypeDefinition : ErrorTypeDefinition = null
     
 
-[<Export (typeof<IViewTaggerProvider>)>]
-[<ContentType "F#">]
-[<TagType (typeof<LintTag>)>]
-type LintTaggerProvider [<ImportingConstructor>]
-    ( [<Import(typeof<SVsServiceProvider>)>] 
-        serviceProvider                 : IServiceProvider              ,
-        textDocumentFactoryService      :   ITextDocumentFactoryService ,
-        projectFactory                  :   ProjectFactory              ,
-        vsLanguageService               :   VSLanguageService           ) =
-
-    interface IViewTaggerProvider with
-        member __.CreateTagger (textView, buffer) =
-            maybe{
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                if not generalOptions.LinterEnabled then return! None else
-                let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
-                return buffer.Properties.GetOrCreateSingletonProperty (typeof<LintTagger>, fun () ->
-                    new LintTagger 
-                       (doc, vsLanguageService, serviceProvider, 
-                        projectFactory, OpenDocumentsTracker textDocumentFactoryService)
-                ) :> obj :?> _
-            } |> Option.getOrElse null
+//[<Export (typeof<IViewTaggerProvider>)>]
+//[<ContentType "F#">]
+//[<TagType (typeof<LintTag>)>]
+//type LintTaggerProvider [<ImportingConstructor>]
+//    ( [<Import(typeof<SVsServiceProvider>)>] 
+//        serviceProvider                 : IServiceProvider              ,
+//        textDocumentFactoryService      :   ITextDocumentFactoryService ,
+//        projectFactory                  :   ProjectFactory              ,
+//        vsLanguageService               :   VSLanguageService           ) =
+//
+//    interface IViewTaggerProvider with
+//        member __.CreateTagger (textView, buffer) =
+//            maybe{
+//                let generalOptions = Setting.getGeneralOptions serviceProvider
+//                if not generalOptions.LinterEnabled then return! None else
+//                let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
+//                return buffer.Properties.GetOrCreateSingletonProperty (typeof<LintTagger>, fun () ->
+//                    new LintTagger 
+//                       (doc, vsLanguageService, serviceProvider, 
+//                        projectFactory, OpenDocumentsTracker textDocumentFactoryService)
+//                ) :> obj :?> _
+//            } |> Option.getOrElse null

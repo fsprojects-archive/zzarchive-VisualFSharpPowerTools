@@ -65,25 +65,25 @@ type DepthColorizerAdornmentManager [<ImportingConstructor>]
                     adornment.Dispose()
 
 
-[<Export (typeof<ITaggerProvider>)>]
-[<ContentType "F#">]
-[<TagType (typeof<DepthRegionTag>)>]
-type DepthColorizerTaggerProvider [<ImportingConstructor>]
-    ( [<Import (typeof<SVsServiceProvider>)>] 
-    serviceProvider             :   IServiceProvider            ,
-    textDocumentFactoryService  :   ITextDocumentFactoryService ,
-    projectFactory              :   ProjectFactory              ,
-    vsLanguageService           :   VSLanguageService           ) =
-        
-    interface ITaggerProvider with
-        member __.CreateTagger buffer =
-            maybe {
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                if not generalOptions.DepthColorizerEnabled then return! None else
-                let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
-                return 
-                    new DepthTagger (doc, buffer, serviceProvider, projectFactory, 
-                            vsLanguageService, OpenDocumentsTracker textDocumentFactoryService)
-                    :> obj :?> _
-            } |> Option.getOrElse null
-
+//[<Export (typeof<ITaggerProvider>)>]
+//[<ContentType "F#">]
+//[<TagType (typeof<DepthRegionTag>)>]
+//type DepthColorizerTaggerProvider [<ImportingConstructor>]
+//    ( [<Import (typeof<SVsServiceProvider>)>] 
+//    serviceProvider             :   IServiceProvider            ,
+//    textDocumentFactoryService  :   ITextDocumentFactoryService ,
+//    projectFactory              :   ProjectFactory              ,
+//    vsLanguageService           :   VSLanguageService           ) =
+//        
+//    interface ITaggerProvider with
+//        member __.CreateTagger buffer =
+//            maybe {
+//                let generalOptions = Setting.getGeneralOptions serviceProvider
+//                if not generalOptions.DepthColorizerEnabled then return! None else
+//                let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
+//                return 
+//                    new DepthTagger (doc, buffer, serviceProvider, projectFactory, 
+//                            vsLanguageService, OpenDocumentsTracker textDocumentFactoryService)
+//                    :> obj :?> _
+//            } |> Option.getOrElse null
+//
