@@ -25,10 +25,10 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
         editorFactory               :   IVsEditorAdaptersFactoryService ,
         fileSystem                  :   FileSystem                      ,
         projectFactory              :   ProjectFactory                  ,
-        vsLanguageService           :   VSLanguageService               ) as self = 
+        vsLanguageService           :   VSLanguageService               ) = 
 
 
-    let serviceType =  typeof<FindReferencesFilterProvider>
+   // let serviceType =  typeof<FindReferencesFilterProvider>
 
     static member AddCommandFilter (viewAdapter:IVsTextView, commandFilter:FindReferencesFilter) =
         if not commandFilter.IsAdded then
@@ -40,27 +40,20 @@ type FindReferencesFilterProvider [<ImportingConstructor>]
                 // You'll need the next target for Exec and QueryStatus
                 if isNotNull next then commandFilter.NextTarget <- next
 
-    member __.RegisterCommandFilter (textView:IWpfTextView, showProgress:bool ) =
-        maybe {
-            let! textViewAdapter = editorFactory.TryGetViewAdapter textView
-          //  let generalOptions = Setting.getGeneralOptions serviceProvider
-
-        //    if not generalOptions.FindAllReferencesEnabled then return! None else
-
-            let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
-            let filter = new FindReferencesFilter ( doc, textView, vsLanguageService, serviceProvider,
-                                                    projectFactory, showProgress, fileSystem)
-
-            FindReferencesFilterProvider.AddCommandFilter (textViewAdapter, filter)
-            return 
-                filter        
-        }
-     
 
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated textView =
-            self.RegisterCommandFilter (textView, true) |> ignore
-        
+            maybe {
+                let! textViewAdapter = editorFactory.TryGetViewAdapter textView
+              //  let generalOptions = Setting.getGeneralOptions serviceProvider
+            //    if not generalOptions.FindAllReferencesEnabled then return! None else
+                let! doc = textDocumentFactoryService.TryDocumentFromBuffer textView.TextBuffer
+                let filter = new FindReferencesFilter ( doc, textView, vsLanguageService, serviceProvider,
+                                                        projectFactory, true, fileSystem)
+                FindReferencesFilterProvider.AddCommandFilter (textViewAdapter, filter)
+                return 
+                    filter        
+            } |> ignore       
         
 //            if reason = ConnectionReason.TextViewLifetime then () else 
 //

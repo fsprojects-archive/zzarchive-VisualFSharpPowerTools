@@ -71,9 +71,9 @@ type StandardCommandDispatcher private () as self =
             |]
 
     // this probably shouldn't be an option
-    static member Register (interopTextView :IVsTextView,  
-                            textView        :IWpfTextView, 
-                            codeServices    :CodeFormattingServices ) : StandardCommandDispatcher option =
+    static member Register 
+        //(interopTextView :IVsTextView, textView:IWpfTextView, codeServices:CodeFormattingServices ) : StandardCommandDispatcher option =
+        (_, textView:IWpfTextView, _) : StandardCommandDispatcher option =
         //let generalOptions = Setting.getGeneralOptions codeServices.ServiceProvider
         //Unchecked.defaultof<StandardCommandDispatcher>
         maybe{

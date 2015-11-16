@@ -74,7 +74,7 @@ module OutputWindowHelper =
 
     let writeToOutputWindow (logType: LogType) (message: string) (window: IVsOutputWindowPane) =
         let outputMessage = 
-            String.Format("[VFPT][{0} {1}] {2}{3}",
+            String.Format("[PVFPT][{0} {1}] {2}{3}",
                 logType.ToString(), DateTime.Now.ToString("hh:mm:ss tt"), message, Environment.NewLine)
         window.OutputString(outputMessage) |> ignore
     

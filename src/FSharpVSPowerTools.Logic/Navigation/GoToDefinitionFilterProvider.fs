@@ -33,19 +33,19 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
         editorFactory                   :   IVsEditorAdaptersFactoryService ,
         editorOptionsFactory            :   IEditorOptionsFactoryService    ,
         textDocumentFactoryService      :   ITextDocumentFactoryService     ,
-        textEditorFactoryService        :   ITextEditorFactoryService       ,
+   //     textEditorFactoryService        :   ITextEditorFactoryService       ,
         [<Import (typeof<DotNetReferenceSourceProvider>)>] 
         referenceSourceProvider         :   ReferenceSourceProvider         ,
         projectFactory                  :   ProjectFactory                  ,
         vsLanguageService               :   VSLanguageService               ) as self =
     
-    let mutable solutionEvents = Unchecked.defaultof<SolutionEvents>
+//    let mutable solutionEvents = Unchecked.defaultof<SolutionEvents>
 
     let serviceType = typeof<GoToDefinitionFilterProvider>
     
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
-    let events = dte.Events  :?> Events2
+//    let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
+ //   let events = dte.Events  :?> Events2
 //    do 
 //        if isNotNull events then
 //            solutionEvents <- events.SolutionEvents
@@ -101,9 +101,9 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
     
     interface IWpfTextViewConnectionListener with    
 
-        member __.SubjectBuffersConnected (textView:IWpfTextView, reason:ConnectionReason, subjectBuffers:Collection<ITextBuffer>) = ()
+        member __.SubjectBuffersConnected (_, _, _) = ()
         
-        member __.SubjectBuffersDisconnected (textView:IWpfTextView, reason:ConnectionReason, subjectBuffers:Collection<ITextBuffer>) =
+        member __.SubjectBuffersDisconnected (textView:IWpfTextView, reason:ConnectionReason, _) =
                 if reason = ConnectionReason.TextViewLifetime then () else 
 
                 let mutable commandFilter = Unchecked.defaultof<GoToDefinitionFilter>
@@ -111,7 +111,7 @@ type  GoToDefinitionFilterProvider [<ImportingConstructor>]
                 if textView.Properties.TryGetProperty( serviceType, &commandFilter) then
                     let textViewAdapter = editorFactory.GetViewAdapter textView
                     let hr = textViewAdapter.RemoveCommandFilter commandFilter 
-                    let success = textView.Properties.RemoveProperty serviceType
+                  //  let success = textView.Properties.RemoveProperty serviceType
                     Debug.Assert ( (hr = VSConstants.S_OK) , "Should be able to remove adornment from the text view")
                     (commandFilter :> IDisposable).Dispose()
 

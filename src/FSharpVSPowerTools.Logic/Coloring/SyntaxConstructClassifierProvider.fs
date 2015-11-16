@@ -145,7 +145,7 @@ type ClassificationColorManager [<ImportingConstructor>]
     member __.UpdateColors () =
         let currentTheme = themeManager.GetCurrentTheme()
         if currentTheme <> VisualStudioTheme.Unknown && currentTheme <> lastTheme then
-            let lastTheme = currentTheme
+         //   let lastTheme = currentTheme
             let colors = themeColors.[currentTheme]
             let formatMap = classificationFormatMapService.GetClassificationFormatMap(category="text")
             try
@@ -311,60 +311,60 @@ module  ClassificationFormats =
         member __.ForegroundColor = colors.Foreground
         member __.BackgroundColor = colors.Background
 
-//             
-//[<Export (typeof<ITaggerProvider>)>]
-//[<TagType(typeof<UnusedDeclarationTag>)>]
-//[<Export (typeof<IClassifierProvider>)>]
-//[<ContentType("F#")>]
-//[<TextViewRole(PredefinedTextViewRoles.Document)>]
-//type SyntaxConstructClassifierProvider [<ImportingConstructor>]
-//    (   [<Import(typeof<SVsServiceProvider>)>]
-//        serviceProvider           : IServiceProvider,
-//        shellEventListener        : ShellEventListener,
-//        classificationColorManager: ClassificationColorManager,
-//        classificationRegistry    : IClassificationTypeRegistryService,
-//        textDocumentFactoryService: ITextDocumentFactoryService,
-//        fsharpVsLanguageService   : VSLanguageService,
-//        projectFactory            : ProjectFactory ) as self =
-//
-//    static let serviceType = typeof<SyntaxConstructClassifier> : Type
-//    let subscriptions = ResizeArray()
-//    let themeChanged = shellEventListener.ThemeChanged
-//
-//
-//    // Receive notification for Visual Studio theme change
-//    do  themeChanged.Subscribe (fun _ ->
-//            classificationColorManager.UpdateColors ()
-//        ) |> subscriptions.Add
-//
-//    member __.GetClassifier(textBuffer: ITextBuffer)= 
-//        maybe{
-//            let generalOptions = Setting.getGeneralOptions serviceProvider
-//            if not generalOptions.SyntaxColoringEnabled then return! None else
-//            let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
-//            let includeUnusedOpens = generalOptions.UnusedOpensEnabled
-//            let includeUnusedReferences = false
-//            let includeUnusedOpens = false
-//            let! doc = textDocumentFactoryService.TryDocumentFromBuffer textBuffer
-//            return textBuffer.Properties.GetOrCreateSingletonProperty (serviceType, fun () ->
-//                new SyntaxConstructClassifier
-//                    (   doc, textBuffer, classificationRegistry,
-//                        fsharpVsLanguageService, serviceProvider, projectFactory,
-//                        includeUnusedReferences, includeUnusedOpens))
-//        }
-//
-//    interface IClassifierProvider with
-//        member __.GetClassifier textBuffer = 
-//            match self.GetClassifier textBuffer with
-//            | None -> null
-//            | Some cl -> cl :> IClassifier
-//            
-//
-//    interface ITaggerProvider with
-//        member x.CreateTagger(buffer: ITextBuffer)= 
-//            (self :> IClassifierProvider).GetClassifier buffer :?> ITagger<_>
-//
-//
-//    interface IDisposable with
-//        member __.Dispose () = subscriptions.Iter dispose
+             
+[<Export (typeof<ITaggerProvider>)>]
+[<TagType(typeof<UnusedDeclarationTag>)>]
+[<Export (typeof<IClassifierProvider>)>]
+[<ContentType("F#")>]
+[<TextViewRole(PredefinedTextViewRoles.Document)>]
+type SyntaxConstructClassifierProvider [<ImportingConstructor>]
+    (   [<Import(typeof<SVsServiceProvider>)>]
+        serviceProvider           : IServiceProvider,
+        shellEventListener        : ShellEventListener,
+        classificationColorManager: ClassificationColorManager,
+        classificationRegistry    : IClassificationTypeRegistryService,
+        textDocumentFactoryService: ITextDocumentFactoryService,
+        fsharpVsLanguageService   : VSLanguageService,
+        projectFactory            : ProjectFactory ) as self =
+
+    static let serviceType = typeof<SyntaxConstructClassifier> : Type
+    let subscriptions = ResizeArray()
+    let themeChanged = shellEventListener.ThemeChanged
+
+
+    // Receive notification for Visual Studio theme change
+    do  themeChanged.Subscribe (fun _ ->
+            classificationColorManager.UpdateColors ()
+        ) |> subscriptions.Add
+
+    member __.GetClassifier(textBuffer: ITextBuffer)= 
+        maybe{
+            let generalOptions = Setting.getGeneralOptions serviceProvider
+            if not generalOptions.SyntaxColoringEnabled then return! None else
+  //          let includeUnusedReferences = generalOptions.UnusedReferencesEnabled
+    //        let includeUnusedOpens = generalOptions.UnusedOpensEnabled
+            let includeUnusedReferences = false
+            let includeUnusedOpens = false
+            let! doc = textDocumentFactoryService.TryDocumentFromBuffer textBuffer
+            return textBuffer.Properties.GetOrCreateSingletonProperty (serviceType, fun () ->
+                new SyntaxConstructClassifier
+                    (   doc, textBuffer, classificationRegistry,
+                        fsharpVsLanguageService, serviceProvider, projectFactory,
+                        includeUnusedReferences, includeUnusedOpens))
+        }
+
+    interface IClassifierProvider with
+        member __.GetClassifier textBuffer = 
+            match self.GetClassifier textBuffer with
+            | None -> null
+            | Some cl -> cl :> IClassifier
+            
+
+    interface ITaggerProvider with
+        member x.CreateTagger(buffer: ITextBuffer)= 
+            (self :> IClassifierProvider).GetClassifier buffer :?> ITagger<_>
+
+
+    interface IDisposable with
+        member __.Dispose () = subscriptions.Iter dispose
 

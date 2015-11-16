@@ -20,8 +20,8 @@ type VisualStudioTheme =
 type ThemeManager [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
     static let themes = 
-        dict [ (Guid("de3dbbcd-f642-433c-8353-8f1df4370aba"), VisualStudioTheme.Light); 
-               (Guid("a4d6a176-b948-4b29-8c66-53c97a1ed7d0"), VisualStudioTheme.Blue);
+        dict [ (Guid("de3dbbcd-f642-433c-8353-8f1df4370aba"), VisualStudioTheme.Light)
+               (Guid("a4d6a176-b948-4b29-8c66-53c97a1ed7d0"), VisualStudioTheme.Blue)
                (Guid("1ded0138-47ce-435e-84ef-9ec1f439b749"), VisualStudioTheme.Dark) ]
 
     let getThemeId() =

@@ -57,7 +57,7 @@ type OutliningTaggerProvider [<ImportingConstructor>]
                         if !isFirstOutlining then
                             let fullspan = SnapshotSpan (textView.TextSnapshot, 0, textView.TextSnapshot.Length)
                             // ensure that first tags have been computed
-                            let tags = outliningTagger.GetTags( NormalizedSnapshotSpanCollection fullspan )
+                            outliningTagger.GetTags( NormalizedSnapshotSpanCollection fullspan ) |> ignore
                             let outliningManager = outliningManagerService.GetOutliningManager textView
                             outliningManager.CollapseAll
                                 ( fullspan, fun (c:ICollapsible) -> c.Tag.IsDefaultCollapsed ) |> ignore

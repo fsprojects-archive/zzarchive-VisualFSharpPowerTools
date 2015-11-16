@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.HighlightUsageFilterProvider
+module FSharpVSPowerTools.HighlightUsageFilterProvider
 
 open System.Diagnostics
 open System.ComponentModel.Composition
@@ -22,9 +22,9 @@ open System
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type HighlightUsageFilterProvider [<ImportingConstructor>]
-    ( [<Import (typeof<SVsServiceProvider>)>] 
-        serviceProvider :   IServiceProvider                    ,
-        editorFactory   :   IVsEditorAdaptersFactoryService     ,
+//    ( [<Import (typeof<SVsServiceProvider>)>] 
+//        serviceProvider :   IServiceProvider                    ,
+       (editorFactory   :   IVsEditorAdaptersFactoryService     ,
         tagAggregator   :   IViewTagAggregatorFactoryService    ) =
     
 
@@ -50,4 +50,3 @@ type HighlightUsageFilterProvider [<ImportingConstructor>]
                 HighlightUsageFilterProvider.AddCommandFilter ( textViewAdapter, 
                         new HighlightUsageFilter (textView, tagAggregator.CreateTagAggregator<TextMarkerTag> textView))
             } |> ignore
-

@@ -126,26 +126,6 @@
     <Compile Include="GUI\FantomasOptions.xaml.fs" />
     <Resource Include="GUI\GlobalOptions.xaml" />
     <Compile Include="PowerToolsCommandsPackage.fs" />
-    <Compile Include="Commands\SyntaxConstructClassifierProvider.fs" />
-    <Compile Include="Commands\StandardCommandDispatcher.fs" />
-    <Compile Include="Commands\CodeFormattingHookHelper.fs" />
-    <Compile Include="Commands\QuickInfoMarginProvider.fs" />
-    <Compile Include="Commands\XmlDocCommandFilterProvider.fs" />
-    <Compile Include="Commands\UnusedDeclarationMarginProvider.fs" />
-    <Compile Include="Commands\HighlightUsageTaggerProvider.fs" />
-    <Compile Include="Commands\ImplementInterfaceSmartTaggerProvider.fs" />
-    <Compile Include="Commands\LintQuickInfoProvider.fs" />
-    <Compile Include="Commands\LintTaggerProvider.fs" />
-    <Compile Include="Commands\RecordStubGeneratorSmartTaggerProvider.fs" />
-    <Compile Include="Commands\RenameCommandFilterProvider.fs" />
-    <Compile Include="Commands\ResolveUnopenedNamespaceSmartTaggerProvider.fs" />
-    <Compile Include="Commands\TaskListCommentFilterProvider.fs" />
-    <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.fs" />
-    <Compile Include="Commands\HighlightUsageFilterProvider.fs" />
-    <Compile Include="Commands\GoToDefinitionFilterProvider.fs" />
-    <Compile Include="Commands\FindReferenceFilterProvider.fs" />
-    <Compile Include="Commands\DepthColorizerManager.fs" />
-    <Compile Include="Commands\OutliningTaggerProvider.fs" />
     <None Include="Resources\Images.png" />
     <EmbeddedResource Include="Resources\FSharpVSPowerTools.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -228,9 +208,9 @@
       <EmbedInteropTypes>true</EmbedInteropTypes>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.Data, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Text.Logic, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
-    <Reference Include="Microsoft.VisualStudio.Text.UI, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
-    <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"/>
+    <Reference Include="Microsoft.VisualStudio.Text.Logic, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Text.UI, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop.11, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <EmbedInteropTypes>true</EmbedInteropTypes>
