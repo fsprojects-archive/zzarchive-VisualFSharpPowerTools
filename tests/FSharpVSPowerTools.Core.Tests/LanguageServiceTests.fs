@@ -9,12 +9,8 @@ module FSharpVSPowerTools.Core.Tests.LanguageServiceTests
 
 open NUnit.Framework
 open System.IO
-open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open System.Threading
-open FSharpVSPowerTools.AsyncMaybe
-open TestHelpers.LanguageServiceTestHelper
 
 //[<Literal>]
 //let DataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
@@ -99,13 +95,15 @@ let opts source =
     { opts with LoadTime = System.DateTime.UtcNow }
 
 let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) = 
+    let line = line - 1
     let opts = opts source
 
     let getSymbol line col lineStr =
         Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy LanguageServiceTestHelper.args Lexer.queryLexState
     
     let sourceLines = String.getLines source
-
+    let getLineStr line = sourceLines.[line - 1]
+    
     let lexer = 
         { new LexerBase() with
             member __.GetSymbolFromTokensAtLocation (_tokens, line, col) =
@@ -116,9 +114,10 @@ let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) =
                 Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState 
             member __.LineCount = sourceLines.Length }
 
-    let symbolsUses = 
+    let results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
+
+    let actual = 
         asyncMaybe {
-            let! results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> liftAsync
             let! symbol = getSymbol line col sourceLines.[line]
             let! symbolUse = results.GetSymbolUseAtLocation (line, col, sourceLines.[line], [symbol.Text])
             let! _, _, symbolUses = results.GetUsesOfSymbolInFileAtLocation(line, col, sourceLines.[line], symbol.Text)
@@ -126,87 +125,35 @@ let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) =
         }
         |> Async.RunSynchronously
         |> Option.getOrElse [||]
-
-    let checkResults = 
-        languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
-
-    let actualCategories =
-        let entities =
-            languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
-            |> Async.RunSynchronously
-
-//        entities |> Option.iter (fun es ->
-//            using (new StreamWriter(@"L:\_entities_.txt")) <| fun w ->
-//                es |> List.iter (fun e -> w.WriteLine (sprintf "%A" e)))
-
-        let getLineStr line = sourceLines.[line - 1]
-
-        let qualifyOpenDeclarations line endColumn idents = async {
-            let! tooltip = languageService.GetIdentTooltip (line, endColumn, getLineStr line, Array.toList idents, opts, fileName, source)
-            return 
-                match tooltip with
-                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                | None -> []
-        }
-
-        let openDeclarations = 
-            OpenDeclarationGetter.getOpenDeclarations checkResults.ParseTree entities qualifyOpenDeclarations
-            |> Async.RunSynchronously
-
-        let allEntities =
-            entities
-            |> Option.map (fun entities -> 
-                entities 
-                |> Seq.groupBy (fun e -> e.FullName)
-                |> Seq.map (fun (key, es) -> key, es |> Seq.map (fun e -> e.CleanedIdents) |> Seq.toList)
-                |> Dict.ofSeq)
-
-        SourceCodeClassifier.getCategoriesAndLocations (symbolsUses, checkResults, lexer, 
-                                                        (fun line -> sourceLines.[line]), openDeclarations, allEntities)
-        |> Seq.groupBy (fun span -> span.WordSpan.Line)
-
-    let actual =
-        expected
-        |> List.map (fun (line, _) ->
-            match actualCategories |> Seq.tryFind (fun (actualLine, _) -> actualLine = line) with
-            | Some (_, spans) -> 
-                line,
-                spans
-                |> Seq.choose (fun span ->
-                    match span.Category with 
-                    | Cat.Other -> None
-                    | _ -> Some (span.Category, span.WordSpan.StartCol, span.WordSpan.EndCol))
-                |> Seq.sortBy (fun (_, startCol, _) -> startCol)
-                |> Seq.toList
-            | None -> line, [])
+        |> Array.toList
+        |> List.groupBy (fun su -> su.RangeAlternate.StartLine)
+        |> List.map (fun (line, sus) ->    
+            line, sus |> List.map (fun su -> su.RangeAlternate.StartColumn, su.RangeAlternate.EndColumn))
         |> List.sortBy (fun (line, _) -> line)
-    
+
     let expected = 
         expected 
-        |> List.map (fun (line, spans) -> line, spans |> List.sortBy (fun (_, startCol, _) -> startCol))
+        |> List.map (fun (line, sus) -> line, List.sort sus)
         |> List.sortBy (fun (line, _) -> line)
     
     try actual |> Collection.assertEquiv expected
     with _ -> 
-        debug "AST: %A" checkResults.ParseTree
+        debug "AST: %A" results.ParseTree
         for x in actual do
             debug "Actual: %A" x
         reraise()
 
-
-
 [<Test>]
 let ``should find usages of module let bindings``() =
-    """
+    ("""
 let helloWorld = string1 + " " + string2
 let substring = helloWorld.[0..6]
 let string5 =
     let helloWorld = "Hello F# world"
     helloWorld
-"""
-    => [ 2, []
-         3, []
-         5, []]
+""", 2, 5)
+    => [ 2, [ 4, 14 ]
+         3, [ 16, 26 ]]
 
 //[<Test>]
 //let ``should find usages of arrays``() =
