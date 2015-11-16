@@ -454,9 +454,6 @@
     <Compile Include="Linting\LintQuickInfoSource.fs">
       <Link>Linting\LintQuickInfoSource.fs</Link>
     </Compile>
-    <Compile Include="Linting\LintQuickInfoSource.fs">
-      <Link>Linting\LintQuickInfoSource.fs</Link>
-    </Compile>
     <Compile Include="Linting\LintTaggerProvider.fs">
       <Link>Linting\LintTaggerProvider.fs</Link>
     </Compile>
