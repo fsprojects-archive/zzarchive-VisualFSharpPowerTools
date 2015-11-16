@@ -20,6 +20,7 @@ open FSharpVSPowerTools
 type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
    (fsharpVsLanguageService: VSLanguageService,
     textDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>] 
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
