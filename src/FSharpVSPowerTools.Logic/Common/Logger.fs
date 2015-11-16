@@ -18,8 +18,11 @@ type LogType =
         | Error -> "Error"
 
 [<Export>]
-type internal Logger [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+type internal Logger () = //,
+   //  [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+
+    let shellService = ServiceProvider.GlobalProvider.GetService<SVsUIShell,IVsUIShell>()
+    let activityLog  = ServiceProvider.GlobalProvider.GetService<SVsActivityLog,IVsActivityLog>()
 
     let getEntryTypeInt = function
         | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
@@ -31,30 +34,22 @@ type internal Logger [<ImportingConstructor>]
         | LogType.Warning -> OLEMSGICON.OLEMSGICON_WARNING
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
 
-    let getShellService() = 
-        serviceProvider.TryGetService<IVsUIShell, SVsUIShell>()
 
-    let getActivityLogService() =
-        serviceProvider.TryGetService<IVsActivityLog, SVsActivityLog>() 
 
-    static let mutable globalServiceProvider: IServiceProvider option = None
-
-    /// Quick and dirty global service provider for testing purpose.
-    static member internal GlobalServiceProvider 
-        with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
-        and set v = globalServiceProvider <- Some v
+//    static let mutable globalServiceProvider: IServiceProvider option = None
+//
+//    /// Quick and dirty global service provider for testing purpose.
+//    static member internal GlobalServiceProvider 
+//        with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
+//        and set v = globalServiceProvider <- Some v
 
     member __.Log(logType, message) =
-        getActivityLogService()
-        |> Option.iter (fun s -> s.LogEntry(uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore)
+        activityLog.LogEntry (uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore
         
     member __.MessageBox(logType, message) =
         let icon = getIcon logType
-        match getShellService() with
-        | None -> -1
-        | Some service ->
-            let result = ref 0
-            service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
+        let result = ref 0
+        shellService.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
                 OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
 
 
@@ -63,7 +58,7 @@ module OutputWindowHelper =
     open Microsoft.VisualStudio
 
     let getPowerToolsWindowPane(serviceProvider: IServiceProvider) =
-        let outputWindow = serviceProvider.TryGetService<IVsOutputWindow, SVsOutputWindow>()
+        let outputWindow = serviceProvider.TryGetService<SVsOutputWindow,IVsOutputWindow>()
         outputWindow
         |> Option.bind (fun window ->
             let outputPaneGuid = ref Constants.guidPowerToolsOutputPane
@@ -79,8 +74,8 @@ module OutputWindowHelper =
         window.OutputString(outputMessage) |> ignore
     
     /// This global output window is initialized once for each Visual Studio session.
-    let outputWindowPane = lazy(getPowerToolsWindowPane(Logger.GlobalServiceProvider))
-    let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
+    let outputWindowPane = lazy(getPowerToolsWindowPane ServiceProvider.GlobalProvider )
+    let globalOptions = lazy(Setting.getGlobalOptions ServiceProvider.GlobalProvider)
 
     let diagnose logType msg =
         outputWindowPane.Value 
@@ -91,7 +86,8 @@ module Logging =
     open OutputWindowHelper
 
     /// This is a global logger, please make sure that it is executed after the package is loaded.
-    let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
+    //let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
+    let internal logger = lazy (Logger())
 
     let internal log logType (produceMessage: _ -> string) = 
         // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.

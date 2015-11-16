@@ -8,7 +8,7 @@ open System.Windows.Threading
 open FSharpVSPowerTools
 
 type internal OptionsReader(serviceProvider: IServiceProvider) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = serviceProvider.GetService<SDTE,DTE>()
     
     member __.GetOptions() =
         dte.TryGetProperty("Environment", "TaskList", "CommentTokens")

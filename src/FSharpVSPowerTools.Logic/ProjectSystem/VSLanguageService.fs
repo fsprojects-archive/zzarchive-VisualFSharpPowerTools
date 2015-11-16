@@ -69,7 +69,7 @@ type VSLanguageService
     /// Clean up instructions are displayed on status bar.
     let suggestRecoveryAfterFailure ex fileName _source opts =
         Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
-        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+        let statusBar = serviceProvider.GetService<SVsStatusbar,IVsStatusbar>()
         statusBar.SetText Resource.languageServiceErrorMessage |> ignore 
                 
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure

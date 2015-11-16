@@ -100,7 +100,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
             | Some point, _ ->
                 let projectAndDoc =
                     maybe {
-                        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                        let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                         let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                         let! project = projectFactory.CreateForDocument buffer doc
                         return project, doc }

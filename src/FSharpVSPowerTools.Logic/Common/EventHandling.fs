@@ -3,6 +3,9 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
+open Microsoft.VisualStudio.Shell.Interop
+open System.ComponentModel.Composition
+open Microsoft.VisualStudio.ComponentModelHost
 open System.Threading
 open System.Windows.Threading
 open FSharpVSPowerTools
@@ -97,4 +100,12 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                 tokenSource.Dispose()
                 timer.Stop()
                 disposed <- true
-   
+
+[<Export>]
+type EventChannel [<ImportingConstructor>]   
+    ([<Import(typeof<SVsFileChangeEx)>] fileChangeService : IVsFileChangeEx,
+     [<Import(typeof<SVsShell)>] shellService : IVsShell ) =
+
+    let cookie = ref 0u
+                            fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
+                            fileChangeCookies.[file] <- !cookie)

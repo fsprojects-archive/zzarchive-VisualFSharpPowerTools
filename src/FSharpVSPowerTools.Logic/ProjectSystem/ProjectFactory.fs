@@ -45,7 +45,7 @@ type ProjectFactory
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
      openDocumentsTracker: IOpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = serviceProvider.GetService<SDTE,DTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
 

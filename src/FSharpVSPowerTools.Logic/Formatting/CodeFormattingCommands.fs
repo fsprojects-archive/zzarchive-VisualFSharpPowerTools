@@ -70,7 +70,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
         let isSignatureFile = x.IsSignatureFile(x.TextBuffer)
 
         let config = getConfig()
-        let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+        let statusBar = x.Services.ServiceProvider.GetService<SVsStatusbar,IVsStatusbar>()
 
         try
             let formattingResult = x.GetFormatted(isSignatureFile, source, config)

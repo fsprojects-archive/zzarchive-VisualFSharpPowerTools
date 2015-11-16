@@ -7,7 +7,7 @@ open System
 
 /// Listen to events related to solution builds
 type SolutionBuildEventListener(serviceProvider: IServiceProvider) as self =
-    let solutionBuildManager = serviceProvider.GetService<IVsSolutionBuildManager2, SVsSolutionBuildManager>()
+    let solutionBuildManager = serviceProvider.GetService<SVsSolutionBuildManager,IVsSolutionBuildManager2>()
     let mutable updateSolutionEventsCookie = 0u
     do solutionBuildManager.AdviseUpdateSolutionEvents(self, &updateSolutionEventsCookie) |> ignore
     let activeConfigChanged = Event<_>()

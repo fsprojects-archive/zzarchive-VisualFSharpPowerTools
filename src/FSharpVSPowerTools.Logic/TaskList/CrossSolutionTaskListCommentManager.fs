@@ -36,7 +36,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      taskListManager: TaskListManager,
      projectFactory: ProjectFactory) =
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = serviceProvider.GetService<SDTE,DTE>()
     let events = dte.Events :?> Events2
     let projectItemsEvents = events.ProjectItemsEvents
     let solutionEvents = events.SolutionEvents
@@ -45,7 +45,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
     let optionsMonitor = new OptionsMonitor(serviceProvider)
     let mutable options = optionsReader.GetOptions()
 
-    let fileChangeService = serviceProvider.GetService<IVsFileChangeEx, SVsFileChangeEx>()
+    let fileChangeService = serviceProvider.GetService<SVsFileChangeEx,IVsFileChangeEx>()
     let fileChangeMonitor = FileChangeMonitor()
     
     let fileChangeCookies = Dictionary()

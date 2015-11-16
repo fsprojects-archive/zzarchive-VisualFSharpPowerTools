@@ -37,7 +37,7 @@ type LintTagger(textDocument: ITextDocument,
             | None -> false
         config, shouldFileBeIgnored)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =

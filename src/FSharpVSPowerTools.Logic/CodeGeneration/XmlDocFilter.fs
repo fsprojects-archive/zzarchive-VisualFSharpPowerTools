@@ -54,7 +54,7 @@ type XmlDocFilter
                         asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                             let! document = dte.GetCurrentDocument fileName
                             let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
                             let! parseResults = languageService.ParseFileInProject (fileName, project)

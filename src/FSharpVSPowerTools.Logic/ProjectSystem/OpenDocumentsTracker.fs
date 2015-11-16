@@ -34,7 +34,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
     let documentClosed = Event<_> ()
 
     interface IOpenDocumentsTracker with
-        member __.RegisterView(view: IWpfTextView) = 
+        member __.RegisterView (view: IWpfTextView) = 
             ForegroundThreadGuard.CheckThread()
             match textDocumentFactoryService.TryGetTextDocument view.TextBuffer with
             | true, doc ->

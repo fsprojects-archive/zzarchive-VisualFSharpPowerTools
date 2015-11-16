@@ -72,7 +72,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 

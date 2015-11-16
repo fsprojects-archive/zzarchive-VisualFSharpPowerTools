@@ -214,14 +214,14 @@ type DocumentUpdater(serviceProvider: IServiceProvider) =
         x.OpenDocument(fileName, viewAdapter, frame)
 
         let lines = ref null
-        ErrorHandler.ThrowOnFailure((!viewAdapter).GetBuffer(lines)) |> ignore
+        ErrorHandler.ThrowOnFailure((!viewAdapter).GetBuffer lines) |> ignore
 
-        let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
+        let componentModel = serviceProvider.GetService<SComponentModel,IComponentModel>()
         let adapter = componentModel.GetService<IVsEditorAdaptersFactoryService>()
         adapter.GetDocumentBuffer(!lines)
 
     member __.BeginGlobalUndo(key: string) = 
-        let linkedUndo = serviceProvider.GetService<IVsLinkedUndoTransactionManager, SVsLinkedUndoTransactionManager>()
+        let linkedUndo = serviceProvider.GetService<SVsLinkedUndoTransactionManager,IVsLinkedUndoTransactionManager>()
         ErrorHandler.ThrowOnFailure(linkedUndo.OpenLinkedUndo(uint32 LinkedTransactionFlags2.mdtGlobal, key)) |> ignore
         linkedUndo
 
@@ -533,7 +533,7 @@ type IServiceProvider with
             |> ensureSucceeded
 
             let vsTextView = VsShellUtilities.GetTextView windowFrame
-            let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+            let vsTextManager = serviceProvider.GetService<SVsTextManager,IVsTextManager>()
             let mutable vsTextBuffer = Unchecked.defaultof<_>
             vsTextView.GetBuffer (&vsTextBuffer)
             |> ensureSucceeded
@@ -550,7 +550,7 @@ type IServiceProvider with
             if VsShellUtilities.IsDocumentOpen
                    (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
                 let vsTextView = VsShellUtilities.GetTextView windowFrame 
-                let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
+                let componentModel = serviceProvider.GetService<SComponentModel,IComponentModel>()
                 let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
                 return
                     (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
@@ -580,7 +580,7 @@ type IServiceProvider with
     member serviceProvider.GetActiveViewAndDocument () =
         maybe {
             let! documentService     = serviceProvider.TryGetService<ITextDocumentFactoryService>()
-            let! dte                 = serviceProvider.TryGetService<EnvDTE.DTE, SDTE> ()
+            let! dte                 = serviceProvider.TryGetService<SDTE,EnvDTE.DTE> ()
             let! doc = dte.GetActiveDocument ()
             let! wpfview =
                 let mutable hierarchy   = Unchecked.defaultof<_>
@@ -589,7 +589,7 @@ type IServiceProvider with
                 if VsShellUtilities.IsDocumentOpen
                    (serviceProvider, doc.FullName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
                     let vsTextView      = VsShellUtilities.GetTextView windowFrame 
-                    let componentModel  = serviceProvider.GetService<IComponentModel, SComponentModel>()
+                    let componentModel  = serviceProvider.GetService<SComponentModel,IComponentModel>()
                     let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
                     Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
                 else None            

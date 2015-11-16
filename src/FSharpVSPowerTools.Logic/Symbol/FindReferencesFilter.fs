@@ -23,7 +23,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
                           fileSystem: IFileSystem) =    
     let getDocumentState (progress: ShowProgress) =
         async {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
             let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
@@ -103,7 +103,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
                     | None ->
                         FSharpLibraryNode("Find Symbol Results", serviceProvider, fileSystem)
 
-                let findService = serviceProvider.GetService<IVsFindSymbol, SVsObjectSearch>()
+                let findService = serviceProvider.GetService<SVsObjectSearch,IVsFindSymbol>()
                 let searchCriteria = 
                     VSOBSEARCHCRITERIA2(
                         dwCustom = Constants.findReferencesResults,
@@ -117,7 +117,7 @@ type FindReferencesFilter(textDocument: ITextDocument,
             | Choice2Of2 msg -> 
                 // Clear cursor after finishing
                 progress(OperationState.Idle)
-                let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                let statusBar = serviceProvider.GetService<SVsStatusbar,IVsStatusbar>()
                 statusBar.SetText(msg) |> ignore 
         } |> Async.StartImmediateSafe
 

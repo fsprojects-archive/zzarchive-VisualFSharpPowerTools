@@ -88,7 +88,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 return!

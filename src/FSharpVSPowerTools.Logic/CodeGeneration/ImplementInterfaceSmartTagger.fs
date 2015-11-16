@@ -93,7 +93,7 @@ type ImplementInterface
                        startColumn indentSize typeParams objectIdentifier defaultBody
                        displayContext implementedMemberSignatures entity verboseMode
         if String.IsNullOrEmpty stub then
-            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+            let statusBar = serviceProvider.GetService< SVsStatusbar,IVsStatusbar>()
             statusBar.SetText(Resource.interfaceFilledStatusMessage) |> ignore
         else
             use transaction = textUndoHistory.CreateTransaction(Resource.implementInterfaceCommandName)
@@ -154,7 +154,7 @@ type ImplementInterface
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                    let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, symbol = vsLanguageService.GetSymbol (point, doc.FullName, project) 

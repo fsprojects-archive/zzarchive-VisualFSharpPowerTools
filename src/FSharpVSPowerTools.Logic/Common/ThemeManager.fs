@@ -25,7 +25,7 @@ type ThemeManager [<ImportingConstructor>]
                (Guid("1ded0138-47ce-435e-84ef-9ec1f439b749"), VisualStudioTheme.Dark) ]
 
     let getThemeId() =
-        let dte = serviceProvider.GetService<DTE, SDTE>()
+        let dte = serviceProvider.GetService<SDTE,DTE>()
         let version = VisualStudioVersion.fromDTEVersion dte.Version
         match version with
         | VisualStudioVersion.VS2012 
@@ -62,7 +62,7 @@ type ThemeManager [<ImportingConstructor>]
             | _ -> None)
         |> Option.getOrTry (fun _ ->
             try 
-                let dte = serviceProvider.GetService<DTE, SDTE>()
+                let dte = serviceProvider.GetService<SDTE,DTE>()
                 let fontsAndColors = 
                     // This method will not work well for customized themes, but we should not give up.
                     dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems

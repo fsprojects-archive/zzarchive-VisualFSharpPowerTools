@@ -35,7 +35,7 @@ type NavigateToItemProviderFactory
         projectFactory: ProjectFactory
     ) =
     
-    let dte = serviceProvider.GetService<DTE, SDTE>()
+    let dte = serviceProvider.GetService<SDTE,DTE>()
     let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
     let itemDisplayFactory = 
         let candidate =
@@ -77,7 +77,7 @@ and
     let projectIndexes = 
         lazy
             let listFSharpProjectsInSolution() = 
-                projectFactory.ListFSharpProjectsInSolution(serviceProvider.GetService<DTE, SDTE>()) 
+                projectFactory.ListFSharpProjectsInSolution(serviceProvider.GetService<SDTE,DTE>()) 
                 |> List.map projectFactory.CreateForProject
 
             let openedDocuments = 
@@ -87,7 +87,7 @@ and
             let projects = 
                 match listFSharpProjectsInSolution() with
                 | [] -> maybe {
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                             let! doc = dte.GetActiveDocument()
                             let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
                             let buffer = openDoc.Document.TextBuffer

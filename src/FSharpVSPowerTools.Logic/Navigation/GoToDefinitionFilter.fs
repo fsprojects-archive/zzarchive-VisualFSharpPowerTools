@@ -49,7 +49,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let getCurrentFilePathProjectAndDoc () =
         maybe {
             let filepath = textDocument.FilePath
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
             let! doc = dte.GetCurrentDocument(filepath)
             let! project = projectFactory.CreateForDocument view.TextBuffer doc
             return (filepath, project, doc)
@@ -78,7 +78,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
     // Use a single cache across text views
     static let xmlDocCache = Dictionary<string, IVsXMLMemberIndex>()
-    let xmlIndexService = serviceProvider.GetService<IVsXMLMemberIndexService, SVsXMLMemberIndexService>()
+    let xmlIndexService = serviceProvider.GetService<SVsXMLMemberIndexService,IVsXMLMemberIndexService>()
 
     /// If the XML comment starts with '<' not counting whitespace then treat it as a literal XML comment.
     /// Otherwise, escape it and surround it with <summary></summary>
@@ -211,7 +211,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
 
             match matchedSymbol with
             | Some symbol ->
-                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                let vsTextManager = serviceProvider.GetService<SVsTextManager,IVsTextManager>()
                 symbol.DeclarationLocation
                 |> Option.iter (fun r -> 
                     let (startRow, startCol) = (r.StartLine-1, r.StartColumn)
@@ -234,7 +234,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
             let subFolder = string (uint32 (hash fileName))
 
             let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
-            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+            let statusBar = serviceProvider.GetService<SVsStatusbar,IVsStatusbar>()
             let editorOptions = editorOptionsFactory.GetOptions(view.TextBuffer)
             let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
             match VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Constants.guidLogicalTextView) with
@@ -316,7 +316,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let replace (b:string) c (a:string) = a.Replace(b, c)
 
     let getSymbolCacheDir() = 
-        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+        let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
         let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
                                     dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toString)
         use key = Registry.CurrentUser.OpenSubKey(keyName)
@@ -466,7 +466,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                                     if shouldGenerateDefinition symbol then
                                         return! navigateToMetadata project span parseTree fsSymbolUse
                                 | _ ->
-                                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                                    let statusBar = serviceProvider.GetService<SVsStatusbar,IVsStatusbar>()
                                     statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
                                     return ()
             }

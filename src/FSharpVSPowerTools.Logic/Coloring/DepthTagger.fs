@@ -41,7 +41,7 @@ type DepthTagger
     let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
             let! document = dte.GetCurrentDocument doc.FilePath
             let! project = projectFactory.CreateForDocument buffer document
             let! parseResults = languageService.ParseFileInProject (doc.FilePath, project)

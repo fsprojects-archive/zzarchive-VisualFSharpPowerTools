@@ -161,7 +161,7 @@ type OutliningTagger
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
+            let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE> ()
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc

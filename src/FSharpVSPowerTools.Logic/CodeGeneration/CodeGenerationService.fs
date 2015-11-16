@@ -68,7 +68,7 @@ module ResourceProvider =
     open Microsoft.VisualStudio
 
     let getRefactoringIcon (serviceProvider: IServiceProvider) (kind: RefactoringIconKind) =
-        let manager = serviceProvider.GetService<IVsResourceManager, SVsResourceManager>()
+        let manager = serviceProvider.GetService<SVsResourceManager,IVsResourceManager>()
         let cmdDefUiPackageGuid = Guid "{44E07B02-29A5-11D3-B882-00C04F79F802}"
         let IDBMP_REFACTOR_IMAGES = "#2029"        
         match manager.LoadResourceBitmap(ref cmdDefUiPackageGuid, 0, IDBMP_REFACTOR_IMAGES) with

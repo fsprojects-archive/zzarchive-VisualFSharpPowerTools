@@ -30,7 +30,7 @@ type UnionPatternMatchCaseGeneratorSmartTaggerProvider [<ImportingConstructor>]
                 if textView.TextBuffer <> buffer then return! None else
        //         let generalOptions = Setting.getGeneralOptions serviceProvider
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
+                let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 let generator = 

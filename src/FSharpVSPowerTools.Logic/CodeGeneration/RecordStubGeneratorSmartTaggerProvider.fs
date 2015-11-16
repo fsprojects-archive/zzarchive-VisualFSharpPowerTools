@@ -32,7 +32,7 @@ type RecordStubGeneratorSmartTaggerProvider [<ImportingConstructor>]
        //         let generalOptions = Setting.getGeneralOptions serviceProvider
          //       if not generalOptions.GenerateRecordStubEnabled then return! None else
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                let dte = serviceProvider.GetService<EnvDTE.DTE,SDTE>()
+                let dte = serviceProvider.GetService<SDTE,EnvDTE.DTE>()
                 if dte.Version = string VisualStudioVersion.VS2015 then return! None else
                 let! doc = textDocumentFactoryService.TryDocumentFromBuffer buffer
                 let generator = 

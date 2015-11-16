@@ -47,7 +47,7 @@ type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, f
                     with _ -> false
             if canShow then
                 let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                let vsTextManager = serviceProvider.GetService<SVsTextManager,IVsTextManager>()
                 let mutable vsTextBuffer = Unchecked.defaultof<_>
                 vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
                 Some (windowFrame, vsTextManager, vsTextBuffer)
