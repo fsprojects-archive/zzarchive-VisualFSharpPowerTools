@@ -100,7 +100,8 @@ module TypedAstExtensionHelpers =
         member x.PublicNestedEntities =
             x.NestedEntities |> Seq.filter (fun entity -> entity.Accessibility.IsPublic)
 
-        member x.TryGetMembersFunctionsAndValues = Option.attempt (fun _ -> x.MembersFunctionsAndValues)
+        member x.TryGetMembersFunctionsAndValues = 
+            Option.attempt (fun _ -> x.MembersFunctionsAndValues) |> Option.getOrElse ([||] :> _)
 
     type FSharpMemberOrFunctionOrValue with
         // FullType may raise exceptions (see https://github.com/fsharp/fsharp/issues/307). 
