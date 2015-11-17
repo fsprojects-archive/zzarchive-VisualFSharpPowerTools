@@ -102,24 +102,11 @@ let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) =
         Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy LanguageServiceTestHelper.args Lexer.queryLexState
     
     let sourceLines = String.getLines source
-    let getLineStr line = sourceLines.[line - 1]
-    
-    let lexer = 
-        { new LexerBase() with
-            member __.GetSymbolFromTokensAtLocation (_tokens, line, col) =
-                let lineStr = sourceLines.[line]
-                Lexer.getSymbol source line col lineStr SymbolLookupKind.ByRightColumn LanguageServiceTestHelper.args Lexer.queryLexState
-            member __.TokenizeLine line =
-                let lineStr = sourceLines.[line]
-                Lexer.tokenizeLine source LanguageServiceTestHelper.args line lineStr Lexer.queryLexState 
-            member __.LineCount = sourceLines.Length }
-
     let results = languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
 
     let actual = 
         asyncMaybe {
             let! symbol = getSymbol line col sourceLines.[line]
-            let! symbolUse = results.GetSymbolUseAtLocation (line, col, sourceLines.[line], [symbol.Text])
             let! _, _, symbolUses = results.GetUsesOfSymbolInFileAtLocation(line, col, sourceLines.[line], symbol.Text)
             return symbolUses
         }
@@ -152,57 +139,94 @@ let string5 =
     let helloWorld = "Hello F# world"
     helloWorld
 """, 2, 5)
-    => [ 2, [ 4, 14 ]
-         3, [ 16, 26 ]]
+    => [2, [4, 14]
+        3, [16, 26]]
 
-//[<Test>]
-//let ``should find usages of arrays``() =
-//    checkSymbolUsage 
-//        126 29 "    let substring = helloWorld.[0..6]"
-//        [ (126, 20, 30); (123, 8, 18); (132, 17, 27) ]
+[<Test>]
+let ``should find usages of class members``() =
+    ("""
+type Vector() =
+    member __.Length = 1
+let v = Vector()
+let _ = v.Length
+let _ = v.Length + v.Length
+""", 3, 15)
+    => [3, [14, 20]
+        5, [8, 16]
+        6, [8, 16; 19, 27]]
 
-//[<Test>]
-//let ``should find usages of members``() =
-//    checkSymbolUsage
-//        217 26 "        member this.Length = length"
-//        [ (217, 20, 26); (227, 63, 77); (227, 78, 92) ]
-//
-//    checkSymbolUsage
-//        610 35 "    eventForDelegateType.Publish.AddHandler("
-//        [ (610, 4, 43) ]
-//
-//    checkSymbolUsage
-//        722 16 "    Nested.``long name``()"
-//        [ (720, 12, 25); (722, 4, 24) ]
-//
-//[<Test>]
-//let ``should find usages of DU constructors named with single upper-case letter``() =
-//    checkSymbolUsage
-//        470 14 "    type A = B of int"
-//        [ (470, 13, 14); (471, 9, 10); (471, 16, 17) ]
-//
-//[<Test>]
-//let ``should find usages of DU types named with single upper-case letter``() =
-//    checkSymbolUsage
-//        470 10 "    type A = B of int"
-//        [ (470, 9, 10); (472, 13, 14) ]
-//
-//[<Test>]
-//let ``should find usages of operators``() =
-//    checkSymbolUsage
-//        690 22 "    let func1 x = x *. x + 3"
-//        [ (689, 10, 12); (690, 20, 22); (691, 23, 25) ]
-//
-//[<Test>]
-//let ``should find usages of operators starting with '>' symbol``() =
-//    checkSymbolUsage
-//        693 11 "    let (>>=) x y = ()"
-//        [ (693, 9, 12); (694, 6, 9) ]
-//
-//    checkSymbolUsage
-//        696 8 "    1 >~>> 2"
-//        [ (695, 9, 13); (696, 6, 10) ]
-//
+[<Test>]
+let ``should find usages of module level events``() =
+    ("""
+let event = Event<EventHandler, EventArgs>()    
+event.Publish.AddHandler(EventHandler(fun _ _ -> ()))
+event.Trigger(null, EventArgs.Empty)
+""", 2, 5) 
+    => [2, [4, 9]
+        3, [0, 5]
+        4, [0, 5]]
+
+[<Test>]
+let ``should find usages of symbol defined in a nested module``() =
+    ("""
+module Nested =
+    let foo() = ()
+    let _ = foo()
+Nested.foo()
+""", 3, 9) 
+    => [3, [8, 11]
+        4, [12, 15]
+        5, [0, 10]]
+
+[<Test>]
+let ``should find usages of single letter DU case``() =
+    ("""
+type A = B of int
+    let (B b) = B 1
+    type C = A list
+""", 3, 10) 
+    => [2, [9, 10]
+        3, [16, 17; 9, 10]]
+
+[<Test>]
+let ``should find usages of single letter DU type``() =
+    ("""
+type A = B of int
+    let (B b) = B 1
+    type C = A list
+""", 2, 6) 
+    => [2, [5, 6]
+        4, [13, 14]]
+
+[<Test>]
+let ``should find usages of operator``() =
+    ("""
+let ( *. ) x y = x * y
+    let func1 x = x *. x + 3
+    let func1a (x) = x *. x + 3
+""", 2, 8) 
+    => [2, [6, 8]
+        3, [20, 22]
+        4, [23, 25]]
+
+[<Test>]
+let ``should find usages of operator >>= which starts with '>' symbol``() =
+    ("""
+let (>>=) x y = ()
+    1 >>= 2
+""", 2, 8) 
+    => [2, [5, 8]
+        3, [6, 9]]
+
+[<Test>]
+let ``should find usages of operator >~>> which starts with '>' symbol``() =
+    ("""
+let (>~>>) x y = ()
+1 >~>> 2
+""", 2, 9) 
+    => [2, [5, 9]
+        3, [2, 6]]
+
 //[<Test>]
 //let ``should find usages of operators containing dots``() =
 //    checkSymbolUsage
