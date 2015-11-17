@@ -115,7 +115,10 @@ let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) =
         |> Array.toList
         |> List.groupBy (fun su -> su.RangeAlternate.StartLine)
         |> List.map (fun (line, sus) ->    
-            line, sus |> List.map (fun su -> su.RangeAlternate.StartColumn, su.RangeAlternate.EndColumn))
+            line, 
+            sus 
+            |> List.map (fun su -> su.RangeAlternate.StartColumn, su.RangeAlternate.EndColumn)
+            |> List.sort)
         |> List.sortBy (fun (line, _) -> line)
 
     let expected = 
