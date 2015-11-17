@@ -1,9 +1,7 @@
 namespace FSharpVSPowerTools.Navigation
 
-open System.ComponentModel.Composition
 open System
 open System.Collections.Concurrent
-open Microsoft.VisualStudio.Shell
 open EnvDTE80
 open Microsoft.VisualStudio.Shell.Interop
 open EnvDTE
@@ -12,7 +10,6 @@ open System.Security.Cryptography
 open System.Text
 open Nessos.FsPickler
 open System.IO
-open System.Diagnostics
 open System.Threading
 open FSharpVSPowerTools.ProjectSystem
 
@@ -35,7 +32,7 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
     let solutionPathHash (solutionPath: FilePath): string =
         use digest = SHA1.Create()
         let bytes = Encoding.UTF8.GetBytes solutionPath
-        digest.ComputeHash bytes |> Array.toHexString
+        digest.ComputeHash bytes |> Array.toShortHexString
 
     let cacheFilePath solutionPath =
         let solutionHash = solutionPathHash solutionPath

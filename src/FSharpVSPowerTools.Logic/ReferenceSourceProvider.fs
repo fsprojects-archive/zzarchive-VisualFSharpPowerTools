@@ -44,7 +44,7 @@ type ReferenceSourceProvider(baseUrl: string) =
         use md5 = MD5.Create()
         let bytes = Encoding.UTF8.GetBytes(input)
         let hashBytes = md5.ComputeHash(bytes)
-        Array.toHexString hashBytes
+        Array.toShortHexString hashBytes
 
     member __.IsActivated =
         timer.IsEnabled
