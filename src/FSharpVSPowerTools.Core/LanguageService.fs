@@ -43,10 +43,10 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
     member __.CheckErrors = infoOpt |> Option.map (fun (checkResults, _) -> checkResults.Errors)
     member __.ParseErrors = infoOpt |> Option.map (fun (_, parseResults) -> parseResults.Errors)
     
-    member x.HasParseOrCheckErrors =
+    member x.Errors =
         x.ParseErrors 
         |> Option.getOrElse [||]
-        |> Array.append (x.CheckErrors |> Option.getOrElse [||]) <> [||]
+        |> Array.append (x.CheckErrors |> Option.getOrElse [||])
 
     member __.GetFormatSpecifierLocations() =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocations())

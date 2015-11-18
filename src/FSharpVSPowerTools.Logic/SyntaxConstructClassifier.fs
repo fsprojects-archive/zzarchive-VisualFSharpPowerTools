@@ -49,7 +49,7 @@ type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSna
 [<NoComparison>]
 type private CategorizedSnapshotSpans =
     { Spans: CategorizedSnapshotSpan[]
-      HasErrors: bool }
+      Errors: FSharpErrorInfo[] }
 
 [<NoComparison>]
 type private FastStageData =
@@ -238,38 +238,35 @@ type SyntaxConstructClassifier
             | x, y ->
                 sameWordSpan x.[0].ColumnSpan.WordSpan y.[0].ColumnSpan.WordSpan
                 && sameWordSpan x.[x.Length - 1].ColumnSpan.WordSpan y.[y.Length - 1].ColumnSpan.WordSpan
-
         
-        if not newSpans.HasErrors then
-            debug "[SyntaxConstructClassifier] Replace spans entirely because new spans has no errors." 
+        match newSpans.Errors with
+        | [||] ->
             Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] Replace spans entirely because new spans has no errors.")
             newSpans
-        elif isNewRangeLarger then
-            debug "[SyntaxConstructClassifier] Replace spans entirely because new span range are wider than old one (old lines = %d..%d, new lines = %d..%d)" 
-                  oldStartLine oldEndLine newStartLine newEndLine
-            Logging.logInfo (fun _ -> 
-                sprintf "[SyntaxConstructClassifier] Replace spans entirely because new span range are wider than old one (old lines = %d..%d, new lines = %d..%d)." 
-                        oldStartLine oldEndLine newStartLine newEndLine)
-            newSpans
-        elif haveFirstAndLastSpansNotChanged() then
-            debug "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed."
-            Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed.")
-            newSpans
-        else
-            debug "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
-                  (newStartLine, newEndLine) (oldStartLine, oldEndLine)
-            Logging.logInfo (fun _ ->
-                sprintf "[SyntaxConstructClassifier] Merging spans (new range %A < old range %A)."
-                        (newStartLine, newEndLine) (oldStartLine, oldEndLine))
-            let spans = 
-                seq { 
-                    yield! oldSpans.Spans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
-                    yield! oldSpans.Spans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line <= newEndLine) 
-                    yield! newSpans.Spans
-                }
-                |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
-                |> Seq.toArray
-            { Spans = spans; HasErrors = newSpans.HasErrors }
+        | _ ->
+            Logging.logInfo (fun _ ->  sprintf "[SyntaxConstructClassifier] FCS returns errors:\n %+A" newSpans.Errors)
+
+            if isNewRangeLarger then
+                Logging.logInfo (fun _ -> 
+                    sprintf "[SyntaxConstructClassifier] Replace spans entirely because new span range is wider than old one (old lines = %d..%d, new lines = %d..%d)." 
+                            oldStartLine oldEndLine newStartLine newEndLine)
+                newSpans
+            elif haveFirstAndLastSpansNotChanged() then
+                Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed.")
+                newSpans
+            else
+                Logging.logInfo (fun _ ->
+                    sprintf "[SyntaxConstructClassifier] Merging spans (new range %A <= old range %A)."
+                            (newStartLine, newEndLine) (oldStartLine, oldEndLine))
+                let spans = 
+                    seq { 
+                        yield! oldSpans.Spans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
+                        yield! oldSpans.Spans |> Seq.skipWhile (fun x -> x.ColumnSpan.WordSpan.Line <= newEndLine) 
+                        yield! newSpans.Spans
+                    }
+                    |> Seq.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
+                    |> Seq.toArray
+                { Spans = spans; Errors = newSpans.Errors }
             
     let updateUnusedDeclarations (CallInUIContext callInUIContext) =
         let worker (project, snapshot) =
@@ -316,7 +313,7 @@ type SyntaxConstructClassifier
                         (fun x -> x.ColumnSpan.WordSpan, x)
                     |> Map.ofArray
 
-                let spans = { Spans = spans; HasErrors = checkResults.HasParseOrCheckErrors }
+                let spans = { Spans = spans; Errors = checkResults.Errors }
 
                 fastState.Swap (function
                     | FastStage.Data data ->
@@ -421,7 +418,7 @@ type SyntaxConstructClassifier
                         |> Array.sortBy (fun x -> x.ColumnSpan.WordSpan.Line)
                     | _ -> spans
 
-                let spans = { Spans = spans; HasErrors = checkResults.HasParseOrCheckErrors }
+                let spans = { Spans = spans; Errors = checkResults.Errors }
 
                 let! singleSymbolsProjects =
                     async {
