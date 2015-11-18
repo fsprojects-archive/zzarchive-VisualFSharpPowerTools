@@ -44,6 +44,7 @@ type Type
             | TyCon (s, ts) -> s
 """
         let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
         command.Exec(ref Constants.guidStandardCmdSet, uint32 VSConstants.VSStd2KCmdID.FORMATDOCUMENT, 
@@ -71,6 +72,7 @@ let rangeTest testValue mid size =
     | _ -> printfn "The test value is out of range."
 """
         let buffer = createMockTextBuffer content fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let textView = createMockTextView buffer
         let selection = fromRange buffer.CurrentSnapshot (3, 4, 5, 52) |> Option.get
         textView.Selection.Select(selection, false)

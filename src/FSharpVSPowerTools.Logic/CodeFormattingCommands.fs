@@ -75,6 +75,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
         |> Async.StartInThreadPoolSafe
 
     member x.ExecuteFormatCore() =
+        let (CallInUIContext callInUIContext) = CallInUIContext.FromCurrentThread()
         asyncMaybe {
             let source = x.TextBuffer.CurrentSnapshot.GetText()
             
@@ -96,16 +97,19 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                 let! isValid = 
                     CodeFormatter.IsValidFSharpCodeAsync(filePath, formattingResult.NewText, projectOptions, checker)
                     |> liftAsync
+                
                 if isValid then
-                    use edit = x.TextBuffer.CreateEdit()
-                    let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
+                    do! callInUIContext (fun _ -> 
+                        use edit = x.TextBuffer.CreateEdit()
+                        let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
 
-                    edit.Replace(formattingResult.OldTextStartIndex,
-                                 formattingResult.OldTextLength,
-                                 formattingResult.NewText) |> ignore
-                    edit.Apply() |> ignore
+                        edit.Replace(formattingResult.OldTextStartIndex,
+                                        formattingResult.OldTextLength,
+                                        formattingResult.NewText) |> ignore
+                        edit.Apply() |> ignore
+                        x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
+                        ) |> liftAsync
 
-                    x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
                     return! Some()
                 else
                     statusBar.SetText(Resource.formattingValidationMessage) |> ignore 
