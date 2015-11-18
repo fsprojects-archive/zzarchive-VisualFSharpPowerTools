@@ -9,19 +9,23 @@ open Management
 open FSharpVSPowerTools
 
 module LintUtils =
+    open FSharpVSPowerTools.ProjectSystem
 
-    let getProjectPaths (dte:EnvDTE.DTE) =
-        [ for project in dte.Solution.Projects do 
-            let projectFilePath = project.FullName
-            if (String.IsNullOrEmpty >> not) projectFilePath then 
-                let projectDirectoryPath = Path.GetDirectoryName projectFilePath
-                yield normalisePath projectDirectoryPath ]
+    let getProjectPaths (dte: EnvDTE.DTE) =
+        listFSharpProjectsInSolution dte
+        |> List.choose (fun project -> 
+                let projectFilePath = project.FullName
+                if not (String.IsNullOrEmpty projectFilePath) then
+                    let projectDirectoryPath = Path.GetDirectoryName projectFilePath
+                    Some (normalisePath projectDirectoryPath)
+                else
+                    None)
 
-    let getSolutionPath (dte:EnvDTE.DTE) =
+    let getSolutionPath (dte: EnvDTE.DTE) =
         let solutionFilePath = dte.Solution.FullName
-        if (String.IsNullOrEmpty >> not) solutionFilePath then 
+        if not (String.IsNullOrEmpty solutionFilePath) then 
             let solutionDirectoryPath = Path.GetDirectoryName solutionFilePath
-            Some(normalisePath solutionDirectoryPath)
+            Some (normalisePath solutionDirectoryPath)
         else
             None
 
@@ -79,23 +83,17 @@ module LintUtils =
             | _ -> () ]
                     
     let getInitialPath dte loadedConfigs =
-        match getSolutionPath dte with
-        | Some(solutionPath) ->
-            let commonToAllProjects = commonPath loadedConfigs solutionPath
-
-            match commonToAllProjects with
-            | Some(x) -> Some(x)
-            | None -> Some(solutionPath)
-        | None ->
-            match getProjectPaths dte with
-            | firstProject::_ ->
-                Some(firstProject)
-            | [] -> None
+        getSolutionPath dte
+        |> Option.bind (fun solutionPath ->
+            commonPath loadedConfigs solutionPath
+            |> Option.orElse (Some solutionPath))
+        |> Option.orTry (fun _ ->
+            getProjectPaths dte |> List.tryHead)
 
     let getConfigForDirectory loadedConfigs directory =
-        match getConfig loadedConfigs (normalisePath directory) with
-        | Some(config) -> config
-        | None -> defaultConfiguration
+        normalisePath directory
+        |> getConfig loadedConfigs
+        |> Option.getOrElse defaultConfiguration
 
     let private settingFromObject (settingObj:obj) = 
         match settingObj with
@@ -168,12 +166,11 @@ module LintUtils =
         let existing = getConfigForDirectory loadedConfigs directory
 
         let existingPartial = 
-            match getPartialConfig loadedConfigs normalisedDir with
-            | Some(x) -> x
-            | None -> 
+            getPartialConfig loadedConfigs normalisedDir
+            |> Option.getOrTry (fun _ ->
                 { UseTypeChecker = None
                   IgnoreFiles = None
-                  Analysers = Map.ofList [] }
+                  Analysers = Map.ofList [] })
 
         let updatedPartial = updateConfigMap config existing existingPartial
 
@@ -183,7 +180,7 @@ module LintUtils =
     | Success
     | Failure of reason:string
 
-    let saveViewModel loadedConfigs (viewModel:OptionsViewModel) =
+    let saveViewModel loadedConfigs (viewModel: OptionsViewModel) =
         let directory = viewModel.CurrentFilePath
         let filepath = directory </> SettingsFileName
     
