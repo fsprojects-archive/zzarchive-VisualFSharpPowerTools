@@ -114,7 +114,7 @@ let (=>) (source, line, col) (expected: (int * ((int * int) list)) list) =
         |> Option.getOrElse [||]
         |> Array.toList
         |> List.groupBy (fun su -> su.RangeAlternate.StartLine)
-        |> List.map (fun (line, sus) ->    
+        |> List.map (fun (line, sus) ->
             line, 
             sus 
             |> List.map (fun su -> su.RangeAlternate.StartColumn, su.RangeAlternate.EndColumn)
@@ -161,7 +161,7 @@ let _ = v.Length + v.Length
 [<Test>]
 let ``should find usages of module level events``() =
     ("""
-let event = Event<EventHandler, EventArgs>()    
+let event = Event<EventHandler, EventArgs>()
 event.Publish.AddHandler(EventHandler(fun _ _ -> ()))
 event.Trigger(null, EventArgs.Empty)
 """, 2, 5) 
@@ -213,7 +213,7 @@ let ( *. ) x y = x * y
         4, [23, 25]]
 
 [<Test>]
-let ``should find usages of operator >>= which starts with '>' symbol``() =
+let ``should find usages of operator >>= containing '>' symbol``() =
     ("""
 let (>>=) x y = ()
     1 >>= 2
@@ -222,7 +222,7 @@ let (>>=) x y = ()
         3, [6, 9]]
 
 [<Test>]
-let ``should find usages of operator >~>> which starts with '>' symbol``() =
+let ``should find usages of operator >~>> containing '>' symbol``() =
     ("""
 let (>~>>) x y = ()
 1 >~>> 2
@@ -230,76 +230,118 @@ let (>~>>) x y = ()
     => [2, [5, 9]
         3, [2, 6]]
 
-//[<Test>]
-//let ``should find usages of operators containing dots``() =
-//    checkSymbolUsage
-//        697 11 "    let (.>>) x y = ()"
-//        [ (697, 9, 12); (698, 6, 9) ]
-//
-//    checkSymbolUsage
-//        699 11 "    let (>.>) x y = ()"
-//        [ (699, 9, 12); (700, 6, 9) ]
-//
-//    checkSymbolUsage
-//        701 11 "    let ( >>. ) x y = ()"
-//        [ (701, 10, 13); (702, 6, 9); (702, 12, 15); (704, 14, 17); (704, 21, 24); (704, 27, 30) ]
-//
-//[<Test>]
-//let ``should find usages of operators containing 'at' symbol``() =
-//    checkSymbolUsage
-//        887 10 "    let (@) x y = ()"
-//        [ (887, 9, 10); (888, 14, 15) ]
-//
-//    checkSymbolUsage
-//        889 10 "    let (@@) x y = ()"
-//        [ (889, 9, 11); (890, 14, 16) ]
-//
-//    checkSymbolUsage
-//        891 10 "    let (@.@) x y = ()"
-//        [ (891, 9, 12); (892, 14, 17) ]
-//
-//[<Test>]
-//let ``should find fully qualified operator``() =
-//    checkSymbolUsage 
-//        728 9 "    M.N.(+.) 1 2" 
-//        [ (726, 17, 19); (728, 4, 11) ]
-//
-//[<Test>]
-//let ``should find usages of symbols if there are operators containing dots on the same line``() =
-//    let line = "    let x = 1 >>. ws >>. 2 >>. ws"
-//    let usages = [ (703, 8, 10); (704, 18, 20); (704, 31, 33) ]
-//    checkSymbolUsage 704 18 line usages
-//    checkSymbolUsage 704 19 line usages
-//    checkSymbolUsage 704 20 line usages
-//
-//[<Test>]
-//let ``should find usages of symbols contacting with a special symbol on the right``() =
-//    checkSymbolUsage
-//        706 12 "    let f (a, b) = a + b"
-//        [ (706, 11, 12); (706, 19, 20) ]
-//
-//    checkSymbolUsage
-//        707 9 "    type C<'a> = C of 'a"
-//        [ (707, 9, 10) ]
-//
-//    checkSymbolUsage
-//        707 10 "    type C<'a> = C of 'a"
-//        [ (707, 9, 10) ]
-//
-//    checkSymbolUsage
-//        709 5 "    g(2)"
-//        [ (708, 8, 9); (709, 4, 5) ]
-//
-//[<Test>]
-//let ``should find all symbols in combined match patterns``() =
-//    checkSymbolUsage
-//        763 27 "    let _ = match [] with [h] | [_; h] | [_; _; h] -> h | _ -> 0"
-//        [(763, 27, 28); (763, 36, 37); (763, 42, 43); (763, 51, 52)]
-//
-//[<Test>]
-//let ``should not find usages inside comments``() =
-//    hasNoSymbolUsage 478 11 "    // List.length ref"
-//
+[<Test>]
+let ``should find usages of operator .>> containing '.' symbol``() =
+    ("""
+let (.>>) x y = ()
+1 .>> 2
+""", 2, 8) 
+    => [2, [5, 8]
+        3, [2, 5]]
+
+[<Test>]
+let ``should find usages of operator >.> containing '.' symbol``() =
+    ("""
+let (>.>) x y = ()
+1 >.> 2
+""", 2, 8) 
+    => [2, [5, 8]
+        3, [2, 5]]
+
+[<Test>]
+let ``should find usages of operator >>. containing '.' symbol``() =
+    ("""
+let ( >>. ) x y = x
+1 >>. 2 >>. 3 |> ignore
+""", 2, 9) 
+    => [2, [6, 9]
+        3, [2, 5; 8, 11]]
+
+[<Test>]
+let ``should find usages of "at" operator``() =
+    ("""
+let (@) x y = ()
+let _ = 1 @ 2
+""", 2, 6) 
+    => [2, [5, 6]
+        3, [10, 11]]
+
+[<Test>]
+let ``should find usages of "atat" operator``() =
+    ("""
+let (@@) x y = ()
+let _ = 1 @@ 2
+""", 2, 7) 
+    => [2, [5, 7]
+        3, [10, 12]]
+
+[<Test>]
+let ``should find usages of "at.at" operator``() =
+    ("""
+let (@.@) x y = ()
+let _ = 1 @.@ 2
+""", 2, 8) 
+    => [2, [5, 8]
+        3, [10, 13]]
+
+[<Test>]
+let ``should find usages of symbols if there are operators containing dots on the same line``() =
+    ("""
+let ( >>. ) x y = x
+1 >>. 2 >>. 3 |> ignore
+""", 2, 9) 
+    => [2, [6, 9]
+        3, [2, 5; 8, 11]]
+
+[<Test>]
+let ``should find usages of fully qualified operator``() =
+    ("""
+module M =
+    module N =
+        let (+.) x y = ()
+
+M.N.(+.) 1 2
+""", 4, 15) 
+    => [4, [13, 15]
+        6, [0, 7]] // ported as is. Should be (6, [5, 7])
+
+[<Test>]
+let ``should find usages of symbols followed with a punctuation symbol ','``() =
+    ("""
+let f (a, b) = a + b
+""", 2, 8) 
+    => [2, [7, 8; 15, 16]]
+
+[<Test>]
+let ``should find usages of symbols followed with a punctuation symbol '<'``() =
+    ("""
+type C<'a> = C of 'a
+""", 2, 6) 
+    => [2, [5, 6]]
+
+[<Test>]
+let ``should find usages of symbols followed with a punctuation symbol '('``() =
+    ("""
+let g x = ()
+g(2)
+""", 3, 1) 
+    => [2, [4, 5]
+        3, [0, 1]]
+
+[<Test>]
+let ``should find all symbols in combined match patterns``() =
+    ("""
+let _ = match [] with [h] | [_; h] | [h; _] -> h | _ -> 0
+""", 2, 24) 
+    => [2, [23, 24; 32, 33; 38, 39; 47, 48]]
+
+[<Test>]
+let ``should not find usages inside comments``() =
+    ("""
+// List.length ref
+""", 2, 7) 
+    => []
+
 //[<Test>]
 //let ``should not find usages inside multi-line comments``() =
 //    hasNoSymbolUsage 713 13 "        let p = 1"
