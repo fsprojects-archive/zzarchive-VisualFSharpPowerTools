@@ -6,11 +6,6 @@ open FSharpVSPowerTools
 
 
 type String with
-
-    /// Splits a string into lines for all platform's linebreaks.
-    /// If the string mixes windows, mac, and linux linebreaks, all will be respected
-    static member toLineArray str = String.getLines str
-
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
     member self.ToLineArray () = String.getLines self
@@ -49,7 +44,7 @@ let fromFSharpRange (snapshot: ITextSnapshot) (r: range) =
 
 let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
 let isFSharpProject (project: EnvDTE.Project) = 
-    project <> null && project.Kind <> null && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
+    isNotNull project  && isNotNull project.Kind && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFolderKind (kind: string) =
     kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
@@ -58,16 +53,16 @@ let isPhysicalFileKind (kind: string) =
     kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFile, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFileOrFolderKind kind =
-    kind <> null && (isPhysicalFolderKind kind) || (isPhysicalFileKind kind)
+    isNotNull kind && (isPhysicalFolderKind kind) || (isPhysicalFileKind kind)
 
 let isPhysicalFolder (item: EnvDTE.ProjectItem) =
-    item <> null && item.Kind <> null && (isPhysicalFolderKind item.Kind)
+    isNotNull item && isNotNull item.Kind && (isPhysicalFolderKind item.Kind)
 
 let isPhysicalFile (item: EnvDTE.ProjectItem) =
-    item <> null && item.Kind <> null && (isPhysicalFileKind item.Kind)
+    isNotNull item && isNotNull item.Kind && (isPhysicalFileKind item.Kind)
 
 let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
-    item <> null && isPhysicalFileOrFolderKind item.Kind
+    isNotNull item && isPhysicalFileOrFolderKind item.Kind
 
 let filePath (item: EnvDTE.ProjectItem) =
     Debug.Assert(item.FileCount = 1s, "Item should be unique.")
@@ -76,7 +71,7 @@ let filePath (item: EnvDTE.ProjectItem) =
 let inline private isTypeParameter (prefix: char) (s: string) =
     match s.Length with
     | 0 | 1 -> false
-    | _ -> s.[0] = prefix && IdentifierUtils.isIdentifier (s.Substring(1))
+    | _ -> s.[0] = prefix && IdentifierUtils.isIdentifier s.[1..]
 
 let isGenericTypeParameter = isTypeParameter '''
 let isStaticallyResolvedTypeParameter = isTypeParameter '^'
@@ -113,7 +108,7 @@ type SnapshotSpan with
     member inline x.EndLine = x.Snapshot.GetLineFromPosition (x.End.Position)
     member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
     member inline x.EndColumn = 
-        x.End.Position - x.EndLine.Start.Position          
+        x.End.Position - x.EndLine.Start.Position
 
     member x.ModStart (num) =
         SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
@@ -326,7 +321,7 @@ type Project with
             |> Option.bind Option.ofNull)
 
 let getProject (hierarchy: IVsHierarchy) =
-    if hierarchy = null then
+    if isNull hierarchy then
         None
     else
         match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT,
@@ -365,10 +360,9 @@ let showDialog (wnd: Window) (shell: IVsUIShell) =
         finally
             shell.EnableModeless(1) |> ignore
     | _ -> 
-        None    
+        None
 
 open System.Threading
-open System.Windows.Threading
 open System.Windows.Input
 
 [<Literal>]
@@ -409,7 +403,7 @@ type Async with
                     fail "The following exception occurs inside async blocks: %O" e
                     Logging.logException e
             }
-        Async.Start(comp, ?cancellationToken = cancellationToken)       
+        Async.Start(comp, ?cancellationToken = cancellationToken)
 
 /// Provides an IDisposable handle which allows us to override the cursor cleanly as well as restore whenever needed
 type CursorOverrideHandle(newCursor) =
@@ -512,9 +506,9 @@ type IServiceProvider with
                (serviceProvider, fileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) then
             let vsTextView = VsShellUtilities.GetTextView windowFrame 
             let componentModel = serviceProvider.GetService<IComponentModel, SComponentModel>()
-            let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()            
+            let vsEditorAdapterFactoryService =  componentModel.GetService<IVsEditorAdaptersFactoryService>()
             Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
-        else None      
+        else None
 
 let isSourceExtension ext =
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
@@ -528,8 +522,9 @@ let listFSharpProjectsInSolution (dte: DTE) =
     let rec handleProject (p: Project) = 
         if p === null then []
         elif isFSharpProject p then [ p ]
-        elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then handleProjectItems p.ProjectItems
-        else []  
+        elif p.Kind = EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder then 
+            handleProjectItems p.ProjectItems
+        else []
         
     and handleProjectItems (items: ProjectItems) =
         [ for pi in items do
