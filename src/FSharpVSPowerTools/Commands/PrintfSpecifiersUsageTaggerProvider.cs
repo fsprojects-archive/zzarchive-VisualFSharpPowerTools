@@ -10,6 +10,7 @@ using FSharpVSPowerTools.PrintfSpecifiersHighlightUsage;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Formatting;
+using System.Windows;
 
 namespace FSharpVSPowerTools
 {
@@ -22,18 +23,30 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
+        readonly ShellEventListener _shellEventListener;
+        readonly PrintfColorManager _printfColorManager;
 
         [ImportingConstructor]
         public PrintfSpecifiersUsageTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+            VSLanguageService fsharpVsLanguageService,
+            ShellEventListener shellEventListener,
+            PrintfColorManager printfColorManager)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _shellEventListener = shellEventListener;
+            _printfColorManager = printfColorManager;
+            _shellEventListener.ThemeChanged += UpdateTheme;
+        }
+
+        private void UpdateTheme(object sender, EventArgs e)
+        {
+            _printfColorManager.UpdateColors();
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -58,20 +71,17 @@ namespace FSharpVSPowerTools
     [Export]
     public class PrintfColorManager
     {
-        static readonly FontColor LightThemeColor = new FontColor(null, Color.FromRgb(245, 222, 179));
-        static readonly FontColor DarkThemeColor = new FontColor(null, Color.FromRgb(145, 122, 110));
+        static readonly Color LightThemeColor = Color.FromRgb(245, 222, 179);
+        static readonly Color DarkThemeColor = Color.FromRgb(145, 122, 110);
         VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
 
         [Import]
         private ThemeManager themeManager = null;
 
         [Import]
-        private IClassificationFormatMapService classificationFormatMapService = null;
+        private IEditorFormatMapService editorFormatMapService = null;
 
-        [Import]
-        private IClassificationTypeRegistryService classificationTypeRegistry = null;
-
-        public FontColor GetDefaultColor()
+        public Color GetDefaultColor()
         {
             return themeManager.GetCurrentTheme() == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
         }
@@ -83,30 +93,14 @@ namespace FSharpVSPowerTools
             if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
             {
                 lastTheme = currentTheme;
-                var color = GetDefaultColor();
-                var formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
+                var formatMap = editorFormatMapService.GetEditorFormatMap(category: "text");
 
                 try
                 {
                     formatMap.BeginBatchUpdate();
-                    var classificationType = classificationTypeRegistry.GetClassificationType(Constants.fsharpPrintfTagType);
-                    var oldProp = formatMap.GetTextProperties(classificationType);
-
-                    var foregroundBrush =
-                        color.Foreground == null
-                            ? null
-                            : new SolidColorBrush(color.Foreground.Value);
-
-                    var backgroundBrush =
-                        color.Background == null
-                            ? null
-                            : new SolidColorBrush(color.Background.Value);
-
-                    var newProp = TextFormattingRunProperties.CreateTextFormattingRunProperties(
-                        foregroundBrush, backgroundBrush, oldProp.Typeface, null, null, oldProp.TextDecorations,
-                        oldProp.TextEffects, oldProp.CultureInfo);
-
-                    formatMap.SetTextProperties(classificationType, newProp);
+                    var dict = formatMap.GetProperties(Constants.fsharpPrintfTagType);
+                    dict["BackgroundColor"] = GetDefaultColor();
+                    formatMap.SetProperties(Constants.fsharpPrintfTagType, dict);
                 }
                 finally
                 {
@@ -124,9 +118,7 @@ namespace FSharpVSPowerTools
         [ImportingConstructor]
         public HighlightIdentifierFormatDefinition(PrintfColorManager colorManager) 
         {
-            var color = colorManager.GetDefaultColor();
-            BackgroundColor = color.Background;
-            ForegroundColor = color.Foreground;
+            BackgroundColor = colorManager.GetDefaultColor();
             DisplayName = "F# Highlight Printf";
             ZOrder = 5;
         }
