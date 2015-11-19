@@ -88,18 +88,6 @@ namespace FSharpVSPowerTools
         internal static ClassificationTypeDefinition FSharpOperatorClassificationType = null;
     }
 
-    public class FontColor
-    {
-        public readonly Color? Foreground;
-        public readonly Color? Background;
-
-        public FontColor(Color? foreground = null, Color? background = null)
-        {
-            Foreground = foreground;
-            Background = background;
-        }
-    }
-
     [Export]
     public class ClassificationColorManager 
     {

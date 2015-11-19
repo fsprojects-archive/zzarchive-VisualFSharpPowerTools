@@ -9,24 +9,9 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.PrintfSpecifiersUsageGetter
 open Microsoft.FSharp.Compiler
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Utilities
-open System.Windows.Media
 
 type PrintfSpecifiersUsageTag() = 
-    inherit TextMarkerTag("MarkerFormatDefinition/HighlightPrintf") 
-
-[<Export(typeof<EditorFormatDefinition>)>]
-[<Name("MarkerFormatDefinition/HighlightPrintf")>]
-[<UserVisible(true)>]
-type HighlightIdentifierFormatDefinition() =
-    inherit MarkerFormatDefinition()
-    do  
-      base.BackgroundColor <- Nullable(Color.FromRgb(245uy, 222uy, 179uy))
-      //base.ForegroundColor <- Nullable(Color.FromRgb(231uy, 231uy, 214uy))
-      base.DisplayName <- "F# Highlight Printf"
-      base.ZOrder <- 5
+    inherit TextMarkerTag(Constants.fsharpPrintfTagType) 
 
 // Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
 
