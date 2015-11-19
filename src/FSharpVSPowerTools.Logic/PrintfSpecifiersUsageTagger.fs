@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.PrintfSpecifiersUsageGetter
+open Microsoft.FSharp.Compiler
 
 type PrintfSpecifiersUsageTag() = 
     // todo change type to allow different (dark yellow?) color, same as R# uses
@@ -35,8 +36,15 @@ type PrintfSpecifiersUsageTagger
            fromFSharpRange buffer.CurrentSnapshot u.ArgumentRange |]
         |> Array.choose id
     
-    let findUsagesAtPoint (_point: SnapshotPoint) (_usages: PrintfSpecifierUse[]): PrintfSpecifierUse option =
-        None
+    let findUsagesAtPoint (point: SnapshotPoint) (usages: PrintfSpecifierUse[]): PrintfSpecifierUse option =
+        let pos = 
+            Range.mkPos ((point.Snapshot.GetLineNumberFromPosition point.Position) + 1) 
+                        (point.Position - point.GetContainingLine().Start.Position)
+        usages 
+        |> Array.filter (fun x -> 
+            Range.rangeContainsPos x.SpecifierRange pos 
+            || Range.rangeContainsPos x.ArgumentRange pos)
+        |> Array.tryHead
 
     let onCaretMove (CallInUIContext callInUIContext) =
         asyncMaybe {

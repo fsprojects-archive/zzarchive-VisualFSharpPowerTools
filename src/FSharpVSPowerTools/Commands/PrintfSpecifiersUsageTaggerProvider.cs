@@ -45,7 +45,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
-                    () => new PrintfSpecifiersUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory) as ITagger<T>);
+                    () => new PrintfSpecifiersUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory)) as ITagger<T>;
             }
 
             return null;

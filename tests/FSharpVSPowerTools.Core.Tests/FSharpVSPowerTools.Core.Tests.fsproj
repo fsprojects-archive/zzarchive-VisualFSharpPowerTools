@@ -66,6 +66,7 @@
     <Compile Include="LexerTests.fs" />
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="GetUsesOfSymbolInFileTests.fs" />
+    <Compile Include="PrintfSpecifiersUsageGetterTests.fs" />
     <Compile Include="NavigableItemsCollectorTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
     <Compile Include="IdentifierDetectionTests.fs" />

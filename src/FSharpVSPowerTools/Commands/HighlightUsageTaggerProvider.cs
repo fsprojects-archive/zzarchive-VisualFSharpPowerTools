@@ -48,7 +48,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
-                    () => new HighlightUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory) as ITagger<T>);
+                    () => new HighlightUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory)) as ITagger<T>;
             }
 
             return null;
