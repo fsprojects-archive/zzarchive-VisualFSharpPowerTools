@@ -25,7 +25,7 @@ let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
             |> Array.fold (fun (specifierRanges, acc) func ->
                 let ownSpecifiers, restSpecifiers = 
                     specifierRanges 
-                    |> Array.partition (Range.rangeContainsRange func.Full)
+                    |> Array.partition (Range.rangeContainsRange func.String)
             
                 if ownSpecifiers.Length > func.Args.Length then
                     failwithf "Too many Printf specifiers for %+A (%d > %d)" func ownSpecifiers.Length func.Args.Length

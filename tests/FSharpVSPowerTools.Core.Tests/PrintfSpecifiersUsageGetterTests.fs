@@ -58,9 +58,19 @@ let (=>) source (expected: (int * (((int * int) * (int * int)) list)) list) =
         reraise()
 
 [<Test>]
-let ``should find usages in printf``() =
+let ``simplest case``() =
     """
-let _ = printf "%+A foo %d" 1 2
+printf "%+A foo %d" 1 2
 """
-    => [2, [(16, 19), (28, 29)
-            (24, 26), (30, 31)]]
+    => [2, [(8, 11), (20, 21)
+            (16, 18), (22, 23)]]
+
+[<Test>]
+let ``printf as an argument of another printf``() =
+    """
+printf "%+A foo %s" 1 (sprintf "%d" 2)
+"""
+    => [2, [(8, 11), (20, 21)
+            (16, 18), (22, 38)
+            (32, 34), (36, 37)]]
+
