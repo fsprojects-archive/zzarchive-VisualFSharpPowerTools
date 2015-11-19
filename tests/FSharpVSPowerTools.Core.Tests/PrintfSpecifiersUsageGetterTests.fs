@@ -24,7 +24,7 @@ let opts source =
         |> Async.RunSynchronously
     { opts with LoadTime = System.DateTime.UtcNow }
 
-let (=>) source (expected: (int * ((int * int) list)) list) = 
+let (=>) source (expected: (int * (((int * int) * (int * int)) list)) list) = 
     let opts = opts source
     let results = 
         languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No)
@@ -35,12 +35,13 @@ let (=>) source (expected: (int * ((int * int) list)) list) =
         |> Async.RunSynchronously
         |> Option.getOrElse [||]
         |> Array.toList
-        |> List.collect (fun x -> [x.SpecifierRange; x.ArgumentRange])
-        |> List.groupBy (fun r -> r.StartLine)
+        |> List.groupBy (fun r -> r.SpecifierRange.StartLine)
         |> List.map (fun (line, rs) ->
             line, 
             rs 
-            |> List.map (fun x -> x.StartColumn, x.EndColumn)
+            |> List.map (fun x -> 
+                (x.SpecifierRange.StartColumn, x.SpecifierRange.EndColumn),
+                (x.ArgumentRange.StartColumn, x.ArgumentRange.EndColumn))
             |> List.sort)
         |> List.sortBy (fun (line, _) -> line)
 
@@ -61,4 +62,5 @@ let ``should find usages in printf``() =
     """
 let _ = printf "%+A foo %d" 1 2
 """
-    => [2, [16, 18; 20, 21]]
+    => [2, [(16, 19), (28, 29)
+            (24, 26), (30, 31)]]

@@ -1161,7 +1161,7 @@ module Printf =
     type PrintfFunction = 
         { Full: Range.range
           String: Range.range
-          Args: Range.range list }
+          Args: Range.range[] }
 
     let internal getAll (input: ParsedInput option) : PrintfFunction[] =
         let result = ResizeArray()
@@ -1221,12 +1221,14 @@ module Printf =
                 | [] -> ()
                 | (fullExpr :: _) as apps ->
                     let args =
-                        List.foldBack (fun app res -> 
+                        apps 
+                        |> List.fold (fun res app -> 
                             match app with 
                             | SynExpr.App (_, _, _, arg, _) ->
                                 arg.Range :: res
                             | _ -> res
-                        ) apps []
+                        ) []
+                        |> List.toArray
                     let res = { Full = fullExpr.Range
                                 String = stringRange
                                 Args = args }
