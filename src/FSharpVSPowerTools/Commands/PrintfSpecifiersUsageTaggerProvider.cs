@@ -72,7 +72,7 @@ namespace FSharpVSPowerTools
     public class PrintfColorManager
     {
         static readonly Color LightThemeColor = Color.FromRgb(245, 222, 179);
-        static readonly Color DarkThemeColor = Color.FromRgb(145, 122, 110);
+        static readonly Color DarkThemeColor = Color.FromRgb(0, 77, 77);
         VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
 
         [Import]
