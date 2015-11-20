@@ -7,6 +7,7 @@ open System.IO
 open System
 open Microsoft.VisualStudio.Text
 open FSharpVSPowerTools.ProjectSystem
+open System.Threading
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 
@@ -69,25 +70,28 @@ let snapshotPoint (snapshot: ITextSnapshot) line (column: int) =
     let line = snapshot.GetLineFromLineNumber(line - 1)
     SnapshotPoint(snapshot, line.Start.Position + column)
 
-let testEventTrigger event errorMessage (timeout: int<_>) triggerEvent predicate =
-    let task() =
-        event
-        |> Async.AwaitEvent
-        |> Async.StartAsTask
-    let sw = System.Diagnostics.Stopwatch()
-    sw.Start()
-    triggerEvent()
-    match task().Wait(TimeSpan.FromMilliseconds(float timeout)) with
-    | true ->         
-        sw.Stop()
-        Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-        predicate()
-    | false ->
-        sw.Stop()
-        Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-        Assert.Inconclusive errorMessage
+let testEventTrigger event errorMessage (timeout: int<ms>) triggerEvent predicate =
+    use ct = new CancellationTokenSource()
+    let task = Async.StartAsTask (Async.AwaitEvent event, cancellationToken = ct.Token)
+    try
+        let sw = System.Diagnostics.Stopwatch()
+        sw.Start()
+        triggerEvent()
+        
+        match task.Wait (int timeout) with
+        | true ->
+            sw.Stop()
+            Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
+            predicate()
+        | false ->
+            sw.Stop()
+            Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
+            Assert.Inconclusive errorMessage
+    finally
+        ct.Cancel()
+        task.Wait (int timeout) |> ignore
 
-let testEvent event errorMessage (timeout: int<_>) predicate =
+let testEvent event errorMessage (timeout: int<ms>) predicate =
     testEventTrigger event errorMessage timeout id predicate
 
 /// Asserts that two strings are the same modulo new line format.

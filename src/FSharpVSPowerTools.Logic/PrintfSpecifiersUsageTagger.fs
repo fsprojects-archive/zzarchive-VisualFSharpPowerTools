@@ -60,7 +60,9 @@ type PrintfSpecifiersUsageTagger
             }
         )
 
-    let onBufferChanged callInUIContext =
+    let onCaretMoveListener: DocumentEventListener option ref = ref None
+
+    let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(textDocument.FilePath)
@@ -75,14 +77,17 @@ type PrintfSpecifiersUsageTagger
         |> Async.bind (fun x -> 
             async {
                 usages <- x
-                return! onCaretMove callInUIContext
+                return! 
+                    match !onCaretMoveListener with
+                    | None ->
+                        callInUIContext <| fun _ ->
+                            onCaretMoveListener := 
+                                Some(new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
+                    | Some _ -> onCaretMove ciuc
             })
 
     let bufferChangedEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, onBufferChanged)
-
-    let docEventListener = 
-        new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove)
-
+    
     let tagSpan span = TagSpan<PrintfSpecifiersUsageTag>(span, PrintfSpecifiersUsageTag()) :> ITagSpan<_>
 
     let getTags (targetSpans: NormalizedSnapshotSpanCollection): ITagSpan<PrintfSpecifiersUsageTag> list = 
@@ -107,4 +112,4 @@ type PrintfSpecifiersUsageTagger
     interface IDisposable with
         member __.Dispose() = 
             dispose bufferChangedEventListener
-            dispose docEventListener
+            !onCaretMoveListener |> Option.iter dispose

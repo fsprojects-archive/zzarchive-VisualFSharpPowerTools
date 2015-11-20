@@ -57,13 +57,7 @@ printf "%d foo %+A bar" 1 "str"
         helper.SetActiveDocument(fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
-        let testEventTrigger = testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout 
-        // first tags changed event is raised by `onCaretMove`, but there are no data yet since
-        // `onBufferChanged` event handler has not finished gathering Printf specifiers.
-        testEventTrigger
-            ignore 
-            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
-
+        let testEventTrigger = testEventTrigger tagger.TagsChanged "Timed out before tags changed" 100000<ms> // timeout 
         testEventTrigger
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 8) |> ignore)
             (fun () -> 
@@ -71,7 +65,7 @@ printf "%d foo %+A bar" 1 "str"
                 |> Seq.toList 
                 |> assertEqual
                      [ (2, 9) => (2, 10)
-                       (2, 28) => (2, 28) ])
+                       (2, 25) => (2, 25) ])
                        
         testEventTrigger
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 16) |> ignore)
@@ -80,7 +74,7 @@ printf "%d foo %+A bar" 1 "str"
                 |> Seq.toList 
                 |> assertEqual
                      [ (2, 16) => (2, 18)
-                       (2, 30) => (2, 34) ])
+                       (2, 27) => (2, 31) ])
                        
     [<Test>]
     let ``should not display tags if moving to a place without a printf specifier or its argument``() = 
