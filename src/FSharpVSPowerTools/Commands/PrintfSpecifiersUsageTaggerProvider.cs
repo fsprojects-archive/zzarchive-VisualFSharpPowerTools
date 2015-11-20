@@ -9,15 +9,13 @@ using System;
 using FSharpVSPowerTools.PrintfSpecifiersHighlightUsage;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
-using Microsoft.VisualStudio.Text.Formatting;
-using System.Windows;
 
 namespace FSharpVSPowerTools
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(PrintfSpecifiersUsageTag))]
-    public class PrintfSpecifiersUsageTaggerProvider : IViewTaggerProvider
+    public class PrintfSpecifiersUsageTaggerProvider : IViewTaggerProvider, IDisposable
     {
         readonly IServiceProvider _serviceProvider;
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
@@ -44,7 +42,7 @@ namespace FSharpVSPowerTools
             _shellEventListener.ThemeChanged += UpdateTheme;
         }
 
-        private void UpdateTheme(object sender, EventArgs e)
+        void UpdateTheme(object sender, EventArgs e)
         {
             _printfColorManager.UpdateColors();
         }
@@ -66,6 +64,11 @@ namespace FSharpVSPowerTools
 
             return null;
         }
+
+        public void Dispose()
+        {
+            _shellEventListener.ThemeChanged -= UpdateTheme;
+        }
     }
 
     [Export]
@@ -76,10 +79,10 @@ namespace FSharpVSPowerTools
         VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
 
         [Import]
-        private ThemeManager themeManager = null;
+        ThemeManager themeManager;
 
         [Import]
-        private IEditorFormatMapService editorFormatMapService = null;
+        IEditorFormatMapService editorFormatMapService;
 
         public Color GetDefaultColor()
         {
