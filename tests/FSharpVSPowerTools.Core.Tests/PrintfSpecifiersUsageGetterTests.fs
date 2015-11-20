@@ -99,3 +99,21 @@ printf "%+A foo" 1
 """
     => [3, [(8, 11), (17, 18)]]
 
+[<Test>]
+let ``printf as an argument to another function``() =
+    """
+System.IO.File.OpenRead (sprintf "file %d" 1) |> ignore
+"""
+    => [2, [(39, 41), (43, 44)]]
+
+[<Test>]
+let ``failwithf``() =
+    """
+failwithf "Not an object: %s" <| "foo"
+"""
+    => [2, [(26, 28), (33, 48)]]
+
+//let f x = 
+//    match x with
+//    | 1 -> ()
+//    | _ -> failwithf "Not an object: %s" <| x.ToString()

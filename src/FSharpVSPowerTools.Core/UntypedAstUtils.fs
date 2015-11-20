@@ -1218,13 +1218,26 @@ module Printf =
             | SynExpr.App (_, _, SynExpr.Ident _, SynExpr.Const (SynConst.String (_, stringRange), _), _) ->
                 match !appStack with
                 | (lastApp :: _) as apps when Range.rangeContainsRange lastApp.Range e.Range ->
-                    let args =
+                    let rec loop acc (apps: (SynExpr * SynExpr) list) =
+                        match acc, apps with
+                        | _, [] -> acc
+                        | [], (prev, curr) :: rest -> 
+                            if Range.rangeContainsRange curr.Range prev.Range then 
+                                loop [prev; curr] rest 
+                            else [prev]
+                        | _, (prev, curr) :: rest ->
+                            if Range.rangeContainsRange curr.Range prev.Range then 
+                                loop (prev :: acc) rest
+                            else prev :: acc
+
+                    let args = 
                         apps 
-                        |> List.rev
+                        |> Seq.pairwise 
+                        |> Seq.toList 
+                        |> loop []
                         |> List.fold (fun res app -> 
                             match app with 
-                            | SynExpr.App (_, _, _, arg, _) ->
-                                arg.Range :: res
+                            | SynExpr.App (_, _, _, arg, _) -> arg.Range :: res
                             | _ -> res
                         ) []
                         |> List.toArray
