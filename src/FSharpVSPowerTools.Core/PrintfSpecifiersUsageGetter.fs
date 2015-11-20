@@ -27,14 +27,14 @@ let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
                     specifierRanges 
                     |> Array.partition (Range.rangeContainsRange func.String)
             
-                if ownSpecifiers.Length > func.Args.Length then
-                    failwithf "Too many Printf specifiers for %+A (%d > %d)" func ownSpecifiers.Length func.Args.Length
+                if func.Args.Length > ownSpecifiers.Length then
+                    failwithf "Too many Printf arguments for %+A (%d > %d)" func func.Args.Length ownSpecifiers.Length
 
                 let uses = 
-                    ownSpecifiers
+                    func.Args
                     |> Array.sortBy sortRange
-                    |> Array.zip (func.Args.[0..ownSpecifiers.Length - 1] |> Array.sortBy sortRange)
-                    |> Array.map (fun (arg, specifier) -> { SpecifierRange = specifier; ArgumentRange = arg })
+                    |> Array.zip (ownSpecifiers.[0..func.Args.Length - 1] |> Array.sortBy sortRange)
+                    |> Array.map (fun (specifier, arg) -> { SpecifierRange = specifier; ArgumentRange = arg })
                 restSpecifiers, uses :: acc
                ) (specifierRanges, [])
             |> snd

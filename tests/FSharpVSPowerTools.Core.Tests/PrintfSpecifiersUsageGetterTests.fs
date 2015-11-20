@@ -74,3 +74,19 @@ printf "%+A foo %s" 1 (sprintf "%d" 2)
             (16, 18), (22, 38)
             (32, 34), (36, 37)]]
 
+[<Test>]
+let ``partially applied printf``() =
+    """
+printf "%+A foo %s" 1
+"""
+    => [2, [(8, 11), (20, 21)]]
+
+[<Test>]
+let ``another function application above printf``() =
+    """
+let f x y = x y
+let _ = f 1 2
+printf "%+A foo" 1
+"""
+    => [4, [(8, 11), (20, 21)]]
+

@@ -36,6 +36,12 @@ namespace FSharpVSPowerTools
             set { chbHighlightUsage.Checked = value; }
         }
 
+        public bool HighlightPrintfUsageEnabled
+        {
+            get { return chbHighlightPrintf.Checked; }
+            set { chbHighlightPrintf.Checked = value; }
+        }
+
         public bool RenameRefactoringEnabled
         {
             get { return chbRenameRefactoring.Checked; }
@@ -155,6 +161,7 @@ namespace FSharpVSPowerTools
             FormattingEnabled = _optionsPage.FormattingEnabled;
             NavBarEnabled = _optionsPage.NavBarEnabled;
             HighlightUsageEnabled = _optionsPage.HighlightUsageEnabled;
+            HighlightPrintfUsageEnabled = _optionsPage.HighlightPrintfUsageEnabled;
             RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
             DepthColorizerEnabled = _optionsPage.DepthColorizerEnabled;
             NavigateToEnabled = _optionsPage.NavigateToEnabled;
