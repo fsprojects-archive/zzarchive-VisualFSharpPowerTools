@@ -1161,10 +1161,21 @@ module Printf =
     type PrintfFunction = 
         { String: Range.range
           Args: Range.range[] }
+    
+    [<NoComparison>]
+    type private AppWithArg = 
+        { Range: Range.range
+          Arg: Range.range }
 
     let internal getAll (input: ParsedInput option) : PrintfFunction[] =
         let result = ResizeArray()
-        let appStack: SynExpr list ref = ref []
+        let appStack: AppWithArg list ref = ref []
+
+        let addAppWithArg appWithArg =
+            match !appStack with
+            | lastApp :: _ when not (Range.rangeContainsRange lastApp.Range appWithArg.Range) ->
+                appStack := [appWithArg]
+            | _ -> appStack := appWithArg :: !appStack
 
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) =
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
@@ -1215,43 +1226,46 @@ module Printf =
 
         and walkExpr e =
             match e with
-            | SynExpr.App (_, _, SynExpr.Ident _, SynExpr.Const (SynConst.String (_, stringRange), _), _) ->
+            | SynExpr.App (_, _, SynExpr.Ident _, SynExpr.Const (SynConst.String (_, stringRange), _), r) ->
                 match !appStack with
                 | (lastApp :: _) as apps when Range.rangeContainsRange lastApp.Range e.Range ->
-                    let rec loop acc (apps: (SynExpr * SynExpr) list) =
+                    let intersectsWithFuncOrString (arg: Range.range) =
+                        Range.rangeContainsRange arg stringRange
+                        || arg = stringRange
+                        || Range.rangeContainsRange arg r
+                        || arg = r 
+
+                    let rec loop acc (apps: AppWithArg list) =
                         match acc, apps with
                         | _, [] -> acc
-                        | [], (prev, curr) :: rest -> 
-                            if Range.rangeContainsRange curr.Range prev.Range then 
-                                loop [prev; curr] rest 
-                            else [prev]
-                        | _, (prev, curr) :: rest ->
-                            if Range.rangeContainsRange curr.Range prev.Range then 
-                                loop (prev :: acc) rest
-                            else prev :: acc
+                        | [], h :: t -> 
+                            if not (intersectsWithFuncOrString h.Arg) then
+                                loop [h] t
+                            else loop [] t
+                        | prev :: _, curr :: rest -> 
+                            if Range.rangeContainsRange curr.Range prev.Range 
+                               && not (intersectsWithFuncOrString curr.Arg) then
+                                loop (curr :: acc) rest 
+                            else acc
 
                     let args = 
                         apps 
-                        |> Seq.pairwise 
-                        |> Seq.toList 
                         |> loop []
-                        |> List.fold (fun res app -> 
-                            match app with 
-                            | SynExpr.App (_, _, _, arg, _) -> arg.Range :: res
-                            | _ -> res
-                        ) []
+                        |> List.rev
+                        |> List.map (fun x -> x.Arg)
                         |> List.toArray
                     let res = { String = stringRange
                                 Args = args }
                     result.Add res
                 | _ -> ()
                 appStack := []
+            | SynExpr.App (_, _, SynExpr.App(_, true, _, e1, _), e2, _) ->
+                addAppWithArg { Range = e.Range; Arg = e2.Range }
+                addAppWithArg { Range = e.Range; Arg = e1.Range }
+                walkExpr e1
+                walkExpr e2
             | SynExpr.App (_, _, e1, e2, _) ->
-                match !appStack with
-                | lastApp :: _ when not (Range.rangeContainsRange lastApp.Range e.Range) ->
-                    appStack := [e]
-                | _ -> appStack := e :: !appStack
-
+                addAppWithArg { Range = e.Range; Arg = e2.Range }
                 walkExpr e1
                 walkExpr e2
             | _ ->

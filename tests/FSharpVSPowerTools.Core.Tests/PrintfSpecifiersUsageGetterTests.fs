@@ -107,13 +107,15 @@ System.IO.File.OpenRead (sprintf "file %d" 1) |> ignore
     => [2, [(39, 41), (43, 44)]]
 
 [<Test>]
-let ``failwithf``() =
+let ``argument backward piped``() =
     """
 failwithf "Not an object: %s" <| "foo"
 """
-    => [2, [(26, 28), (33, 48)]]
+    => [2, [(26, 28), (33, 38)]]
 
-//let f x = 
-//    match x with
-//    | 1 -> ()
-//    | _ -> failwithf "Not an object: %s" <| x.ToString()
+[<Test>]
+let ``argument forward piped``() =
+    """
+"foo" |> failwithf "Not an object: %s"
+"""
+    => [2, [(35, 37), (0, 5)]]
