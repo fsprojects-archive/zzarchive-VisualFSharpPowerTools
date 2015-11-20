@@ -1159,8 +1159,7 @@ module Outlining =
 module Printf =
     [<NoComparison>]
     type PrintfFunction = 
-        { Full: Range.range
-          String: Range.range
+        { String: Range.range
           Args: Range.range[] }
 
     let internal getAll (input: ParsedInput option) : PrintfFunction[] =
@@ -1217,11 +1216,11 @@ module Printf =
         and walkExpr e =
             match e with
             | SynExpr.App (_, _, SynExpr.Ident _, SynExpr.Const (SynConst.String (_, stringRange), _), _) ->
-                match !appStack |> List.rev with
-                | [] -> ()
-                | (fullExpr :: _) as apps ->
+                match !appStack with
+                | (lastApp :: _) as apps when Range.rangeContainsRange lastApp.Range e.Range ->
                     let args =
                         apps 
+                        |> List.rev
                         |> List.fold (fun res app -> 
                             match app with 
                             | SynExpr.App (_, _, _, arg, _) ->
@@ -1229,13 +1228,17 @@ module Printf =
                             | _ -> res
                         ) []
                         |> List.toArray
-                    let res = { Full = fullExpr.Range
-                                String = stringRange
+                    let res = { String = stringRange
                                 Args = args }
                     result.Add res
+                | _ -> ()
                 appStack := []
             | SynExpr.App (_, _, e1, e2, _) ->
-                appStack := e :: !appStack 
+                match !appStack with
+                | lastApp :: _ when not (Range.rangeContainsRange lastApp.Range e.Range) ->
+                    appStack := [e]
+                | _ -> appStack := e :: !appStack
+
                 walkExpr e1
                 walkExpr e2
             | _ ->

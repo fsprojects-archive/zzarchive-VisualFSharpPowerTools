@@ -30,30 +30,32 @@ let (=>) source (expected: (int * (((int * int) * (int * int)) list)) list) =
         languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No)
         |> Async.RunSynchronously
 
-    let actual = 
-        PrintfSpecifiersUsageGetter.getAll results
-        |> Async.RunSynchronously
-        |> Option.getOrElse [||]
-        |> Array.toList
-        |> List.groupBy (fun r -> r.SpecifierRange.StartLine)
-        |> List.map (fun (line, rs) ->
-            line, 
-            rs 
-            |> List.map (fun x -> 
-                (x.SpecifierRange.StartColumn, x.SpecifierRange.EndColumn),
-                (x.ArgumentRange.StartColumn, x.ArgumentRange.EndColumn))
-            |> List.sort)
-        |> List.sortBy (fun (line, _) -> line)
+    let actual = ref []
+    try
+        actual :=
+            PrintfSpecifiersUsageGetter.getAll results
+            |> Async.RunSynchronously
+            |> Option.getOrElse [||]
+            |> Array.toList
+            |> List.groupBy (fun r -> r.SpecifierRange.StartLine)
+            |> List.map (fun (line, rs) ->
+                line, 
+                rs 
+                |> List.map (fun x -> 
+                    (x.SpecifierRange.StartColumn, x.SpecifierRange.EndColumn),
+                    (x.ArgumentRange.StartColumn, x.ArgumentRange.EndColumn))
+                |> List.sort)
+            |> List.sortBy (fun (line, _) -> line)
 
-    let expected = 
-        expected 
-        |> List.map (fun (line, sus) -> line, List.sort sus)
-        |> List.sortBy (fun (line, _) -> line)
+        let expected = 
+            expected 
+            |> List.map (fun (line, sus) -> line, List.sort sus)
+            |> List.sortBy (fun (line, _) -> line)
     
-    try actual |> Collection.assertEquiv expected
+        !actual |> Collection.assertEquiv expected
     with _ -> 
         debug "AST: %A" results.ParseTree
-        for x in actual do
+        for x in !actual do
             debug "Actual: %A" x
         reraise()
 
@@ -82,11 +84,18 @@ printf "%+A foo %s" 1
     => [2, [(8, 11), (20, 21)]]
 
 [<Test>]
-let ``another function application above printf``() =
+let ``another function above printf``() =
     """
-let f x y = x y
-let _ = f 1 2
+let f x = x
 printf "%+A foo" 1
 """
-    => [4, [(8, 11), (20, 21)]]
+    => [3, [(8, 11), (17, 18)]]
+
+[<Test>]
+let ``another curried function above printf``() =
+    """
+let f x y = x y
+printf "%+A foo" 1
+"""
+    => [3, [(8, 11), (17, 18)]]
 
