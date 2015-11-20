@@ -5,7 +5,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
 
-type HighlightUsageTaggerHelper() =    
+type HighlightUsageTaggerHelper() =
     inherit VsTestBase()
 
     let taggerProvider = HighlightUsageTaggerProvider(

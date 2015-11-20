@@ -97,6 +97,7 @@
     <Compile Include="VsTestSetup.fs" />
     <Compile Include="SyntaxConstructClassifierTests.fs" />
     <Compile Include="HighlightUsageTaggerTests.fs" />
+    <Compile Include="PrintfSpecifiersUsageTaggerTests.fs" />
     <Compile Include="FormattingCommandTests.fs" />
     <Compile Include="DepthTaggerTests.fs" />
     <Compile Include="FindReferencesCommandTests.fs" />

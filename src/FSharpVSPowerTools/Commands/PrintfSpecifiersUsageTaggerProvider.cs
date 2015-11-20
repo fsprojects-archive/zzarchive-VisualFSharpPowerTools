@@ -79,10 +79,10 @@ namespace FSharpVSPowerTools
         VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
 
         [Import]
-        ThemeManager themeManager;
+        ThemeManager themeManager = null;
 
         [Import]
-        IEditorFormatMapService editorFormatMapService;
+        IEditorFormatMapService editorFormatMapService = null;
 
         public Color GetDefaultColor()
         {
