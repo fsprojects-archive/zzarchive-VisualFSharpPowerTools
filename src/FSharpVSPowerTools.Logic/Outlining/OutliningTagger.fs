@@ -180,7 +180,7 @@ type OutliningTagger
         |> Async.Ignore
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged
-    let docEventListener =
+    let _docEventListener =
         new DocumentEventListener ([ViewChange.bufferEvent buffer], UpdateDelay, doUpdate) :> IDisposable
 
     /// Find the length of the shortest whitespace indentation in the textblock used for the outlining
@@ -445,10 +445,6 @@ type OutliningTagger
             scopedSnapSpans
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
             |> Seq.choose createTagSpan
-
-    // prevent compilation error, docEventListener must have some code that 
-    // references it.
-    member private x.DocEventListener = docEventListener
 
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans =
