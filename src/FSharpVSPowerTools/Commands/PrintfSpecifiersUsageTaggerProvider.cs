@@ -74,29 +74,32 @@ namespace FSharpVSPowerTools
     [Export]
     public class PrintfColorManager
     {
-        static readonly Color LightThemeColor = Color.FromRgb(245, 222, 179);
+        static readonly Color LightThemeColor = Color.FromRgb(249, 235, 210);
         static readonly Color DarkThemeColor = Color.FromRgb(0, 77, 77);
         VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
+        ThemeManager _themeManager;
+        IEditorFormatMapService _editorFormatMapService;
 
-        [Import]
-        ThemeManager themeManager = null;
-
-        [Import]
-        IEditorFormatMapService editorFormatMapService = null;
+        [ImportingConstructor]
+        public PrintfColorManager(ThemeManager themeManager, IEditorFormatMapService editorFormatMapService) 
+        {
+            _themeManager = themeManager;
+            _editorFormatMapService = editorFormatMapService;
+        }
 
         public Color GetDefaultColor()
         {
-            return themeManager.GetCurrentTheme() == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
+            return _themeManager.GetCurrentTheme() == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
         }
 
         public void UpdateColors()
         {
-            var currentTheme = themeManager.GetCurrentTheme();
+            var currentTheme = _themeManager.GetCurrentTheme();
 
             if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
             {
                 lastTheme = currentTheme;
-                var formatMap = editorFormatMapService.GetEditorFormatMap(category: "text");
+                var formatMap = _editorFormatMapService.GetEditorFormatMap(category: "text");
 
                 try
                 {

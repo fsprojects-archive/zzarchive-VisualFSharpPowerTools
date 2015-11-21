@@ -1159,7 +1159,7 @@ module Outlining =
 module Printf =
     [<NoComparison>]
     type PrintfFunction = 
-        { String: Range.range
+        { FormatString: Range.range
           Args: Range.range[] }
     
     [<NoComparison>]
@@ -1254,7 +1254,7 @@ module Printf =
                         |> List.rev
                         |> List.map (fun x -> x.Arg)
                         |> List.toArray
-                    let res = { String = stringRange
+                    let res = { FormatString = stringRange
                                 Args = args }
                     result.Add res
                 | _ -> ()

@@ -60,7 +60,8 @@ type PrintfSpecifiersUsageTagger
             }
         )
 
-    let onCaretMoveListener: DocumentEventListener option ref = ref None
+    let onCaretMoveListener = 
+        lazy (new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
 
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
@@ -78,12 +79,11 @@ type PrintfSpecifiersUsageTagger
             async {
                 usages <- x
                 return! 
-                    match !onCaretMoveListener with
-                    | None ->
-                        callInUIContext <| fun _ ->
-                            onCaretMoveListener := 
-                                Some(new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
-                    | Some _ -> onCaretMove ciuc
+                    if onCaretMoveListener.IsValueCreated then
+                        onCaretMove ciuc
+                    else 
+                        callInUIContext <| fun _ -> 
+                            onCaretMoveListener.Force() |> ignore
             })
 
     let bufferChangedEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, onBufferChanged)
@@ -112,4 +112,5 @@ type PrintfSpecifiersUsageTagger
     interface IDisposable with
         member __.Dispose() = 
             dispose bufferChangedEventListener
-            !onCaretMoveListener |> Option.iter dispose
+            if onCaretMoveListener.IsValueCreated then 
+                dispose onCaretMoveListener.Value

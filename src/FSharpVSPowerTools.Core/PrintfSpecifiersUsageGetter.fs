@@ -8,7 +8,7 @@ type PrintfSpecifierUse =
     { SpecifierRange: Range.range
       ArgumentRange: Range.range }
 
-let private sortRange (r: Range.range) = r.StartLine, r.StartColumn
+let private startPos (r: Range.range) = r.StartLine, r.StartColumn
 
 let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
     asyncMaybe {
@@ -25,7 +25,7 @@ let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
             |> Array.fold (fun (specifierRanges, acc) func ->
                 let ownSpecifiers, restSpecifiers = 
                     specifierRanges 
-                    |> Array.partition (Range.rangeContainsRange func.String)
+                    |> Array.partition (Range.rangeContainsRange func.FormatString)
                 
                 match ownSpecifiers with
                 | [||] -> restSpecifiers, acc
@@ -35,8 +35,8 @@ let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
                     
                     let uses = 
                         func.Args
-                        |> Array.sortBy sortRange
-                        |> Array.zip (ownSpecifiers.[0..func.Args.Length - 1] |> Array.sortBy sortRange)
+                        |> Array.sortBy startPos
+                        |> Array.zip (ownSpecifiers.[0..func.Args.Length - 1] |> Array.sortBy startPos)
                         |> Array.map (fun (specifier, arg) -> { SpecifierRange = specifier; ArgumentRange = arg })
                     restSpecifiers, uses :: acc
                ) (specifierRanges, [])
