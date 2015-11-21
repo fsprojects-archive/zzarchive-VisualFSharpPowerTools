@@ -735,11 +735,6 @@ module Outlining =
         /// Create a range beginning at the start of r1 and finishing at the end of r2
         let inline startToEnd (r1: range) (r2: range) = mkFileIndexRange r1.FileIndex r1.Start r2.End
 
-        /// Create a range starting at the end of r1 modified by m1 and finishing at the end of r2 modified by m2
-        let inline endToEndmod (r1: range) (m1:int) (r2: range) (m2:int) =
-            let modstart, modend = mkPos r1.EndLine (r1.EndColumn + m1), mkPos r2.EndLine (r2.EndColumn + m2)
-            mkFileIndexRange r1.FileIndex modstart modend
-
         /// Create a new range from r by shifting the starting column by m
         let inline modStart (r: range) (m:int) =
             let modstart = mkPos r.StartLine (r.StartColumn+m)
@@ -751,9 +746,6 @@ module Outlining =
             let rStart = Range.mkPos r.StartLine (r.StartColumn+modStart)
             let rEnd   = Range.mkPos r.EndLine   (r.EndColumn - modEnd)
             mkFileIndexRange r.FileIndex rStart rEnd
-
-        let inline ofAttributes (attrs:SynAttributes) =
-            match attrs with | [] -> range () | _  -> startToEnd attrs.[0].Range attrs.[List.length attrs - 1].ArgExpr.Range
 
     /// Scope indicates the way a range/snapshot should be collapsed. |Scope.Scope.Same| is for a scope inside
     /// some kind of scope delimiter, e.g. `[| ... |]`, `[ ... ]`, `{ ... }`, etc.  |Scope.Below| is for expressions
@@ -1163,3 +1155,259 @@ module Outlining =
             let (ParsedImplFileInput (_, _, _, _, _, modules, _)) = implFile
             Seq.collect parseModuleOrNamespace modules
         | _ -> Seq.empty
+
+module Printf =
+    [<NoComparison>]
+    type PrintfFunction = 
+        { FormatString: Range.range
+          Args: Range.range[] }
+    
+    [<NoComparison>]
+    type private AppWithArg = 
+        { Range: Range.range
+          Arg: Range.range }
+
+    let internal getAll (input: ParsedInput option) : PrintfFunction[] =
+        let result = ResizeArray()
+        let appStack: AppWithArg list ref = ref []
+
+        let addAppWithArg appWithArg =
+            match !appStack with
+            | lastApp :: _ when not (Range.rangeContainsRange lastApp.Range appWithArg.Range) ->
+                appStack := [appWithArg]
+            | _ -> appStack := appWithArg :: !appStack
+
+        let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) =
+            List.iter walkSynModuleOrNamespace moduleOrNamespaceList
+
+        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, _)) =
+            List.iter walkSynModuleDecl decls
+
+        and walkTypeConstraint = function
+            | SynTypeConstraint.WhereTyparDefaultsToType (_, ty, _)
+            | SynTypeConstraint.WhereTyparSubtypeOfType (_, ty, _) -> walkType ty
+            | SynTypeConstraint.WhereTyparIsEnum (_, ts, _)
+            | SynTypeConstraint.WhereTyparIsDelegate (_, ts, _) -> List.iter walkType ts
+            | SynTypeConstraint.WhereTyparSupportsMember (_, sign, _) -> walkMemberSig sign
+            | _ -> ()
+
+        and walkBinding (SynBinding.Binding (_, _, _, _, _, _, _, _, returnInfo, e, _, _)) =
+            walkExpr e
+            returnInfo |> Option.iter (fun (SynBindingReturnInfo (t, _, _)) -> walkType t)
+
+        and walkInterfaceImpl (InterfaceImpl(_, bindings, _)) = List.iter walkBinding bindings
+
+        and walkIndexerArg = function
+            | SynIndexerArg.One e -> walkExpr e
+            | SynIndexerArg.Two (e1, e2) -> List.iter walkExpr [e1; e2]
+
+        and walkType = function
+            | SynType.Array (_, t, _)
+            | SynType.HashConstraint (t, _)
+            | SynType.MeasurePower (t, _, _) -> walkType t
+            | SynType.Fun (t1, t2, _)
+            | SynType.MeasureDivide (t1, t2, _) -> walkType t1; walkType t2
+            | SynType.App (ty, _, types, _, _, _, _) -> walkType ty; List.iter walkType types
+            | SynType.LongIdentApp (_, _, _, types, _, _, _) -> List.iter walkType types
+            | SynType.Tuple (ts, _) -> ts |> List.iter (fun (_, t) -> walkType t)
+            | SynType.WithGlobalConstraints (t, typeConstraints, _) ->
+                walkType t; List.iter walkTypeConstraint typeConstraints
+            | _ -> ()
+
+        and walkClause (Clause (_, e1, e2, _, _)) =
+            walkExpr e2
+            e1 |> Option.iter walkExpr
+
+        and walkSimplePats = function
+            | SynSimplePats.SimplePats (pats, _) -> List.iter walkSimplePat pats
+            | SynSimplePats.Typed (pats, ty, _) -> 
+                walkSimplePats pats
+                walkType ty
+
+        and walkExpr e =
+            match e with
+            | SynExpr.App (_, _, SynExpr.Ident _, SynExpr.Const (SynConst.String (_, stringRange), _), r) ->
+                match !appStack with
+                | (lastApp :: _) as apps when Range.rangeContainsRange lastApp.Range e.Range ->
+                    let intersectsWithFuncOrString (arg: Range.range) =
+                        Range.rangeContainsRange arg stringRange
+                        || arg = stringRange
+                        || Range.rangeContainsRange arg r
+                        || arg = r 
+
+                    let rec loop acc (apps: AppWithArg list) =
+                        match acc, apps with
+                        | _, [] -> acc
+                        | [], h :: t -> 
+                            if not (intersectsWithFuncOrString h.Arg) then
+                                loop [h] t
+                            else loop [] t
+                        | prev :: _, curr :: rest -> 
+                            if Range.rangeContainsRange curr.Range prev.Range 
+                               && not (intersectsWithFuncOrString curr.Arg) then
+                                loop (curr :: acc) rest 
+                            else acc
+
+                    let args = 
+                        apps 
+                        |> loop []
+                        |> List.rev
+                        |> List.map (fun x -> x.Arg)
+                        |> List.toArray
+                    let res = { FormatString = stringRange
+                                Args = args }
+                    result.Add res
+                | _ -> ()
+                appStack := []
+            | SynExpr.App (_, _, SynExpr.App(_, true, _, e1, _), e2, _) ->
+                addAppWithArg { Range = e.Range; Arg = e2.Range }
+                addAppWithArg { Range = e.Range; Arg = e1.Range }
+                walkExpr e1
+                walkExpr e2
+            | SynExpr.App (_, _, e1, e2, _) ->
+                addAppWithArg { Range = e.Range; Arg = e2.Range }
+                walkExpr e1
+                walkExpr e2
+            | _ ->
+                match e with
+                | SynExpr.Paren (e, _, _, _)
+                | SynExpr.Quote (_, _, e, _, _)
+                | SynExpr.Typed (e, _, _)
+                | SynExpr.InferredUpcast (e, _)
+                | SynExpr.InferredDowncast (e, _)
+                | SynExpr.AddressOf (_, e, _, _)
+                | SynExpr.DoBang (e, _)
+                | SynExpr.YieldOrReturn (_, e, _)
+                | SynExpr.ArrayOrListOfSeqExpr (_, e, _)
+                | SynExpr.CompExpr (_, _, e, _)
+                | SynExpr.Do (e, _)
+                | SynExpr.Assert (e, _)
+                | SynExpr.Lazy (e, _)
+                | SynExpr.YieldOrReturnFrom (_, e, _) -> walkExpr e
+                | SynExpr.Lambda (_, _, pats, e, _) ->
+                    walkSimplePats pats
+                    walkExpr e
+                | SynExpr.New (_, t, e, _)
+                | SynExpr.TypeTest (e, t, _)
+                | SynExpr.Upcast (e, t, _)
+                | SynExpr.Downcast (e, t, _) -> walkExpr e; walkType t
+                | SynExpr.Tuple (es, _, _)
+                | Sequentials es
+                | SynExpr.ArrayOrList (_, es, _) -> List.iter walkExpr es
+                | SynExpr.TryFinally (e1, e2, _, _, _)
+                | SynExpr.While (_, e1, e2, _) -> List.iter walkExpr [e1; e2]
+                | SynExpr.Record (_, _, fields, _) ->
+                    fields |> List.iter (fun (_, e, _) -> e |> Option.iter walkExpr)
+                | SynExpr.ObjExpr(ty, argOpt, bindings, ifaces, _, _) ->
+                    argOpt |> Option.iter (fun (e, _) -> walkExpr e)
+                    walkType ty
+                    List.iter walkBinding bindings
+                    List.iter walkInterfaceImpl ifaces
+                | SynExpr.For (_, _, e1, _, e2, e3, _) -> List.iter walkExpr [e1; e2; e3]
+                | SynExpr.ForEach (_, _, _, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
+                | SynExpr.MatchLambda (_, _, synMatchClauseList, _, _) ->
+                    List.iter walkClause synMatchClauseList
+                | SynExpr.Match (_, e, synMatchClauseList, _, _) ->
+                    walkExpr e
+                    List.iter walkClause synMatchClauseList
+                | SynExpr.TypeApp (e, _, tys, _, _, _, _) ->
+                    List.iter walkType tys; walkExpr e
+                | SynExpr.LetOrUse (_, _, bindings, e, _) ->
+                    List.iter walkBinding bindings; walkExpr e
+                | SynExpr.TryWith (e, _, clauses, _, _, _, _) ->
+                    List.iter walkClause clauses;  walkExpr e
+                | SynExpr.IfThenElse (e1, e2, e3, _, _, _, _) ->
+                    List.iter walkExpr [e1; e2]
+                    e3 |> Option.iter walkExpr
+                | SynExpr.LongIdentSet (_, e, _)
+                | SynExpr.DotGet (e, _, _, _) -> walkExpr e
+                | SynExpr.DotSet (e1, _, e2, _) ->
+                    walkExpr e1
+                    walkExpr e2
+                | SynExpr.DotIndexedGet (e, args, _, _) ->
+                    walkExpr e
+                    List.iter walkIndexerArg args
+                | SynExpr.DotIndexedSet (e1, args, e2, _, _, _) ->
+                    walkExpr e1
+                    List.iter walkIndexerArg args
+                    walkExpr e2
+                | SynExpr.NamedIndexedPropertySet (_, e1, e2, _) -> List.iter walkExpr [e1; e2]
+                | SynExpr.DotNamedIndexedPropertySet (e1, _, e2, e3, _) -> List.iter walkExpr [e1; e2; e3]
+                | SynExpr.JoinIn (e1, _, e2, _) -> List.iter walkExpr [e1; e2]
+                | SynExpr.LetOrUseBang (_, _, _, _, e1, e2, _) -> List.iter walkExpr [e1; e2]
+                | SynExpr.TraitCall (_, sign, e, _) ->
+                    walkMemberSig sign
+                    walkExpr e
+                | SynExpr.Const (SynConst.Measure(_, m), _) -> walkMeasure m
+                | _ -> ()
+
+        and walkMeasure = function
+            | SynMeasure.Product (m1, m2, _)
+            | SynMeasure.Divide (m1, m2, _) -> walkMeasure m1; walkMeasure m2
+            | SynMeasure.Seq (ms, _) -> List.iter walkMeasure ms
+            | SynMeasure.Power (m, _, _) -> walkMeasure m
+            | SynMeasure.One
+            | SynMeasure.Anon _
+            | SynMeasure.Named _
+            | SynMeasure.Var _ -> ()
+
+        and walkSimplePat = function
+            | SynSimplePat.Attrib (pat, _, _) -> walkSimplePat pat
+            | SynSimplePat.Typed(_, t, _) -> walkType t
+            | _ -> ()
+
+        and walkField (SynField.Field(_, _, _, t, _, _, _, _)) = walkType t
+
+        and walkMemberSig = function
+            | SynMemberSig.Inherit (t, _)
+            | SynMemberSig.Interface(t, _) -> walkType t
+            | SynMemberSig.ValField(f, _) -> walkField f
+            | SynMemberSig.NestedType(SynTypeDefnSig.TypeDefnSig (_, repr, memberSigs, _), _) ->
+                walkTypeDefnSigRepr repr
+                List.iter walkMemberSig memberSigs
+            | SynMemberSig.Member _ -> ()
+
+        and walkMember = function
+            | SynMemberDefn.Member (binding, _) -> walkBinding binding
+            | SynMemberDefn.ImplicitCtor (_, _, pats, _, _) -> List.iter walkSimplePat pats
+            | SynMemberDefn.ImplicitInherit (t, e, _, _) -> walkType t; walkExpr e
+            | SynMemberDefn.LetBindings (bindings, _, _, _) -> List.iter walkBinding bindings
+            | SynMemberDefn.Interface (t, members, _) ->
+                walkType t
+                members |> Option.iter (List.iter walkMember)
+            | SynMemberDefn.Inherit (t, _, _) -> walkType t
+            | SynMemberDefn.ValField (field, _) -> walkField field
+            | SynMemberDefn.NestedType (tdef, _, _) -> walkTypeDefn tdef
+            | SynMemberDefn.AutoProperty (_, _, _, t, _, _, _, _, e, _, _) ->
+                Option.iter walkType t
+                walkExpr e
+            | _ -> ()
+
+        and walkTypeDefnRepr = function
+            | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.iter walkMember defns
+            | SynTypeDefnRepr.Simple _ -> ()
+
+        and walkTypeDefnSigRepr = function
+            | SynTypeDefnSigRepr.ObjectModel (_, defns, _) -> List.iter walkMemberSig defns
+            | SynTypeDefnSigRepr.Simple _ -> ()
+
+        and walkTypeDefn (TypeDefn (_, repr, members, _)) =
+            walkTypeDefnRepr repr
+            List.iter walkMember members
+
+        and walkSynModuleDecl (decl: SynModuleDecl) =
+            match decl with
+            | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
+            | SynModuleDecl.NestedModule (_, modules, _, _) ->
+                List.iter walkSynModuleDecl modules
+            | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
+            | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr
+            | SynModuleDecl.Types (types, _) -> List.iter walkTypeDefn types
+            | _ -> ()
+
+        match input with
+        | Some (ParsedInput.ImplFile input) ->
+             walkImplFileInput input
+        | _ -> ()
+        //debug "%A" idents
+        result.ToArray()

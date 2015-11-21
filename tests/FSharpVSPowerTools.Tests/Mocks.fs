@@ -38,6 +38,7 @@ let createGeneralOptionsPage() =
             page.GoToSymbolSourceEnabled --> true
             page.LinterEnabled --> true
             page.OutliningEnabled --> true
+            page.HighlightPrintfUsageEnabled --> true
         @>)
 
 let createClassificationTypeRegistryService() =

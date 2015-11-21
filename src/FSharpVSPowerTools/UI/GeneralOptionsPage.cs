@@ -13,9 +13,9 @@ namespace FSharpVSPowerTools
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
     public class GeneralOptionsPage : DialogPage, IGeneralOptions
     {
-        private GeneralOptionsControl _optionsControl;
-        private const string navBarConfig = "fsharp-navigationbar-enabled";
-        private bool _navBarEnabledInAppConfig;
+        GeneralOptionsControl _optionsControl;
+        const string navBarConfig = "fsharp-navigationbar-enabled";
+        bool _navBarEnabledInAppConfig;
 
         public GeneralOptionsPage()
         {
@@ -25,6 +25,7 @@ namespace FSharpVSPowerTools
             FormattingEnabled = true;
             _navBarEnabledInAppConfig = GetNavigationBarConfig();
             HighlightUsageEnabled = true;
+            HighlightPrintfUsageEnabled = true;
             RenameRefactoringEnabled = true;
             DepthColorizerEnabled = false;
             NavigateToEnabled = true;
@@ -46,7 +47,7 @@ namespace FSharpVSPowerTools
             OutliningEnabled = false;
         }
 
-        private bool GetNavigationBarConfig()
+        bool GetNavigationBarConfig()
         {
             try
             {
@@ -62,7 +63,7 @@ namespace FSharpVSPowerTools
             }
         }
 
-        private bool IsUserAdministrator()
+        bool IsUserAdministrator()
         {
             bool isAdmin;
             try
@@ -121,6 +122,9 @@ namespace FSharpVSPowerTools
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool HighlightUsageEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool HighlightPrintfUsageEnabled { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool RenameRefactoringEnabled { get; set; }
@@ -213,6 +217,7 @@ namespace FSharpVSPowerTools
                 FormattingEnabled = _optionsControl.FormattingEnabled;
 
                 HighlightUsageEnabled = _optionsControl.HighlightUsageEnabled;
+                HighlightPrintfUsageEnabled = _optionsControl.HighlightPrintfUsageEnabled;
                 RenameRefactoringEnabled = _optionsControl.RenameRefactoringEnabled;
                 DepthColorizerEnabled = _optionsControl.DepthColorizerEnabled;
                 NavigateToEnabled = _optionsControl.NavigateToEnabled;

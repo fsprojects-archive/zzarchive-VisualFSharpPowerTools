@@ -5,6 +5,7 @@ type IGeneralOptions =
     abstract FormattingEnabled: bool with get, set
     abstract NavBarEnabled: bool with get, set
     abstract HighlightUsageEnabled: bool with get, set
+    abstract HighlightPrintfUsageEnabled: bool with get, set
     abstract RenameRefactoringEnabled: bool with get, set
     abstract DepthColorizerEnabled: bool with get, set
     abstract NavigateToEnabled: bool with get, set
