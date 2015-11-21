@@ -446,6 +446,9 @@ type OutliningTagger
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
             |> Seq.choose createTagSpan
 
+    // prevent compilation error, docEventListener must have some code that 
+    // references it.
+    member private x.DocEventListener = docEventListener
 
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans =
@@ -453,9 +456,3 @@ type OutliningTagger
 
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
-
-
-    interface IDisposable with
-        member __.Dispose () =
-            docEventListener.Dispose ()
-            scopedSnapSpans <- [||]
