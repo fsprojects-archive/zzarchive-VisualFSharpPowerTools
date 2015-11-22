@@ -71,7 +71,6 @@ namespace FSharpVSPowerTools
         [Order(Before = PredefinedAdornmentLayers.CurrentLineHighlighter)]
         internal AdornmentLayerDefinition AdornmentLayerDefinition { get; set; }
 
-        private readonly ShellEventListener _shellEventListener;
         private readonly ThemeManager _themeManager;
         private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
         private readonly IServiceProvider _serviceProvider;
@@ -81,14 +80,12 @@ namespace FSharpVSPowerTools
         [ImportingConstructor]
         public DepthColorizerAdornmentManager(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-            ShellEventListener shellEventListener,
             ThemeManager themeManager,
             IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
         {
             _serviceProvider = serviceProvider;
             _themeManager = themeManager;
             _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
-            _shellEventListener = shellEventListener;
         }
 
         public void TextViewCreated(IWpfTextView textView)
@@ -99,7 +96,7 @@ namespace FSharpVSPowerTools
             if (generalOptions == null || !generalOptions.DepthColorizerEnabled) return;
             
             var tagAggregator = _viewTagAggregatorFactoryService.CreateTagAggregator<DepthRegionTag>(textView);
-            var adornment = new DepthColorizerAdornment(textView, tagAggregator, _themeManager, _shellEventListener);
+            var adornment = new DepthColorizerAdornment(textView, tagAggregator, _themeManager);
             textView.Properties.AddProperty(serviceType, adornment);
         }
 

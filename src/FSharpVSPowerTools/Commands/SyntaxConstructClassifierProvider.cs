@@ -1,6 +1,7 @@
 ﻿using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Language.StandardClassification;
+using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -88,15 +89,7 @@ namespace FSharpVSPowerTools
     [Export]
     public class ClassificationColorManager 
     {
-        private readonly IDictionary<VisualStudioTheme, IDictionary<string, FontColor>> themeColors =
-            new Dictionary<VisualStudioTheme, IDictionary<string, FontColor>>();
-
-        private VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
-
-        public ClassificationColorManager()
-        {
-            // Light/Blue theme colors
-            var lightAndBlueColors = new Dictionary<string, FontColor>
+        static readonly Dictionary<string, FontColor> LightAndBlueColors = new Dictionary<string, FontColor>
             {
                 { ClassificationTypes.FSharpReferenceType, new FontColor(Color.FromRgb(43, 145, 175)) },
                 { ClassificationTypes.FSharpValueType, new FontColor(Color.FromRgb(43, 145, 175)) },
@@ -111,12 +104,7 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpOperator, new FontColor(Colors.Black) }
             };
 
-            themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
-            themeColors.Add(VisualStudioTheme.Light, lightAndBlueColors);
-            themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
-
-            // Dark theme colors
-            var darkColors = new Dictionary<string, FontColor>
+        static readonly Dictionary<string, FontColor> DarkColors = new Dictionary<string, FontColor>
             {
                 { ClassificationTypes.FSharpReferenceType, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpValueType, new FontColor(Color.FromRgb(78, 201, 176)) },
@@ -131,54 +119,61 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpOperator, new FontColor(Color.FromRgb(220, 220, 220)) }
             };
 
-            themeColors.Add(VisualStudioTheme.Dark, darkColors);
+        private ThemeManager _themeManager;
+        private IClassificationFormatMapService _classificationFormatMapService;
+        private IClassificationTypeRegistryService _classificationTypeRegistry;
+
+        private VisualStudioTheme _currentTheme;
+
+        [ImportingConstructor]
+        public ClassificationColorManager(
+            ThemeManager themeManager,
+            IClassificationFormatMapService classificationFormatMapService,
+            IClassificationTypeRegistryService classificationTypeRegistry)
+        {
+            _themeManager = themeManager;
+            _classificationFormatMapService = classificationFormatMapService;
+            _classificationTypeRegistry = classificationTypeRegistry;
+
+            // Theme changed event may fire even though the same theme is still in use.
+            // We save a current theme and skip color updates in these cases. 
+            _currentTheme = _themeManager.GetCurrentTheme();
         }
-
-        [Import]
-        private ThemeManager themeManager = null;
-
-        [Import]
-        private IClassificationFormatMapService classificationFormatMapService = null;
-
-        [Import]
-        private IClassificationTypeRegistryService classificationTypeRegistry = null;
 
         public FontColor GetDefaultColors(string category) 
         {
-            var currentTheme = themeManager.GetCurrentTheme();
-
             bool success;
             FontColor color;
-            switch (currentTheme)
+            switch (_currentTheme)
             {
                 case VisualStudioTheme.Dark:
                     color = new FontColor(Color.FromRgb(220, 220, 220), Color.FromRgb(30, 30, 30));
-                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    success = DarkColors.TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", _currentTheme));
                     return color;
 
                 case VisualStudioTheme.Light:
                 case VisualStudioTheme.Blue:
                 default:
                     color = new FontColor(Colors.Black, Colors.White);
-                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    success = LightAndBlueColors.TryGetValue(category, out color);
                     if (!success)
-                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
+                        LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", _currentTheme));
                     return color;
             }
         }
 
         public void UpdateColors()
         {
-            var currentTheme = themeManager.GetCurrentTheme();
+            var newTheme = _themeManager.GetCurrentTheme();
 
-            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
+            if (newTheme != VisualStudioTheme.Unknown && newTheme != _currentTheme)
             {
-                lastTheme = currentTheme;
+                _currentTheme = newTheme;
 
-                var colors = themeColors[currentTheme];
-                var formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
+                var colors = newTheme == VisualStudioTheme.Dark ? DarkColors : LightAndBlueColors;
+                var formatMap = _classificationFormatMapService.GetClassificationFormatMap(category: "text");
                     
                 try
                 {
@@ -188,7 +183,7 @@ namespace FSharpVSPowerTools
                         string type = pair.Key;
                         FontColor color = pair.Value;
 
-                        var classificationType = classificationTypeRegistry.GetClassificationType(type);
+                        var classificationType = _classificationTypeRegistry.GetClassificationType(type);
                         var oldProp = formatMap.GetTextProperties(classificationType);
 
                         var foregroundBrush = 
@@ -228,10 +223,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpReferenceTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Types";
+                DisplayName = "F# Types";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpReferenceType);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -245,10 +240,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpValueTypeFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Value Types";
+                DisplayName = "F# Value Types";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpValueType);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -262,10 +257,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpPatternCaseFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Patterns";
+                DisplayName = "F# Patterns";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpPatternCase);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -279,10 +274,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpFunctionFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Functions / Methods";
+                DisplayName = "F# Functions / Methods";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpFunction);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -296,10 +291,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpMutableVarFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Mutable Variables / Reference Cells";
+                DisplayName = "F# Mutable Variables / Reference Cells";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpMutableVar);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -313,11 +308,11 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpQuotationFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Quotations";
+                DisplayName = "F# Quotations";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpQuotation);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
-                this.ForegroundCustomizable = false;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
+                ForegroundCustomizable = false;
             }
         }
 
@@ -331,10 +326,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpModuleFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Modules";
+                DisplayName = "F# Modules";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpModule);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -348,10 +343,10 @@ namespace FSharpVSPowerTools
             [ImportingConstructor]
             public FSharpUnusedFormat(ClassificationColorManager colorManager)
             {
-                this.DisplayName = "F# Unused Declarations";
+                DisplayName = "F# Unused Declarations";
                 var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpUnused);
-                this.ForegroundColor = colors.Foreground;
-                this.BackgroundColor = colors.Background;
+                ForegroundColor = colors.Foreground;
+                BackgroundColor = colors.Background;
             }
         }
 
@@ -365,10 +360,10 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpPrintfFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Printf Format";
+                 DisplayName = "F# Printf Format";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpPrintf);
-                 this.ForegroundColor = colors.Foreground;
-                 this.BackgroundColor = colors.Background;
+                 ForegroundColor = colors.Foreground;
+                 BackgroundColor = colors.Background;
              }
         }
 
@@ -382,10 +377,10 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpEscapedFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Escaped Characters";
+                 DisplayName = "F# Escaped Characters";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpEscaped);
-                 this.ForegroundColor = colors.Foreground;
-                 this.BackgroundColor = colors.Background;
+                 ForegroundColor = colors.Foreground;
+                 BackgroundColor = colors.Background;
              }
         }
 
@@ -399,10 +394,10 @@ namespace FSharpVSPowerTools
              [ImportingConstructor]
              public FSharpOperatorFormat(ClassificationColorManager colorManager)
              {
-                 this.DisplayName = "F# Operators";
+                 DisplayName = "F# Operators";
                  var colors = colorManager.GetDefaultColors(ClassificationTypes.FSharpOperator);
-                 this.ForegroundColor = colors.Foreground;
-                 this.BackgroundColor = colors.Background;
+                 ForegroundColor = colors.Foreground;
+                 BackgroundColor = colors.Background;
              }
         }
     }
@@ -414,7 +409,6 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Document)]
     public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
-        private readonly ShellEventListener _shellEventListener;
         private readonly ClassificationColorManager _classificationColorManager;
         private readonly IClassificationTypeRegistryService _classificationRegistry;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
@@ -425,7 +419,6 @@ namespace FSharpVSPowerTools
         [ImportingConstructor]
         public SyntaxConstructClassifierProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-            ShellEventListener shellEventListener,
             ClassificationColorManager classificationColorManager,
             IClassificationTypeRegistryService classificationRegistry,
             ITextDocumentFactoryService textDocumentFactoryService,
@@ -436,15 +429,14 @@ namespace FSharpVSPowerTools
             _classificationColorManager = classificationColorManager;
             _classificationRegistry = classificationRegistry;
             _textDocumentFactoryService = textDocumentFactoryService;
-            _shellEventListener = shellEventListener;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _projectFactory = projectFactory;
 
             // Receive notification for Visual Studio theme change
-            _shellEventListener.ThemeChanged += UpdateTheme;
+            VSColorTheme.ThemeChanged += UpdateTheme;
         }
 
-        private void UpdateTheme(object sender, EventArgs e)
+        private void UpdateTheme(EventArgs e)
         {
             _classificationColorManager.UpdateColors();
         }
@@ -475,7 +467,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            _shellEventListener.ThemeChanged -= UpdateTheme;
+            VSColorTheme.ThemeChanged -= UpdateTheme;
         }
     }
 }

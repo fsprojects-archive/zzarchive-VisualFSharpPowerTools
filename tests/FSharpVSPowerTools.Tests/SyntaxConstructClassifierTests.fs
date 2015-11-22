@@ -16,7 +16,6 @@ type SyntaxConstructClassifierHelper() =
     inherit VsTestBase()
     
     let classifierProvider = new SyntaxConstructClassifierProvider(
-                                    shellEventListener = base.ShellEventListener,
                                     serviceProvider = base.ServiceProvider, 
                                     classificationColorManager = null,
                                     projectFactory = base.ProjectFactory,

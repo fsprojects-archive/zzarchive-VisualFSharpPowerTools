@@ -120,9 +120,6 @@
     <Compile Include="VSLanguageService.fs">
       <Link>ProjectSystem/VSLanguageService.fs</Link>
     </Compile>
-    <Compile Include="ShellEventListener.fs">
-      <Link>ProjectSystem/ShellEventListener.fs</Link>
-    </Compile>
     <Compile Include="ProjectProvider.fs">
       <Link>ProjectSystem/ProjectProvider.fs</Link>
     </Compile>
@@ -174,7 +171,7 @@
     <Compile Include="HighlightUsageFilter.fs">
       <Link>Symbol/HighlightUsageFilter.fs</Link>
     </Compile>
-	<Compile Include="PrintfSpecifiersUsageTagger.fs">
+    <Compile Include="PrintfSpecifiersUsageTagger.fs">
       <Link>Symbol/PrintfSpecifiersUsageTagger.fs</Link>
     </Compile>
     <Compile Include="RenameDialog.fs">

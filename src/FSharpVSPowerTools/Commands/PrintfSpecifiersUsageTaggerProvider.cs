@@ -9,6 +9,7 @@ using System;
 using FSharpVSPowerTools.PrintfSpecifiersHighlightUsage;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.PlatformUI;
 
 namespace FSharpVSPowerTools
 {
@@ -21,7 +22,6 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
-        readonly ShellEventListener _shellEventListener;
         readonly PrintfColorManager _printfColorManager;
 
         [ImportingConstructor]
@@ -30,19 +30,18 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            ShellEventListener shellEventListener,
             PrintfColorManager printfColorManager)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _shellEventListener = shellEventListener;
             _printfColorManager = printfColorManager;
-            _shellEventListener.ThemeChanged += UpdateTheme;
+
+            VSColorTheme.ThemeChanged += UpdateTheme;
         }
 
-        void UpdateTheme(object sender, EventArgs e)
+        void UpdateTheme(EventArgs e)
         {
             _printfColorManager.UpdateColors();
         }
@@ -67,7 +66,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            _shellEventListener.ThemeChanged -= UpdateTheme;
+            VSColorTheme.ThemeChanged -= UpdateTheme;
         }
     }
 
@@ -76,7 +75,8 @@ namespace FSharpVSPowerTools
     {
         static readonly Color LightThemeColor = Color.FromRgb(245, 222, 179);
         static readonly Color DarkThemeColor = Color.FromRgb(0, 77, 77);
-        VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
+        
+        VisualStudioTheme _currentTheme;
         ThemeManager _themeManager;
         IEditorFormatMapService _editorFormatMapService;
 
@@ -85,20 +85,22 @@ namespace FSharpVSPowerTools
         {
             _themeManager = themeManager;
             _editorFormatMapService = editorFormatMapService;
+
+            _currentTheme = _themeManager.GetCurrentTheme();
         }
 
         public Color GetDefaultColor()
         {
-            return _themeManager.GetCurrentTheme() == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
+            return _currentTheme == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
         }
 
         public void UpdateColors()
         {
-            var currentTheme = _themeManager.GetCurrentTheme();
+            var newTheme = _themeManager.GetCurrentTheme();
 
-            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
+            if (newTheme != VisualStudioTheme.Unknown && newTheme != _currentTheme)
             {
-                lastTheme = currentTheme;
+                _currentTheme = newTheme;
                 var formatMap = _editorFormatMapService.GetEditorFormatMap(category: "text");
 
                 try
