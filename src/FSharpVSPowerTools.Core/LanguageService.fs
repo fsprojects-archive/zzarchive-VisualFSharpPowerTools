@@ -13,25 +13,19 @@ open AsyncMaybe
 /// various IntelliSense functions (such as completion & tool tips). Provides default
 /// empty/negative results if information is missing.
 type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpParseFileResults) option) =
-
     new (checkResults, parseResults) = ParseAndCheckResults(Some (checkResults, parseResults))
-
-    static member Empty = ParseAndCheckResults(None)
+    static member Empty = ParseAndCheckResults None
 
     member __.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland) =
-        async {
-            match infoOpt with 
-            | None -> 
-                return None
-            | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
+        asyncMaybe {
+            let! checkResults, _ = infoOpt 
+            return! checkResults.GetSymbolUseAtLocation(line, colAtEndOfNames, lineStr, identIsland)
         }
 
     member __.GetUsesOfSymbolInFile(symbol) =
         async {
             match infoOpt with 
-            | None -> 
-                return [| |]
+            | None -> return [||]
             | Some (checkResults, _parseResults) -> 
                 return! checkResults.GetUsesOfSymbolInFile(symbol)
         }
@@ -39,57 +33,45 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
     member __.GetAllUsesOfAllSymbolsInFile() =
         async {
             match infoOpt with
-            | None -> 
-                return [||]
+            | None -> return [||]
             | Some (checkResults, _) -> 
                 return! checkResults.GetAllUsesOfAllSymbolsInFile()
         }
 
-    member __.GetUntypedAst() =
-        match infoOpt with 
-        | None -> None
-        | Some (_, parseResults) -> parseResults.ParseTree
-
-    member __.GetCheckResults() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _) -> Some checkResults
+    member __.ParseTree = infoOpt |> Option.bind (fun (_, parseResults) -> parseResults.ParseTree)
+    member __.CheckResults = infoOpt |> Option.map fst
+    member __.CheckErrors = infoOpt |> Option.map (fun (checkResults, _) -> checkResults.Errors)
+    member __.ParseErrors = infoOpt |> Option.map (fun (_, parseResults) -> parseResults.Errors)
+    
+    member x.Errors =
+        x.ParseErrors 
+        |> Option.getOrElse [||]
+        |> Array.append (x.CheckErrors |> Option.getOrElse [||])
 
     member __.GetFormatSpecifierLocations() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _) -> Some (checkResults.GetFormatSpecifierLocations())
-
-    member __.GetErrors() =
-        match infoOpt with 
-        | None -> None
-        | Some (checkResults, _parseResults) -> Some checkResults.Errors
+        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocations())
 
     member __.GetNavigationItems() =
         match infoOpt with 
-        | None -> [| |]
+        | None -> [||]
         | Some (_checkResults, parseResults) -> 
            // GetNavigationItems is not 100% solid and throws occasional exceptions
             try parseResults.GetNavigationItems().Declarations
             with _ -> 
                 fail "Couldn't update navigation items, ignoring"
-                [| |]
+                [||]
 
-    member __.GetPartialAssemblySignature() =
+    member __.PartialAssemblySignature =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
 
     member __.ProjectContext =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.ProjectContext)
 
     member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
-        async {
-            let! result = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
-            match result with
-            | Some symbolUse ->
-                let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol)
-                return Some(symbolUse.Symbol, ident, refs)
-            | None -> 
-                return None
+        asyncMaybe {
+            let! symbolUse = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
+            let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol) |> liftAsync
+            return symbolUse.Symbol, ident, refs
         }
 
     member __.GetDeclarationLocation(line, col, lineStr, ident, preferSignature) =
@@ -98,17 +80,16 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             | None -> 
                 return FSharpFindDeclResult.DeclNotFound FSharpFindDeclFailureReason.Unknown
             | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)       
+                return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)
         }
             
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
-        Debug.Assert(not (List.isEmpty names), "The names should not be empty (for which GetToolTip raises exceptions).")
+        Debug.Assert(names <> [], "The names should not be empty (for which GetToolTip raises exceptions).")
         asyncMaybe {
-            match infoOpt with
-            | Some (checkResults, _) -> 
-                let tokenTag = FSharpTokenTag.IDENT
-                return! checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
-            | None -> return! None
+            let! checkResults, _ = infoOpt 
+            let tokenTag = FSharpTokenTag.IDENT
+            return! 
+                checkResults.GetToolTipTextAlternate(line, colAtEndOfNames, lineText, names, tokenTag) |> liftAsync
         }
 
 [<RequireQualifiedAccess>]
@@ -280,7 +261,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
             debug "GetScriptCheckerOptions: Creating for stand-alone file or script: '%s'" fileName
             let! opts = checkerInstance.GetProjectOptionsFromScript(fileName, source, fakeDateTimeRepresentingTimeLoaded projFilename)
                 
-            let results =         
+            let results =
                 // The FSharpChecker resolution sometimes doesn't include FSharp.Core and other essential assemblies, so we need to include them by hand
                 if opts.OtherOptions |> Seq.exists (fun s -> s.Contains("FSharp.Core.dll")) then
                     match fscVersion with
@@ -308,7 +289,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
               
             // Print contents of check option for debugging purposes
             debug "GetScriptCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A" 
-                                    results.ProjectFileName results.ProjectFileNames results.OtherOptions results.IsIncompleteTypeCheckEnvironment results.UseScriptResolutionRules        
+                                    results.ProjectFileName results.ProjectFileNames results.OtherOptions results.IsIncompleteTypeCheckEnvironment results.UseScriptResolutionRules
             return results
         with e -> 
             return failwithf "Exception when getting check options for '%s'\n.Details: %A" fileName e
@@ -327,7 +308,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           ReferencedProjects = referencedProjects }
     debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
                                     opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
-    opts     
+    opts
 
   member __.ParseFileInProject(projectOptions, fileName: string, src) = 
     async {
@@ -383,12 +364,12 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
              let! result = fileCheckResults.GetSymbolUseAtLocation(line + 1, symbol.RightColumn, lineStr, [symbol.Text])
              match result with
              | Some fsSymbolUse ->
-                 let! refs =                    
+                 let! refs =
                     let dependentProjects = dependentProjectsOptions |> Seq.toArray
                     
                     dependentProjects |> Async.Array.mapi (fun index opts ->
-                          async {   
-                            try                         
+                          async {
+                            try
                                 let projectName = Path.GetFileNameWithoutExtension(opts.ProjectFileName)
                                 reportProgress |> Option.iter (fun progress -> progress projectName index dependentProjects.Length)
                                 let! projectResults = checkerAsync (fun x -> x.ParseAndCheckProject opts)
@@ -407,46 +388,11 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.InvalidateConfiguration options =
       checkerAsync <| fun checker -> async { checker.InvalidateConfiguration options }
 
-  // additions
-
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member x.ProcessParseTrees(projectFilename, openDocuments, files: string[], args, fscVersion, parseTreeHandler, ct: System.Threading.CancellationToken) = 
-      let rec loop i options = 
-        async {
-          if not ct.IsCancellationRequested && i < files.Length then
-              let file = files.[i]
-              let source = 
-                  match Map.tryFind file openDocuments with
-                  | None -> try Some(File.ReadAllText file) with _ -> None 
-                  | x -> x
-              let! options = 
-                async {
-                  match source with
-                  | Some source ->
-                      let! opts = 
-                        async {
-                          match options with
-                          | None -> 
-                              return! x.GetCheckerOptions(file, projectFilename, source, files, args, [||], fscVersion)
-                          | Some opts -> 
-                              return opts
-                        }
-                      let! parseResults = checkerInstance.ParseFileInProject(file, source, opts)
-                      match parseResults.ParseTree with
-                      | Some tree -> parseTreeHandler tree
-                      | None -> ()
-                      return Some opts
-                  | None -> 
-                      return options
-                }
-              return! loop (i + 1) options
-          }
-      loop 0 None
-
-    member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
-                                           checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
+  member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
+                                         checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
 
         async {
             let! results = pf.TimeAsync "LS ParseAndCheckFileInProject" <| fun _ ->
@@ -519,7 +465,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                                     // So we add a FullName without having the type part.
                                     if idents.Length > 1 then
                                         yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
-                                 |]   
+                                 |]
                         |  _ -> None
                         |> Option.getOrElse [|symbolUse.Symbol.FullName|]
                         |> Array.map (fun fullName -> fullName.Split '.')
@@ -575,7 +521,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
         async {
             let! checkResults = x.ParseAndCheckFileInProject (projectOptions, fileName, source, AllowStaleResults.No)
             return 
-                Some [ match checkResults.GetPartialAssemblySignature() with
+                Some [ match checkResults.PartialAssemblySignature with
                        | Some signature -> 
                            yield! AssemblyContentProvider.getAssemblySignatureContent AssemblyContentType.Full signature
                        | None -> ()

@@ -128,7 +128,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
                         let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
                         let! errors =
                             asyncMaybe {
-                                let! errors = checkResults.GetErrors()
+                                let! errors = checkResults.CheckErrors
                                 do! (if Array.isEmpty errors then None else Some())
                                 return!
                                     seq { for e in errors do

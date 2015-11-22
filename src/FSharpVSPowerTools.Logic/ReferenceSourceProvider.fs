@@ -14,9 +14,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 // Reference https://github.com/SLaks/Ref12/blob/master/Ref12/Services/ReferenceSourceProvider.cs
 
 type ReferenceSourceProvider(baseUrl: string) =
-    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                Interval = TimeSpan.FromMinutes(60.0))
-
+    let timer = DispatcherTimer (DispatcherPriority.ApplicationIdle, Interval = TimeSpan.FromMinutes 60.)
     let mutable availableAssemblies = Set.empty
 
     let lookUpAvailableAssemblies() =
@@ -42,21 +40,11 @@ type ReferenceSourceProvider(baseUrl: string) =
     let networkAvailabilitySubscription = NetworkChange.NetworkAvailabilityChanged.Subscribe(networkAvailabilityChanged)
     let networkAddressSubscription = NetworkChange.NetworkAddressChanged.Subscribe(fun _ -> lookUpAvailableAssemblies())
 
-    let byteArrayToHexString (bytes: byte []) =
-        let length = bytes.Length
-        let chars = Array.zeroCreate length
-        for i in 0..length/2-1 do
-            let b1 = byte (bytes.[i] >>> 4)
-            chars.[i * 2] <- if b1 > 9uy then char (b1 + 87uy) else char (b1 + 0x30uy)
-            let b2 = byte (bytes.[i] &&& 0xFuy)
-            chars.[i * 2 + 1] <- if b2 > 9uy then char (b2 + 87uy) else char (b2 + 0x30uy)
-        String(chars)
-
     let getMD5Hash (input: string) =
         use md5 = MD5.Create()
         let bytes = Encoding.UTF8.GetBytes(input)
         let hashBytes = md5.ComputeHash(bytes)
-        byteArrayToHexString hashBytes
+        Array.toShortHexString hashBytes
 
     member __.IsActivated =
         timer.IsEnabled

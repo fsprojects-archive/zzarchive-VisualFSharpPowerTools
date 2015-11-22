@@ -101,7 +101,7 @@ let validateSignature source signature =
     let results =
         languageService.ParseAndCheckFileInProject(opts, signatureFile, signature, AllowStaleResults.No)
         |> Async.RunSynchronously
-    results.GetErrors()
+    results.CheckErrors
 
 let generateDefinitionFromPos caretPos src =
     let signature = Option.get (tryGenerateDefinitionFromPos caretPos src)

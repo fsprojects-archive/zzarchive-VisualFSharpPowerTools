@@ -9,14 +9,14 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
-
+ 
 type GoToDefinitionCommandHelper() =    
     inherit VsTestBase()
     let command = new GoToDefinitionFilterProvider(
                         editorFactory = base.VsEditorAdaptersFactoryService,
                         editorOptionsFactory = base.EditorOptionsFactoryService,
                         textDocumentFactoryService = base.DocumentFactoryService,                            
-                        fsharpVsLanguageService = base.VsLanguageService,
+                        languageService = base.VsLanguageService,
                         serviceProvider = base.ServiceProvider,
                         projectFactory = base.ProjectFactory,
                         referenceSourceProvider = base.ReferenceSourceProvider)

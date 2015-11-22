@@ -19,13 +19,11 @@ module Prelude =
 
 [<RequireQualifiedAccess>]
 module Null =
-
     let inline fill defaultValue x = 
         if isNull x then null else defaultValue
 
     let inline fillWith (genDefaultValue: unit -> 'T) x = 
         if isNull x then null else genDefaultValue ()
-
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -294,6 +292,51 @@ module Array =
             i <- i + 1
         result
 
+    /// <summary>
+    /// Splits the collection into two (2) collections, containing the elements for which the given function returns
+    /// <c>Choice1Of2</c> or <c>Choice2Of2</c>, respectively.
+    /// </summary>
+    /// <param name="partitioner"></param>
+    /// <param name="array"></param>
+    /// <returns></returns>
+    /// <remarks>
+    /// This function is similar to Array.partition, but it allows the returned collections to have different types.
+    /// </remarks>
+    let mapPartition (partitioner : 'T -> Choice<'U1, 'U2>) array : 'U1[] * 'U2[] =
+        // Preconditions
+        checkNonNull "array" array
+        
+        // OPTIMIZATION : If the input array is empty, immediately return empty results.
+        if Array.isEmpty array then
+            Array.empty, Array.empty
+        else
+            // Use ResizeArrays to hold the mapped values.
+            let resultList1 = ResizeArray ()
+            let resultList2 = ResizeArray ()
+    
+            // Partition the array, adding each element to the ResizeArray
+            // specific by the partition function.
+            array
+            |> Array.iter (fun el ->
+                match partitioner el with
+                | Choice1Of2 value ->
+                    resultList1.Add value
+                | Choice2Of2 value ->
+                    resultList2.Add value)
+    
+            // Convert the ResizeArrays to arrays and return them.
+            resultList1.ToArray (),
+            resultList2.ToArray ()
+
+    let toShortHexString (bytes: byte[]) =
+        let length = bytes.Length
+        let chars = Array.zeroCreate length
+        for i in 0..length/2-1 do
+            let b1 = byte (bytes.[i] >>> 4)
+            chars.[i * 2] <- if b1 > 9uy then char (b1 + 87uy) else char (b1 + 0x30uy)
+            let b2 = byte (bytes.[i] &&& 0xFuy)
+            chars.[i * 2 + 1] <- if b2 > 9uy then char (b2 + 87uy) else char (b2 + 0x30uy)
+        String chars
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -345,7 +388,6 @@ module Option =
         match x with
         | Some x -> [x]
         | None -> []
-
 
     let inline iterElse someAction noneAction opt =
         match opt with
@@ -593,7 +635,6 @@ module AsyncMaybe =
 
 [<AutoOpen; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Pervasive =
-    open System.Diagnostics
     open System.Threading
 
 // Redirect debug output to F# Interactive for debugging purpose.
@@ -838,6 +879,11 @@ module Reflection =
         let p = Expr.Parameter(typeof<obj>)
         let lambda = Expr.Lambda<Func<obj, 'R>>(Expr.Field(Expr.Convert(p, f.DeclaringType) :> Expr, f) :> Expr, p)
         lambda.Compile().Invoke
+
+module File =
+    open System.IO
+
+    let tryGetLastWriteTime file = Option.attempt (fun _ -> FileInfo(file).LastWriteTimeUtc)
 
 open System.Text
 open System.Diagnostics
