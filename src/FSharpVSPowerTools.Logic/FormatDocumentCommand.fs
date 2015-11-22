@@ -8,7 +8,7 @@ open Fantomas
 open FSharpVSPowerTools.ProjectSystem
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
-    inherit FormatCommand(getConfig)
+    inherit FormatCommand(getConfig, hasSelection = false)
 
     override x.Execute() =
         use _disposable = Cursor.wait()

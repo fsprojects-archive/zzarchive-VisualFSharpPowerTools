@@ -10,7 +10,7 @@ open FSharpVSPowerTools.ProjectSystem
 open Fantomas
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
-    inherit FormatCommand(getConfig)
+    inherit FormatCommand(getConfig, hasSelection = true)
 
     let mutable isFormattingCursorPosition = false
     let mutable selStartPos = 0

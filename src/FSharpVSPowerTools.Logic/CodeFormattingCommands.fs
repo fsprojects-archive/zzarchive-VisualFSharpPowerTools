@@ -29,12 +29,14 @@ type CommandBase() =
     abstract Execute: unit -> unit
 
 [<AbstractClass>]
-type FormatCommand(getConfig: Func<FormatConfig>) =
+type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
     inherit CommandBase()
 
     // Rebind to this method call as it's more F#-friendly
     let getConfig() = getConfig.Invoke()
 
+    let (CallInUIContext callInUIContext) = CallInUIContext.FromCurrentThread()
+        
     member x.TryCreateTextUndoTransaction() =
         let textBufferUndoManager = x.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager(x.TextBuffer)
 
@@ -75,10 +77,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
         |> Async.StartInThreadPoolSafe
 
     member x.ExecuteFormatCore() =
-        let (CallInUIContext callInUIContext) = CallInUIContext.FromCurrentThread()
         asyncMaybe {
-            let source = x.TextBuffer.CurrentSnapshot.GetText()
-            
             let config = getConfig()
             let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
@@ -88,9 +87,16 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                     | true, textDocument ->
                         Some textDocument.FilePath
                     | _ -> None
+                let! source = x.Services.OpenDocumentTracker.TryGetDocumentText filePath
                 let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! document = dte.GetCurrentDocument filePath
-                let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
+                let filePath = if hasSelection then "/tmp.fsx" else filePath
+                let! project =
+                    if hasSelection then
+                        let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
+                        Some (VirtualProjectProvider(source, filePath, vsVersion) :> IProjectProvider)
+                    else
+                        x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
                 let! projectOptions = x.Services.LanguageService.GetProjectCheckerOptions project |> liftAsync
                 let checker = x.Services.LanguageService.RawChecker
                 let! formattingResult = x.GetFormatted(filePath, source, config, projectOptions, checker) |> liftAsync
