@@ -88,15 +88,27 @@ namespace FSharpVSPowerTools
     [Export]
     public class ClassificationColorManager 
     {
-        private readonly IDictionary<VisualStudioTheme, IDictionary<string, FontColor>> themeColors =
-            new Dictionary<VisualStudioTheme, IDictionary<string, FontColor>>();
+        private ThemeManager _themeManager;
+        private IClassificationFormatMapService _classificationFormatMapService;
+        private IClassificationTypeRegistryService _classificationTypeRegistry;
 
-        private VisualStudioTheme lastTheme = VisualStudioTheme.Unknown;
+        private Dictionary<string, FontColor> lightAndBlueColors;
+        private Dictionary<string, FontColor> darkColors;
 
-        public ClassificationColorManager()
+        private VisualStudioTheme _previousTheme = VisualStudioTheme.Unknown;
+
+        [ImportingConstructor]
+        public ClassificationColorManager(
+            ThemeManager themeManager,
+            IClassificationFormatMapService classificationFormatMapService,
+            IClassificationTypeRegistryService classificationTypeRegistry)
         {
+            _themeManager = themeManager;
+            _classificationFormatMapService = classificationFormatMapService;
+            _classificationTypeRegistry = classificationTypeRegistry;
+
             // Light/Blue theme colors
-            var lightAndBlueColors = new Dictionary<string, FontColor>
+            lightAndBlueColors = new Dictionary<string, FontColor>
             {
                 { ClassificationTypes.FSharpReferenceType, new FontColor(Color.FromRgb(43, 145, 175)) },
                 { ClassificationTypes.FSharpValueType, new FontColor(Color.FromRgb(43, 145, 175)) },
@@ -111,12 +123,8 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpOperator, new FontColor(Colors.Black) }
             };
 
-            themeColors.Add(VisualStudioTheme.Blue, lightAndBlueColors);
-            themeColors.Add(VisualStudioTheme.Light, lightAndBlueColors);
-            themeColors.Add(VisualStudioTheme.Unknown, lightAndBlueColors);
-
             // Dark theme colors
-            var darkColors = new Dictionary<string, FontColor>
+            darkColors = new Dictionary<string, FontColor>
             {
                 { ClassificationTypes.FSharpReferenceType, new FontColor(Color.FromRgb(78, 201, 176)) },
                 { ClassificationTypes.FSharpValueType, new FontColor(Color.FromRgb(78, 201, 176)) },
@@ -130,22 +138,11 @@ namespace FSharpVSPowerTools
                 { ClassificationTypes.FSharpEscaped, new FontColor(Color.FromRgb(190, 0, 94)) },
                 { ClassificationTypes.FSharpOperator, new FontColor(Color.FromRgb(220, 220, 220)) }
             };
-
-            themeColors.Add(VisualStudioTheme.Dark, darkColors);
         }
-
-        [Import]
-        private ThemeManager themeManager = null;
-
-        [Import]
-        private IClassificationFormatMapService classificationFormatMapService = null;
-
-        [Import]
-        private IClassificationTypeRegistryService classificationTypeRegistry = null;
 
         public FontColor GetDefaultColors(string category) 
         {
-            var currentTheme = themeManager.GetCurrentTheme();
+            var currentTheme = _themeManager.GetCurrentTheme();
 
             bool success;
             FontColor color;
@@ -153,7 +150,7 @@ namespace FSharpVSPowerTools
             {
                 case VisualStudioTheme.Dark:
                     color = new FontColor(Color.FromRgb(220, 220, 220), Color.FromRgb(30, 30, 30));
-                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    success = darkColors.TryGetValue(category, out color);
                     if (!success)
                         LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
@@ -162,7 +159,7 @@ namespace FSharpVSPowerTools
                 case VisualStudioTheme.Blue:
                 default:
                     color = new FontColor(Colors.Black, Colors.White);
-                    success = themeColors[currentTheme].TryGetValue(category, out color);
+                    success = lightAndBlueColors.TryGetValue(category, out color);
                     if (!success)
                         LoggingModule.logWarningMessage(() => String.Format("Theme manager can't read colors correctly from {0} theme.", currentTheme));
                     return color;
@@ -171,14 +168,14 @@ namespace FSharpVSPowerTools
 
         public void UpdateColors()
         {
-            var currentTheme = themeManager.GetCurrentTheme();
+            var currentTheme = _themeManager.GetCurrentTheme();
 
-            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != lastTheme)
+            if (currentTheme != VisualStudioTheme.Unknown && currentTheme != _previousTheme)
             {
-                lastTheme = currentTheme;
+                _previousTheme = currentTheme;
 
-                var colors = themeColors[currentTheme];
-                var formatMap = classificationFormatMapService.GetClassificationFormatMap(category: "text");
+                var colors = currentTheme == VisualStudioTheme.Dark ? darkColors : lightAndBlueColors;
+                var formatMap = _classificationFormatMapService.GetClassificationFormatMap(category: "text");
                     
                 try
                 {
@@ -188,7 +185,7 @@ namespace FSharpVSPowerTools
                         string type = pair.Key;
                         FontColor color = pair.Value;
 
-                        var classificationType = classificationTypeRegistry.GetClassificationType(type);
+                        var classificationType = _classificationTypeRegistry.GetClassificationType(type);
                         var oldProp = formatMap.GetTextProperties(classificationType);
 
                         var foregroundBrush = 
