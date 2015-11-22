@@ -9,6 +9,7 @@ using System;
 using FSharpVSPowerTools.PrintfSpecifiersHighlightUsage;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.PlatformUI;
 
 namespace FSharpVSPowerTools
 {
@@ -21,7 +22,6 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
-        readonly ShellEventListener _shellEventListener;
         readonly PrintfColorManager _printfColorManager;
 
         [ImportingConstructor]
@@ -30,19 +30,18 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            ShellEventListener shellEventListener,
             PrintfColorManager printfColorManager)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _shellEventListener = shellEventListener;
             _printfColorManager = printfColorManager;
-            _shellEventListener.ThemeChanged += UpdateTheme;
+
+            VSColorTheme.ThemeChanged += UpdateTheme;
         }
 
-        void UpdateTheme(object sender, EventArgs e)
+        void UpdateTheme(EventArgs e)
         {
             _printfColorManager.UpdateColors();
         }
@@ -67,7 +66,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            _shellEventListener.ThemeChanged -= UpdateTheme;
+            VSColorTheme.ThemeChanged -= UpdateTheme;
         }
     }
 

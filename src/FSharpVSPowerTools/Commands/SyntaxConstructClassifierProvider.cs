@@ -1,6 +1,7 @@
 ﻿using FSharpVSPowerTools.ProjectSystem;
 using FSharpVSPowerTools.SyntaxColoring;
 using Microsoft.VisualStudio.Language.StandardClassification;
+using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
@@ -408,7 +409,6 @@ namespace FSharpVSPowerTools
     [TextViewRole(PredefinedTextViewRoles.Document)]
     public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
-        private readonly ShellEventListener _shellEventListener;
         private readonly ClassificationColorManager _classificationColorManager;
         private readonly IClassificationTypeRegistryService _classificationRegistry;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
@@ -419,7 +419,6 @@ namespace FSharpVSPowerTools
         [ImportingConstructor]
         public SyntaxConstructClassifierProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-            ShellEventListener shellEventListener,
             ClassificationColorManager classificationColorManager,
             IClassificationTypeRegistryService classificationRegistry,
             ITextDocumentFactoryService textDocumentFactoryService,
@@ -430,15 +429,14 @@ namespace FSharpVSPowerTools
             _classificationColorManager = classificationColorManager;
             _classificationRegistry = classificationRegistry;
             _textDocumentFactoryService = textDocumentFactoryService;
-            _shellEventListener = shellEventListener;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _projectFactory = projectFactory;
 
             // Receive notification for Visual Studio theme change
-            _shellEventListener.ThemeChanged += UpdateTheme;
+            VSColorTheme.ThemeChanged += UpdateTheme;
         }
 
-        private void UpdateTheme(object sender, EventArgs e)
+        private void UpdateTheme(EventArgs e)
         {
             _classificationColorManager.UpdateColors();
         }
@@ -469,7 +467,7 @@ namespace FSharpVSPowerTools
 
         public void Dispose()
         {
-            _shellEventListener.ThemeChanged -= UpdateTheme;
+            VSColorTheme.ThemeChanged -= UpdateTheme;
         }
     }
 }

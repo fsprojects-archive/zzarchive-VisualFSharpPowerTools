@@ -14,7 +14,6 @@ type PrintfSpecifiersUsageTaggerHelper() =
                 serviceProvider = base.ServiceProvider,
                 projectFactory = base.ProjectFactory,
                 textDocumentFactoryService = base.DocumentFactoryService,
-                shellEventListener = base.ShellEventListener,
                 printfColorManager = null)
 
     member __.GetView buffer =
