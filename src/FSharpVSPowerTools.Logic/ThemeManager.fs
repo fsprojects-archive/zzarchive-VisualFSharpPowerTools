@@ -9,6 +9,7 @@ open FSharpVSPowerTools.ProjectSystem
 open System.Drawing
 open Microsoft.Win32
 open EnvDTE
+open Microsoft.VisualStudio.PlatformUI
 
 type VisualStudioTheme =
     | Unknown = 0
@@ -62,14 +63,11 @@ type ThemeManager [<ImportingConstructor>]
             | _ -> None)
         |> Option.getOrTry (fun _ ->
             try 
-                let dte = serviceProvider.GetService<DTE, SDTE>()
-                let fontsAndColors = 
-                    // This method will not work well for customized themes, but we should not give up.
-                    dte.Properties("FontsAndColors", "TextEditor").Item("FontsAndColorsItems").Object :?> FontsAndColorsItems
-                let background = ColorTranslator.FromOle(int (fontsAndColors.Item("Plain Text").Background))
-                match background.R, background.G, background.B with
-                | 30uy, 30uy, 30uy -> VisualStudioTheme.Dark
-                | _ -> VisualStudioTheme.Light
+                let color = VSColorTheme.GetThemedColor EnvironmentColors.ToolWindowTextColorKey
+                if color.GetBrightness() > 0.5f then
+                    VisualStudioTheme.Dark
+                else
+                    VisualStudioTheme.Light
             with _ -> 
-                Logging.logError (fun _ -> "Can't read Visual Studio themes from Fonts and Colors Items.")
+                Logging.logError (fun _ -> "Can't read Visual Studio themes from environment colors.")
                 VisualStudioTheme.Unknown)
