@@ -8,12 +8,9 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
-using System.Diagnostics;
 using System.Windows.Media;
 
 namespace FSharpVSPowerTools
@@ -86,18 +83,6 @@ namespace FSharpVSPowerTools
         [Name(FSharpOperator)]
         [BaseDefinition("identifier")]
         internal static ClassificationTypeDefinition FSharpOperatorClassificationType = null;
-    }
-
-    public class FontColor
-    {
-        public readonly Color? Foreground;
-        public readonly Color? Background;
-
-        public FontColor(Color? foreground = null, Color? background = null)
-        {
-            Foreground = foreground;
-            Background = background;
-        }
     }
 
     [Export]

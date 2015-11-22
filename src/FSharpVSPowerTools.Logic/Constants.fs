@@ -38,6 +38,8 @@ let [<Literal>] fsharpPrintf = "FSharp.Printf"
 let [<Literal>] fsharpEscaped = "FSharp.Escaped"
 let [<Literal>] fsharpOperator = "FSharp.Operator"
 
+let [<Literal>] fsharpPrintfTagType = "MarkerFormatDefinition/HighlightPrintf"
+
 let [<Literal>] depthAdornmentLayerName = "FSharpDepthFullLineAdornment"
 
 let cmdidStandardRenameCommand = uint32 VSConstants.VSStd2KCmdID.RENAME // ECMD_RENAME

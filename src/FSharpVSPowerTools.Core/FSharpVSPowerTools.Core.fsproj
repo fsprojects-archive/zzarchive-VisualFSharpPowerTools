@@ -89,6 +89,7 @@
     <Compile Include="UnopenedNamespacesResolver.fs" />
     <Compile Include="SignatureGenerator.fs" />
     <Compile Include="TaskListCommentExtractor.fs" />
+    <Compile Include="PrintfSpecifiersUsageGetter.fs" />
     <None Include="Scratchpad.fsx" />
     <Content Include="paket.references" />
   </ItemGroup>

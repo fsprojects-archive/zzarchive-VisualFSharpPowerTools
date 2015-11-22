@@ -14,7 +14,7 @@ type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte:
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =
-    static let serviceProvider = MockServiceProvider()        
+    static let serviceProvider = MockServiceProvider()
     
     static do serviceProvider.Services.[nameOf<SVsActivityLog>] <- MockActivityLog()
     static do serviceProvider.Services.[nameOf<SVsShell>] <- MockVsShell()
