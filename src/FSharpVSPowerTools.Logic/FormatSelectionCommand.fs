@@ -8,9 +8,11 @@ open Fantomas.FormatConfig
 open Fantomas.CodeFormatter
 open FSharpVSPowerTools.ProjectSystem
 open Fantomas
+open FSharpVSPowerTools
+open Microsoft.VisualStudio.Shell.Interop
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
-    inherit FormatCommand(getConfig, hasSelection = true)
+    inherit FormatCommand(getConfig)
 
     let mutable isFormattingCursorPosition = false
     let mutable selStartPos = 0
@@ -26,7 +28,17 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
         use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
-    override x.GetFormatted(filePath, source, config, projectOptions, checker) =
+    override x.AdjustProject(_, source) =
+        maybe {
+            let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
+            // We have to use a temporary name for formatting selection due to hard-code information in the AST
+            let filePath = "/tmp.fsx"
+            let project = VirtualProjectProvider(source, filePath, vsVersion) :> IProjectProvider
+            return (project, filePath)
+        }
+
+    override x.GetFormattedResult(filePath, source, config, projectOptions, checker) =
         async {
             if isFormattingCursorPosition then
                 let caretPos = VirtualSnapshotPoint(x.TextBuffer.CurrentSnapshot, int x.TextView.Caret.Position.BufferPosition)

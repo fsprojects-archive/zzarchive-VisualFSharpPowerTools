@@ -6,15 +6,25 @@ open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
 open Fantomas
 open FSharpVSPowerTools.ProjectSystem
+open FSharpVSPowerTools
+open Microsoft.VisualStudio.Shell.Interop
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
-    inherit FormatCommand(getConfig, hasSelection = false)
+    inherit FormatCommand(getConfig)
 
     override x.Execute() =
         use _disposable = Cursor.wait()
         x.ExecuteFormat()
 
-    override __.GetFormatted(filePath, source, config, projectOptions, checker) =
+    override x.AdjustProject(filePath, _) =
+        maybe {
+            let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let! document = dte.GetCurrentDocument filePath
+            let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
+            return (project, filePath)
+        }
+
+    override __.GetFormattedResult(filePath, source, config, projectOptions, checker) =
         async {
             let! formattedText = CodeFormatter.FormatDocumentAsync(filePath, source, config, projectOptions, checker)
 

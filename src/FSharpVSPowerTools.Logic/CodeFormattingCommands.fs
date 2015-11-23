@@ -29,7 +29,7 @@ type CommandBase() =
     abstract Execute: unit -> unit
 
 [<AbstractClass>]
-type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
+type FormatCommand(getConfig: Func<FormatConfig>) =
     inherit CommandBase()
 
     // Rebind to this method call as it's more F#-friendly
@@ -59,7 +59,7 @@ type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
             // ITextUndoHistory exists and can call all of the methods as appropriate. 
             if isNull textUndoTransaction then
                 let! _ = x.ExecuteFormatCore()
-                ()
+                return ()
             else
                 // This command will capture the caret position as it currently exists inside the undo 
                 // transaction.  That way the undo command will reset the caret back to this position.  
@@ -70,9 +70,9 @@ type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
                     // Capture the caret as it exists now.  This way any redo of this edit will 
                     // reposition the caret as it exists now. 
                     editorOperations.AddAfterTextBufferChangePrimitive()
-                    textUndoTransaction.Complete()
+                    return textUndoTransaction.Complete()
                 else
-                    textUndoTransaction.Cancel()
+                    return textUndoTransaction.Cancel()
             }
         |> Async.StartInThreadPoolSafe
 
@@ -88,31 +88,20 @@ type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
                         Some textDocument.FilePath
                     | _ -> None
                 let! source = x.Services.OpenDocumentTracker.TryGetDocumentText filePath
-                let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
-                let! document = dte.GetCurrentDocument filePath
-                let filePath = if hasSelection then "/tmp.fsx" else filePath
-                let! project =
-                    if hasSelection then
-                        let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
-                        Some (VirtualProjectProvider(source, filePath, vsVersion) :> IProjectProvider)
-                    else
-                        x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
+                let! (project, filePath) = x.AdjustProject(filePath, source)
                 let! projectOptions = x.Services.LanguageService.GetProjectCheckerOptions project |> liftAsync
                 let checker = x.Services.LanguageService.RawChecker
-                let! formattingResult = x.GetFormatted(filePath, source, config, projectOptions, checker) |> liftAsync
+                let! formattingResult = x.GetFormattedResult(filePath, source, config, projectOptions, checker) |> liftAsync
                 let! isValid = 
                     CodeFormatter.IsValidFSharpCodeAsync(filePath, formattingResult.NewText, projectOptions, checker)
                     |> liftAsync
                 
                 if isValid then
                     do! callInUIContext (fun _ -> 
-                        use edit = x.TextBuffer.CreateEdit()
                         let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
-
-                        edit.Replace(formattingResult.OldTextStartIndex,
-                                        formattingResult.OldTextLength,
-                                        formattingResult.NewText) |> ignore
-                        edit.Apply() |> ignore
+                        x.TextBuffer.Replace(
+                            Span(formattingResult.OldTextStartIndex, formattingResult.OldTextLength),
+                            formattingResult.NewText) |> ignore
                         x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
                         ) |> liftAsync
 
@@ -141,6 +130,7 @@ type FormatCommand(getConfig: Func<FormatConfig>, hasSelection) =
             | Some scrollBarLine -> originalSnapshot.GetLineNumberFromPosition(int scrollBarLine.Start)
         (caretPos, scrollBarPos, originalSnapshot)
 
-    abstract GetFormatted: filePath:string * source:string * config:FormatConfig * projectOptions:FSharpProjectOptions * checker:FSharpChecker -> Async<FormattingResult>
+    abstract AdjustProject: filePath:string * source:string -> option<IProjectProvider * string>
+    abstract GetFormattedResult: filePath:string * source:string * config:FormatConfig * projectOptions:FSharpProjectOptions * checker:FSharpChecker -> Async<FormattingResult>
     abstract SetNewCaretPosition: caretPos:SnapshotPoint * scrollBarPos:int * originalSnapshot:ITextSnapshot -> unit
 

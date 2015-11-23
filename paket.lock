@@ -2,7 +2,7 @@ NUGET
   remote: http://nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
-    Fantomas (2.0.1)
+    Fantomas (2.0.2)
       FSharp.Compiler.Service (>= 1.4.0.6)
     FSharp.Compiler.Service (1.4.2)
     FSharp.Management (0.3.0)
