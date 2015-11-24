@@ -799,6 +799,7 @@ module Outlining =
         | SimpleType = 40
         | RecordDefn = 41
         | UnionDefn = 42
+        | Comment = 43
 
     [<NoComparison; Struct>]
     type ScopeRange (scope:Scope, collapse:Collapse, r:range) =
@@ -1149,11 +1150,53 @@ module Outlining =
               yield! collectOpens decls
               yield! Seq.collect parseDeclaration decls }
 
-    let getOutliningRanges tree =
+    let getCommentRanges (lines: string[]) =
+        lines
+        |> Array.foldi (fun ((lastLineNum, currentGroup, groups) as state) lineNum line ->
+            match line.TrimStart() with
+            | x when x.StartsWith "//" || x.StartsWith "///" ->
+                if lineNum = lastLineNum + 1 then
+                    lineNum, ((lineNum, line) :: currentGroup), groups
+                else 
+                    let groups = 
+                        match currentGroup with
+                        | [] -> groups
+                        | _ -> currentGroup :: groups
+                    lineNum, [lineNum, line], groups
+                    
+            | _ -> state) 
+           (-1, [], [])
+        |> fun (_, lastGroup, groups) -> 
+            match lastGroup with 
+            | [] -> groups 
+            | _ -> lastGroup :: groups
+            |> List.rev
+        |> fun groups ->
+            groups
+            |> List.choose (fun g ->
+                match g with
+                | [] | [_] -> None
+                | _ ->
+                    let g = g |> List.rev |> Array.ofList
+                    let startLine, endLine = fst g.[0], fst g.[g.Length - 1]
+                    let startCol = (snd g.[0]).IndexOf '/'
+                    let endCol = (snd g.[g.Length - 1]).TrimEnd().Length
+                    ScopeRange(
+                        Scope.Comment, 
+                        Collapse.Same, 
+                        Range.mkRange 
+                                "" 
+                                (Range.mkPos (startLine + 1) startCol)
+                                (Range.mkPos (endLine + 1) endCol)) 
+                    |> Some)
+
+    let getOutliningRanges sourceLines tree =
         match tree with
-        | ParsedInput.ImplFile(implFile) ->
+        | ParsedInput.ImplFile implFile ->
             let (ParsedImplFileInput (_, _, _, _, _, modules, _)) = implFile
-            Seq.collect parseModuleOrNamespace modules
+            let astBasedRanges = Seq.collect parseModuleOrNamespace modules
+            let commentRanges = getCommentRanges sourceLines
+            Seq.append astBasedRanges commentRanges
         | _ -> Seq.empty
 
 module Printf =

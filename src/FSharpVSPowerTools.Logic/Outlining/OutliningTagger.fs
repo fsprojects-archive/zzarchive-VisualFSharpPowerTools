@@ -76,7 +76,8 @@ type OutliningTagger
      textEditorFactoryService: ITextEditorFactoryService,
      projectionBufferFactoryService: IProjectionBufferFactoryService,
      projectFactory: ProjectFactory,
-     languageService: VSLanguageService) as self =
+     languageService: VSLanguageService,
+     openDocumentsTracker: IOpenDocumentsTracker) as self =
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
@@ -165,13 +166,14 @@ type OutliningTagger
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
+            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = 
-                    ast 
-                    |> getOutliningRanges 
+                    (String.getLines source, ast)
+                    ||> getOutliningRanges 
                     |> Seq.filter (fun x -> outliningEnabled x.Scope)
                     |> Seq.choose (fromScopeRange snapshot)
                     |> Array.ofSeq
@@ -319,6 +321,7 @@ type OutliningTagger
         | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
         | Scope.For                   
         | Scope.While                 -> options.LoopsCollapsedByDefault
+        | Scope.Comment               -> options.CommentsCollapseByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda

@@ -25,6 +25,7 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _vsLanguageService;
         private readonly IProjectionBufferFactoryService _projectionBufferFactoryService;
         private readonly IOutliningManagerService _outliningManagerService;
+        private readonly IOpenDocumentsTracker _openDocumentsTracker;
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
@@ -34,7 +35,8 @@ namespace FSharpVSPowerTools
             IProjectionBufferFactoryService projectionBufferFactoryService,
             IOutliningManagerService outliningManagerService,
             ProjectFactory projectFactory,
-            VSLanguageService vsLanguageService)
+            VSLanguageService vsLanguageService,
+            IOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -43,6 +45,7 @@ namespace FSharpVSPowerTools
             _outliningManagerService = outliningManagerService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
+            _openDocumentsTracker = openDocumentsTracker;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
@@ -61,7 +64,8 @@ namespace FSharpVSPowerTools
                        _textEditorFactoryService,
                        _projectionBufferFactoryService,
                        _projectFactory,
-                       _vsLanguageService));
+                       _vsLanguageService,
+                       _openDocumentsTracker));
             }
 
             return null;
