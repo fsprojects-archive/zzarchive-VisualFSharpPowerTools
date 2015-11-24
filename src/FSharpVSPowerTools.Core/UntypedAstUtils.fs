@@ -1154,7 +1154,7 @@ module Outlining =
         lines
         |> Array.foldi (fun ((lastLineNum, currentGroup, groups) as state) lineNum line ->
             match line.TrimStart() with
-            | x when x.StartsWith "//" || x.StartsWith "///" ->
+            | x when x.StartsWith "//" ->
                 if lineNum = lastLineNum + 1 then
                     lineNum, ((lineNum, line) :: currentGroup), groups
                 else 

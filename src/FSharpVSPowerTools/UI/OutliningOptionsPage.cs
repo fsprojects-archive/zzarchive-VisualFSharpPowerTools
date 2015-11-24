@@ -57,6 +57,9 @@ namespace FSharpVSPowerTools {
 
             AttributesEnabled = false;
             AttributesCollapsedByDefault = false;
+
+            CommentsEnabled = true;
+            CommentsCollapsedByDefault = true;
             
             TooltipZoomLevel = 80;
         }
@@ -92,6 +95,8 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
             AttributesEnabled = _control.Attributes.OutliningEnabled;
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
+            CommentsEnabled = _control.Comments.Enabled;
+            CommentsCollapsedByDefault = _control.Comments.CollapsedByDefault;
             TooltipZoomLevel = _control.Tooltip.InputValue;
 
             base.OnApply(e);
@@ -186,6 +191,12 @@ namespace FSharpVSPowerTools {
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool AttributesCollapsedByDefault { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool CommentsEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool CommentsCollapsedByDefault { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public int TooltipZoomLevel { get; set; }

@@ -89,7 +89,7 @@ type IOutliningOptions =
     abstract AttributesEnabled: bool with get, set
     abstract AttributesCollapsedByDefault: bool with get, set
     abstract CommentsEnabled: bool with get, set
-    abstract CommentsCollapseByDefault: bool with get, set
+    abstract CommentsCollapsedByDefault: bool with get, set
     abstract TooltipZoomLevel: int with get, set
 
 [<AutoOpen>]

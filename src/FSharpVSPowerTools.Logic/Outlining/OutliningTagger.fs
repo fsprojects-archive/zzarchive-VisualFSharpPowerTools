@@ -157,6 +157,7 @@ type OutliningTagger
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
+        | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
@@ -321,7 +322,7 @@ type OutliningTagger
         | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
         | Scope.For                   
         | Scope.While                 -> options.LoopsCollapsedByDefault
-        | Scope.Comment               -> options.CommentsCollapseByDefault
+        | Scope.Comment               -> options.CommentsCollapsedByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda

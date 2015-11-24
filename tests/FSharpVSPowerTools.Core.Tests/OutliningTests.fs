@@ -43,8 +43,8 @@ let parseTree (source: string) =
     try
         match ast with
         | Some tree ->
-                getOutliningRanges tree
-                |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
+                getOutliningRanges (String.getLines source) tree
+                |> Seq.filter (fun sr -> sr.Range.StartLine <> sr.Range.EndLine)
                 |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
                 |> Seq.iter (fun x -> printfn "%s" <| string x)
         | None -> failwithf "Expected there to be a parse tree for source:\n%s" source
@@ -59,8 +59,8 @@ let (=>) (source: string) (expectedRanges: (Line * Col * Line * Col) list) =
         match ast with
         | Some tree ->
             let actualRanges =
-                getOutliningRanges tree
-                |> Seq.filter (fun sr-> sr.Range.StartLine <> sr.Range.EndLine)
+                getOutliningRanges (String.getLines source) tree
+                |> Seq.filter (fun sr -> sr.Range.StartLine <> sr.Range.EndLine)
                 |> Seq.map (fun r ->  r.Range.StartLine, r.Range.StartColumn, r.Range.EndLine, r.Range.EndColumn)
                 |> List.ofSeq
             CollectionAssert.AreEquivalent (List.sort expectedRanges, List.sort actualRanges)

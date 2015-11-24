@@ -15,7 +15,8 @@ type OutliningTaggerHelper() =
                             textDocumentFactoryService = base.DocumentFactoryService,
                             textEditorFactoryService = null,
                             projectionBufferFactoryService = null,
-                            outliningManagerService = null)
+                            outliningManagerService = null,
+                            openDocumentsTracker = base.OpenDocumentsTracker)
 
     member __.GetView(buffer) =
         createMockTextView buffer
