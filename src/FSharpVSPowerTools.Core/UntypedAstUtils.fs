@@ -1159,7 +1159,8 @@ module Outlining =
     type private CommentList = 
         { Lines: ResizeArray<LineNum * LineStr>
           Type: CommentType }
-        static member New ty = { Type = ty; Lines = ResizeArray() }
+        static member New ty lineStr = 
+            { Type = ty; Lines = ResizeArray [| lineStr |] }
 
     let private (|Comment|_|) line =
         match line with
@@ -1170,17 +1171,17 @@ module Outlining =
     let getCommentRanges (lines: string[]) =
         let comments: CommentList list =
             lines
-            |> Array.foldi (fun ((lastLineNum, currentComment: CommentList option, comments) as state) lineNum lineStr ->
+            |> Array.foldi (fun ((lastLineNum, currentComment: CommentList option, result) as state) lineNum lineStr ->
                 match lineStr.TrimStart(), currentComment with
                 | Comment commentType, Some comment ->
                     if comment.Type = commentType && lineNum = lastLineNum + 1 then
                         comment.Lines.Add (lineNum, lineStr)
-                        lineNum, currentComment, comments
-                    else lineNum, Some (CommentList.New commentType), comment :: comments
+                        lineNum, currentComment, result
+                    else lineNum, Some (CommentList.New commentType (lineNum, lineStr)), comment :: result
                 | Comment commentType, None -> 
-                    lineNum, Some (CommentList.New commentType), comments
+                    lineNum, Some (CommentList.New commentType (lineNum, lineStr)), result
                 | _, Some comment -> 
-                    lineNum, None, comment :: comments
+                    lineNum, None, comment :: result
                 | _ -> state) 
                (-1, None, [])
             |> fun (_, lastComment, comments) -> 
@@ -1191,10 +1192,11 @@ module Outlining =
                 |> List.rev
 
         comments
+        |> List.filter (fun comment -> comment.Lines.Count > 1)
         |> List.map (fun comment ->
-            let lines = comment.Lines.ToArray() |> Array.rev
+            let lines = comment.Lines
             let startLine, startStr = lines.[0]
-            let endLine, endStr = lines.[lines.Length - 1]
+            let endLine, endStr = lines.[lines.Count - 1]
             let startCol = startStr.IndexOf '/'
             let endCol = endStr.TrimEnd().Length
 
