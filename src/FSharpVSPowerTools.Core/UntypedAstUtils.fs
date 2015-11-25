@@ -1150,45 +1150,50 @@ module Outlining =
               yield! collectOpens decls
               yield! Seq.collect parseDeclaration decls }
 
+    type private LineNum = int
+    type private LineStr = string
+    type private MultilineComment = (LineNum * LineStr) list
+
     let getCommentRanges (lines: string[]) =
-        lines
-        |> Array.foldi (fun ((lastLineNum, currentGroup, groups) as state) lineNum line ->
-            match line.TrimStart() with
-            | x when x.StartsWith "//" ->
-                if lineNum = lastLineNum + 1 then
-                    lineNum, ((lineNum, line) :: currentGroup), groups
-                else 
-                    let groups = 
-                        match currentGroup with
-                        | [] -> groups
-                        | _ -> currentGroup :: groups
-                    lineNum, [lineNum, line], groups
-                    
-            | _ -> state) 
-           (-1, [], [])
-        |> fun (_, lastGroup, groups) -> 
-            match lastGroup with 
-            | [] -> groups 
-            | _ -> lastGroup :: groups
-            |> List.rev
-        |> fun groups ->
-            groups
-            |> List.choose (fun g ->
-                match g with
-                | [] | [_] -> None
-                | _ ->
-                    let g = g |> List.rev |> Array.ofList
-                    let startLine, endLine = fst g.[0], fst g.[g.Length - 1]
-                    let startCol = (snd g.[0]).IndexOf '/'
-                    let endCol = (snd g.[g.Length - 1]).TrimEnd().Length
-                    ScopeRange(
-                        Scope.Comment, 
-                        Collapse.Same, 
-                        Range.mkRange 
-                                "" 
-                                (Range.mkPos (startLine + 1) startCol)
-                                (Range.mkPos (endLine + 1) endCol)) 
-                    |> Some)
+        let comments: MultilineComment list =
+            lines
+            |> Array.foldi (fun ((lastLineNum, currentComment, comments) as state) lineNum lineStr ->
+                match lineStr.TrimStart() with
+                | x when x.StartsWith "//" ->
+                    if lineNum = lastLineNum + 1 then
+                        lineNum, ((lineNum, lineStr) :: currentComment), comments
+                    else 
+                        let comments = 
+                            match currentComment with
+                            | [] -> comments
+                            | _ -> currentComment :: comments
+                        lineNum, [lineNum, lineStr], comments
+                        
+                | _ -> state) 
+               (-1, [], [])
+            |> fun (_, lastComment, comments) -> 
+                match lastComment with 
+                | [] -> comments 
+                | _ -> lastComment :: comments
+                |> List.rev
+
+        comments
+        |> List.choose (fun comment ->
+            match comment with
+            | [] | [_] -> None
+            | _ ->
+                let comment = comment |> List.rev |> Array.ofList
+                let startLine, endLine = fst comment.[0], fst comment.[comment.Length - 1]
+                let startCol = (snd comment.[0]).IndexOf '/'
+                let endCol = (snd comment.[comment.Length - 1]).TrimEnd().Length
+                ScopeRange(
+                    Scope.Comment, 
+                    Collapse.Same, 
+                    Range.mkRange 
+                        "" 
+                        (Range.mkPos (startLine + 1) startCol)
+                        (Range.mkPos (endLine + 1) endCol)) 
+                |> Some)
 
     let getOutliningRanges sourceLines tree =
         match tree with
