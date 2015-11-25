@@ -30,6 +30,7 @@ namespace FSharpVSPowerTools.UI {
         public OutliningOptionControl Loops { get; private set; }
         public OutliningOptionControl Attributes { get; private set; }
         public OutliningOptionControl Comments { get; private set; }
+        public OutliningOptionControl XmlDocComments { get; private set; }
         public OutliningTooltipZoomLevelControl Tooltip { get; private set; }
 
         protected override void OnLoad(EventArgs e) {
@@ -99,6 +100,10 @@ namespace FSharpVSPowerTools.UI {
                 OutliningEnabled = _outliningOptions.CommentsEnabled,
                 CollapsedByDefault = _outliningOptions.CommentsCollapsedByDefault
             };
+            XmlDocComments = new OutliningOptionControl("XML doc comments") {
+                OutliningEnabled = _outliningOptions.XmlDocCommentsEnabled,
+                CollapsedByDefault = _outliningOptions.XmlDocCommentsCollapsedByDefault
+            };
             Tooltip = new OutliningTooltipZoomLevelControl() {
                 InputValue = _outliningOptions.TooltipZoomLevel
             };
@@ -120,6 +125,7 @@ namespace FSharpVSPowerTools.UI {
             flowLayoutPanelMain.Controls.Add(Loops);
             flowLayoutPanelMain.Controls.Add(Attributes);
             flowLayoutPanelMain.Controls.Add(Comments);
+            flowLayoutPanelMain.Controls.Add(XmlDocComments);
             flowLayoutPanelMain.Controls.Add(Tooltip);
         }
     }

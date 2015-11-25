@@ -800,6 +800,7 @@ module Outlining =
         | RecordDefn = 41
         | UnionDefn = 42
         | Comment = 43
+        | XmlDocComment = 44
 
     [<NoComparison; Struct>]
     type ScopeRange (scope:Scope, collapse:Collapse, r:range) =
@@ -1152,48 +1153,62 @@ module Outlining =
 
     type private LineNum = int
     type private LineStr = string
-    type private MultilineComment = (LineNum * LineStr) list
+    type private CommentType = Regular | XmlDoc
+    
+    [<NoComparison>]
+    type private CommentList = 
+        { Lines: ResizeArray<LineNum * LineStr>
+          Type: CommentType }
+        static member New ty = { Type = ty; Lines = ResizeArray() }
+
+    let private (|Comment|_|) line =
+        match line with
+        | String.StartsWith "///" -> Some XmlDoc
+        | String.StartsWith "//" -> Some Regular
+        | _ -> None
 
     let getCommentRanges (lines: string[]) =
-        let comments: MultilineComment list =
+        let comments: CommentList list =
             lines
-            |> Array.foldi (fun ((lastLineNum, currentComment, comments) as state) lineNum lineStr ->
-                match lineStr.TrimStart() with
-                | x when x.StartsWith "//" ->
-                    if lineNum = lastLineNum + 1 then
-                        lineNum, ((lineNum, lineStr) :: currentComment), comments
-                    else 
-                        let comments = 
-                            match currentComment with
-                            | [] -> comments
-                            | _ -> currentComment :: comments
-                        lineNum, [lineNum, lineStr], comments
-                        
+            |> Array.foldi (fun ((lastLineNum, currentComment: CommentList option, comments) as state) lineNum lineStr ->
+                match lineStr.TrimStart(), currentComment with
+                | Comment commentType, Some comment ->
+                    if comment.Type = commentType && lineNum = lastLineNum + 1 then
+                        comment.Lines.Add (lineNum, lineStr)
+                        lineNum, currentComment, comments
+                    else lineNum, Some (CommentList.New commentType), comment :: comments
+                | Comment commentType, None -> 
+                    lineNum, Some (CommentList.New commentType), comments
+                | _, Some comment -> 
+                    lineNum, None, comment :: comments
                 | _ -> state) 
-               (-1, [], [])
+               (-1, None, [])
             |> fun (_, lastComment, comments) -> 
                 match lastComment with 
-                | [] -> comments 
-                | _ -> lastComment :: comments
+                | Some comment -> 
+                    comment :: comments 
+                | _ -> comments
                 |> List.rev
 
         comments
-        |> List.choose (fun comment ->
-            match comment with
-            | [] | [_] -> None
-            | _ ->
-                let comment = comment |> List.rev |> Array.ofList
-                let startLine, endLine = fst comment.[0], fst comment.[comment.Length - 1]
-                let startCol = (snd comment.[0]).IndexOf '/'
-                let endCol = (snd comment.[comment.Length - 1]).TrimEnd().Length
-                ScopeRange(
-                    Scope.Comment, 
-                    Collapse.Same, 
-                    Range.mkRange 
-                        "" 
-                        (Range.mkPos (startLine + 1) startCol)
-                        (Range.mkPos (endLine + 1) endCol)) 
-                |> Some)
+        |> List.map (fun comment ->
+            let lines = comment.Lines.ToArray() |> Array.rev
+            let startLine, startStr = lines.[0]
+            let endLine, endStr = lines.[lines.Length - 1]
+            let startCol = startStr.IndexOf '/'
+            let endCol = endStr.TrimEnd().Length
+
+            let scopeType =
+                match comment.Type with 
+                | Regular -> Scope.Comment
+                | XmlDoc -> Scope.XmlDocComment
+            ScopeRange(
+                scopeType, 
+                Collapse.Same, 
+                Range.mkRange 
+                    "" 
+                    (Range.mkPos (startLine + 1) startCol)
+                    (Range.mkPos (endLine + 1) endCol)))
 
     let getOutliningRanges sourceLines tree =
         match tree with

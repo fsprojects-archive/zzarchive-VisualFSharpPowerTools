@@ -60,6 +60,9 @@ namespace FSharpVSPowerTools {
 
             CommentsEnabled = true;
             CommentsCollapsedByDefault = true;
+
+            XmlDocCommentsEnabled = true;
+            XmlDocCommentsCollapsedByDefault = true;
             
             TooltipZoomLevel = 80;
         }
@@ -97,6 +100,8 @@ namespace FSharpVSPowerTools {
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
             CommentsEnabled = _control.Comments.Enabled;
             CommentsCollapsedByDefault = _control.Comments.CollapsedByDefault;
+            XmlDocCommentsEnabled = _control.XmlDocComments.Enabled;
+            XmlDocCommentsCollapsedByDefault = _control.XmlDocComments.CollapsedByDefault;
             TooltipZoomLevel = _control.Tooltip.InputValue;
 
             base.OnApply(e);
@@ -197,6 +202,12 @@ namespace FSharpVSPowerTools {
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool CommentsCollapsedByDefault { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool XmlDocCommentsEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool XmlDocCommentsCollapsedByDefault { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public int TooltipZoomLevel { get; set; }

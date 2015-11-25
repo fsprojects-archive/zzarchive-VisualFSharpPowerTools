@@ -69,7 +69,6 @@ let inline scaleToFit (view: IWpfTextView) =
         |> ignore)
     view
 
-
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
@@ -84,12 +83,10 @@ type OutliningTagger
     let mutable scopedSnapSpans: ScopeSpan [] = [||]
     let mutable oldAST: ParsedInput option = None
 
-
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans =
         scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
-
 
     /// convert the FSharp compiler range in SRanges into a snapshot span and tuple it with its Scope tag
     let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopeSpan option =
@@ -97,7 +94,6 @@ type OutliningTagger
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
         | Some sshot -> ScopeSpan (sr.Scope, sr.Collapse, sshot) |> Some
         | None       -> None
-
 
     // There are times when the compiler will return an empty parse tree due to an error in the source file
     // when this happens if we use that empty tree outlining tags will not be created and any scopes that had
@@ -157,6 +153,7 @@ type OutliningTagger
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
+        | Scope.XmlDocComment         -> options.XmlDocCommentsEnabled
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
@@ -323,6 +320,7 @@ type OutliningTagger
         | Scope.For                   
         | Scope.While                 -> options.LoopsCollapsedByDefault
         | Scope.Comment               -> options.CommentsCollapsedByDefault
+        | Scope.XmlDocComment         -> options.XmlDocCommentsCollapsedByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda

@@ -756,7 +756,6 @@ module Dict =
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module String =
-
     let inline toCharArray (str:string) = str.ToCharArray()
 
     let lowerCaseFirstChar (str: string) =
@@ -795,14 +794,14 @@ module String =
         if String.IsNullOrWhiteSpace value then
             None
         elif value.StartsWith pattern then
-            Some value
+            Some()
         else None
 
     let (|Contains|_|) pattern value =
         if String.IsNullOrWhiteSpace value then
             None
         elif value.Contains pattern then
-            Some value
+            Some()
         else None
     
     open System.IO
