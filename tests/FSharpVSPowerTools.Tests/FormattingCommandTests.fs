@@ -88,9 +88,6 @@ let rangeTest testValue mid size =
                 command.Exec(ref Constants.guidStandardCmdSet, uint32 VSConstants.VSStd2KCmdID.FORMATSELECTION, 
                                 0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
             (fun () ->
-                // Should preserve starting point of the selection
-                textView.Selection.Start.Position.Position 
-                |> assertEqual selection.Start.Position
                 buffer.CurrentSnapshot.GetText()
                 |> assertEquivString """
 let rangeTest testValue mid size =
