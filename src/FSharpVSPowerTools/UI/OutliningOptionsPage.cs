@@ -98,9 +98,9 @@ namespace FSharpVSPowerTools {
             LoopsCollapsedByDefault = _control.Loops.CollapsedByDefault;
             AttributesEnabled = _control.Attributes.OutliningEnabled;
             AttributesCollapsedByDefault = _control.Attributes.CollapsedByDefault;
-            CommentsEnabled = _control.Comments.Enabled;
+            CommentsEnabled = _control.Comments.OutliningEnabled;
             CommentsCollapsedByDefault = _control.Comments.CollapsedByDefault;
-            XmlDocCommentsEnabled = _control.XmlDocComments.Enabled;
+            XmlDocCommentsEnabled = _control.XmlDocComments.OutliningEnabled;
             XmlDocCommentsCollapsedByDefault = _control.XmlDocComments.CollapsedByDefault;
             TooltipZoomLevel = _control.Tooltip.InputValue;
 
