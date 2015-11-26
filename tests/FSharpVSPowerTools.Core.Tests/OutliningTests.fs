@@ -268,7 +268,7 @@ let x = 1 // 9
       "b" // 21
       "c" // 22
 #r "d"    // 23
-"""    
+"""
     => [ 2, 3, 3, 6
          7, 3, 8, 6
          11, 3, 14, 6
@@ -399,25 +399,25 @@ else
         (7, 11, 8, 10)]
 
 [<Test>]
-let ``code quotation`` () =
+let ``code quotation``() =
     """
 <@
   "code"
         @>
-"""   
+"""
     => [ 2, 2, 4, 8 ]
 
 [<Test>]
-let ``raw code quotation`` () =
+let ``raw code quotation``() =
     """
 <@@
   "code"
         @@>
-"""  
+"""
     => [ 2, 3, 4, 8 ]
 
 [<Test>]
-let ``match lambda aka function`` () =
+let ``match lambda aka function``() =
     """
 function
 | 0 ->  ()
@@ -427,20 +427,20 @@ function
          (3, 2, 4, 10)]
 
 [<Test>]
-let `` match guarded clause`` () =
+let ``match guarded clause``() =
     """
 let matchwith num =
     match num with
     | 0 -> ()
            ()
-"""    
+"""
     =>  [ 2, 17, 5, 13
           3, 18, 5, 13
           (4, 6, 5, 13) ]
 
 
 [<Test>]
-let `` for loop `` () =
+let ``for loop``() =
     """
 for x = 100 downto 10 do
     ()
@@ -450,27 +450,27 @@ for x = 100 downto 10 do
 
 
 [<Test>]
-let `` for each `` () =
+let ``for each``() =
     """
 for x in 0 .. 100 -> 
             ()
             ()
-"""  
+"""
     =>  [ 2, 0, 4, 14
           2, 18, 4, 14 ]
    
-[<Test>]   
-let `` tuple `` () =
+[<Test>]
+let ``tuple``() =
     """
-( 20340       
+( 20340
 , 322
 , 123123 )
 """
        =>  [(2, 2, 4, 8)]
 
 
-[<Test>]   
-let `` do! `` () =
+[<Test>]
+let ``do!``() =
     """
 do! 
     printfn "allo"
@@ -479,8 +479,8 @@ do!
     =>  [(2, 3, 4, 18)]
 
 
-[<Test>]   
-let `` cexpr yield yield! `` () =
+[<Test>]
+let ``cexpr yield yield!``() =
     """
 cexpr{
     yield! 
@@ -496,3 +496,63 @@ cexpr{
          (4, 14, 8, 16) 
          (5, 20, 7, 26)]
 
+[<Test>]
+let ``XML doc comments``() =
+    """
+/// Line 1
+/// Line 2
+module M =
+    /// Line 3
+    /// Line 4
+    type T() =
+        /// Line 5
+        /// Line 6
+        /// Line 7
+        let f x = x
+    /// Single line comment
+    let f x = x
+"""
+    => [ 2, 0, 3, 10
+         4, 8, 13, 15
+         5, 4, 6, 14
+         7, 10, 11, 19
+         8, 8, 10, 18 ]
+         
+[<Test>]
+let ``regular comments``() =
+    """
+// Line 1
+// Line 2
+module M =
+    // Line 3
+    // Line 4
+    type T() =
+        // Line 5
+        // Line 6
+        // Line 7
+        let f x = x
+    // Single line comment
+    let f x = x
+"""
+    => [ 2, 0, 3, 9
+         4, 8, 13, 15
+         5, 4, 6, 13
+         7, 10, 11, 19
+         8, 8, 10, 17 ]
+         
+[<Test>]
+let ``XML doc and regular comments in one block``() =
+    """
+// Line 1
+// Line 2
+/// Line 3
+/// Line 4
+// Line 5
+/// Line 6
+/// Line 7
+/// Line 8
+/// Line 9
+"""
+    => [ 2, 0, 3, 9
+         4, 0, 5, 10
+         7, 0, 10, 10]
