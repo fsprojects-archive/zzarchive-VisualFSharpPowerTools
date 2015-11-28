@@ -69,26 +69,24 @@ let inline scaleToFit (view: IWpfTextView) =
         |> ignore)
     view
 
-
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
      textEditorFactoryService: ITextEditorFactoryService,
      projectionBufferFactoryService: IProjectionBufferFactoryService,
      projectFactory: ProjectFactory,
-     languageService: VSLanguageService) as self =
+     languageService: VSLanguageService,
+     openDocumentsTracker: IOpenDocumentsTracker) as self =
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
     let mutable scopedSnapSpans: ScopeSpan [] = [||]
     let mutable oldAST: ParsedInput option = None
 
-
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans =
         scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
-
 
     /// convert the FSharp compiler range in SRanges into a snapshot span and tuple it with its Scope tag
     let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopeSpan option =
@@ -96,7 +94,6 @@ type OutliningTagger
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
         | Some sshot -> ScopeSpan (sr.Scope, sr.Collapse, sshot) |> Some
         | None       -> None
-
 
     // There are times when the compiler will return an empty parse tree due to an error in the source file
     // when this happens if we use that empty tree outlining tags will not be created and any scopes that had
@@ -156,6 +153,8 @@ type OutliningTagger
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
+        | Scope.XmlDocComment         -> options.XmlDocCommentsEnabled
+        | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
@@ -165,13 +164,14 @@ type OutliningTagger
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
+            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = 
-                    ast 
-                    |> getOutliningRanges 
+                    (String.getLines source, ast)
+                    ||> getOutliningRanges 
                     |> Seq.filter (fun x -> outliningEnabled x.Scope)
                     |> Seq.choose (fromScopeRange snapshot)
                     |> Array.ofSeq
@@ -319,6 +319,8 @@ type OutliningTagger
         | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
         | Scope.For                   
         | Scope.While                 -> options.LoopsCollapsedByDefault
+        | Scope.Comment               -> options.CommentsCollapsedByDefault
+        | Scope.XmlDocComment         -> options.XmlDocCommentsCollapsedByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
