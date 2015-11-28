@@ -12,6 +12,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open System.Threading
 
 [<NoComparison>]
 type FormattingResult = 
@@ -35,8 +36,8 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
     // Rebind to this method call as it's more F#-friendly
     let getConfig() = getConfig.Invoke()
 
-    let (CallInUIContext callInUIContext) = CallInUIContext.FromCurrentThread()
-        
+    let uiContext = SynchronizationContext.Current
+                         
     member x.TryCreateTextUndoTransaction() =
         let textBufferUndoManager = x.Services.TextBufferUndoManagerProvider.GetTextBufferUndoManager(x.TextBuffer)
 
@@ -49,6 +50,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
 
     member x.ExecuteFormat() =
         async {
+            do! Async.SwitchToContext uiContext
             let editorOperations = x.Services.EditorOperationsFactoryService.GetEditorOperations(x.TextView)
             use textUndoTransaction = x.TryCreateTextUndoTransaction()
             // Handle the special case of a null ITextUndoTransaction up here because it simplifies
@@ -78,6 +80,7 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
 
     member x.ExecuteFormatCore() =
         asyncMaybe {
+            do! Async.SwitchToThreadPool() |> liftAsync
             let config = getConfig()
             let statusBar = x.Services.ServiceProvider.GetService<IVsStatusbar, SVsStatusbar>()
 
@@ -97,14 +100,12 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                     |> liftAsync
                 
                 if isValid then
-                    do! callInUIContext (fun _ -> 
-                        let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
-                        x.TextBuffer.Replace(
-                            Span(formattingResult.OldTextStartIndex, formattingResult.OldTextLength),
-                            formattingResult.NewText) |> ignore
-                        x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
-                        ) |> liftAsync
-
+                    do! Async.SwitchToContext uiContext |> liftAsync
+                    let (caretPos, scrollBarPos, currentSnapshot) = x.TakeCurrentSnapshot()
+                    x.TextBuffer.Replace(
+                        Span(formattingResult.OldTextStartIndex, formattingResult.OldTextLength),
+                        formattingResult.NewText) |> ignore
+                    x.SetNewCaretPosition(caretPos, scrollBarPos, currentSnapshot)
                     return! Some()
                 else
                     statusBar.SetText(Resource.formattingValidationMessage) |> ignore 
@@ -117,7 +118,11 @@ type FormatCommand(getConfig: Func<FormatConfig>) =
                 statusBar.SetText(sprintf "%s: %O" Resource.formattingErrorMessage ex) |> ignore
                 return! None
         }
-        |> Async.map Option.isSome
+        |> Async.bind (fun result ->
+            async {
+                do! Async.SwitchToContext uiContext
+                return Option.isSome result
+            })
        
     member x.TakeCurrentSnapshot() =
         let caretPos = x.TextView.Caret.Position.BufferPosition
