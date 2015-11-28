@@ -297,9 +297,9 @@ type VSLanguageService
                 return! None
         }
 
-    member __.GetLoadDirectiveFileNameAtCursor (fileName, view: Microsoft.VisualStudio.Text.Editor.ITextView, project) =
+    member x.GetLoadDirectiveFileNameAtCursor (fileName, view: Microsoft.VisualStudio.Text.Editor.ITextView, project) =
         asyncMaybe {
-            let! parseResult = __.ParseFileInProject(fileName, project)
+            let! parseResult = x.ParseFileInProject(fileName, project)
             let! pos = view.PosAtCaretPosition()
             let! ast = parseResult.ParseTree
             return! UntypedAstUtils.HashDirectiveInfo.getHashLoadDirectiveResolvedPathAtPosition pos ast

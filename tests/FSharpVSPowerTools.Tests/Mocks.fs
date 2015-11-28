@@ -74,10 +74,18 @@ let createEditorOptionsFactoryService() =
         <@ x.GetOptions (any()) --> editorOptions @>)
 
 let createEditorOperationsFactoryService() =
-    Mock<IEditorOperationsFactoryService>().Create()
+    let editorOperations =
+        Mock<IEditorOperations>.With(fun x ->
+            <@
+                x.AddBeforeTextBufferChangePrimitive()
+                x.AddAfterTextBufferChangePrimitive()
+            @>)
+    Mock<IEditorOperationsFactoryService>.With(fun x ->
+        <@ x.GetEditorOperations (any()) --> editorOperations @>)
 
 let createTextBufferUndoManagerProvider() =
-    Mock<ITextBufferUndoManagerProvider>().Create()
+    Mock<ITextBufferUndoManagerProvider>.With(fun x ->
+        <@ x.GetTextBufferUndoManager (any()) --> null @>)
 
 let createDummyCommandTarget() =
     {
