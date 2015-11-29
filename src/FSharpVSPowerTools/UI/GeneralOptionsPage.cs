@@ -43,7 +43,7 @@ namespace FSharpVSPowerTools
             GenerateReferencesEnabled = true;
             GoToSymbolSourceEnabled = true;
             QuickInfoPanelEnabled = true;
-            LinterEnabled = true;
+            LinterEnabled = false;
             OutliningEnabled = false;
         }
 
