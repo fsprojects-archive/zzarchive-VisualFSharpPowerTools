@@ -81,7 +81,7 @@ let g x = File.Exists(x)
                 command.CurrentUrl
                 |> assertEqual (Some "http://referencesource.microsoft.com/mscorlib/a.html#95facc58d06cadd0"))
 
-    [<Test>]
+    [<Test; Ignore "Current FAKE is not source indexed. Reactivate this test when it's fixed.">]
     let ``should be able to go to definition to an external member using pdb files``() = 
         let content = """
 module FAKETests
