@@ -3,6 +3,7 @@
 // --------------------------------------------------------------------------------------
 
 #r @"packages/build/FAKE/tools/FakeLib.dll"
+
 open Fake 
 open Fake.Git
 open Fake.AssemblyInfoFile
@@ -322,14 +323,14 @@ Target "All" DoNothing
   ==> "AssemblyInfo"
   =?> ("VsixManifest", isAppVeyorBuild)
   ==> "Build"
-  ==> "BuildTests"
-  ==> "UnitTests"
+  //==> "BuildTests"
+  //==> "UnitTests"
   ==> "Main"
 
 "Clean"
   ==> "Build"
   ==> "BuildTests"
-  ==> "ParallelUnitTests"
+  //==> "ParallelUnitTests"
 
 "Clean"
  ==> "RunStatistics"
