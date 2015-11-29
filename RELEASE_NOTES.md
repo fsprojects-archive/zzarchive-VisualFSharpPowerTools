@@ -1,4 +1,4 @@
-#### 2.2.0 - Unreleased
+#### 2.2.0 - November 29 2015
 * Implement outlining support ([#1147](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1147))
 * Fix conflicts between FSharpLint options dialog and ReSharper ([#1166](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1166))
 * Use FCS operation queues more effectively ([#1177](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1177), [#1178](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1178))
