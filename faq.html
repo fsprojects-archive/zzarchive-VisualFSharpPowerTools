@@ -51,6 +51,8 @@
 <li>Resolve unopened namespaces</li>
 <li>Task List comments</li>
 <li>Quick info panel</li>
+<li>FSharpLint integration</li>
+<li>Outlining</li>
 </ul>
 
 <p>and enable them one by one to identify the features causing slowness. 
@@ -61,14 +63,6 @@ If you found a scenario that is slow, please let us know on <a href="https://git
 <p>There are some performance penalties on checking unused declarations. 
 Until the performance issue is sorted out, we divide the option into two settings to provide more granularity to users.
 The new options are disabled by default.</p>
-
-<h2><a name="What-is-Strict-mode-When-should-I-use-it" class="anchor" href="#What-is-Strict-mode-When-should-I-use-it">What is Strict mode? When should I use it?</a></h2>
-
-<p><code>FSharp.Compiler.Service</code> (one of our main components) makes extensive use of caching.
-In Strict mode, cache invalidation is done more aggressively. 
-Consequently, type checking results are more up-to-date but there might be performance degradation.
-This setting is disabled by default.
-We recommend to use it if there are frequent intermittent errors on syntax coloring.</p>
 
 <h2><a name="What-is-Diagnostic-mode-When-should-I-use-it" class="anchor" href="#What-is-Diagnostic-mode-When-should-I-use-it">What is Diagnostic mode? When should I use it?</a></h2>
 
@@ -127,6 +121,7 @@ You can workaround by disabling the ReSharper option "Hide overridden Visual Stu
                 <li><a href="./navigatetosource.html">Navigate to source</a></li>
 				<li><a href="./quickinfopanel.html">Quick info panel</a></li>
 				<li><a href="./lint.html">Lint</a></li>
+				<li><a href="./outlining.html">Outlining</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./reference/index.html">API Reference</a></li>

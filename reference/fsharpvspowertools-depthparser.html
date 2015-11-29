@@ -41,51 +41,31 @@
 </p>
 <div class="xmldoc">
 </div>
-  <h3>Static members</h3>
+
+<!-- Render nested types and modules, if there are any -->
+
+  <h3>Functions and values</h3>
   <table class="table table-bordered member-list">
     <thead>
-      <tr><td>Static member</td><td>Description</td></tr>
+      <tr><td>Function or value</td><td>Description</td></tr>
     </thead>
     <tbody>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '226', 226)" onmouseover="showTip(event, '226', 226)">
-            GetNonoverlappingDepthRanges(...)
+          <code onmouseout="hideTip(event, '29', 29)" onmouseover="showTip(event, '29', 29)">
+            getNonoverlappingDepthRanges (...)
           </code>
-          <div class="tip" id="226">
-            <strong>Signature:</strong> (sourceCodeOfTheFile:string * filename:string * checker:FSharpChecker option) -&gt; Async&lt;(int * int * int * int) []&gt;<br />
+          <div class="tip" id="29">
+            <strong>Signature:</strong> (sourceLines:string * input:ParsedInput option) -&gt; Async&lt;(int * int * int * int) []&gt;<br />
                       </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/DepthParser.fs#L387-387" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/DepthParser.fs#L340-340" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
           <p>Get non-overlapping ranges, where each range spans at most a single line, and has info about its "semantic depth".
-Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.<br />
-      Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.</p>
-
-
-
-        </td>
-      </tr>
-      <tr>
-        <td class="member-name">
-
-          <code onmouseout="hideTip(event, '227', 227)" onmouseover="showTip(event, '227', 227)">
-            GetRanges(...)
-          </code>
-          <div class="tip" id="227">
-            <strong>Signature:</strong> (sourceCodeOfTheFile:string * filename:string * checker:FSharpChecker option) -&gt; Async&lt;(int * int * int * int * int) []&gt;<br />
-                      </div>
-        </td>
-        <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/DepthParser.fs#L374-374" class="github-link">
-              <img src="../content/img/github.png" class="normal" />
-              <img src="../content/img/github-blue.png" class="hover" />
-            </a>
-          <p>Get the "nested ranges" of source code structures, along with the minimum-number-of-indent spaces inside that span (ignoring comments and #commands).
 Note: The 'filename' is only used e.g. to look at the filename extension (e.g. ".fs" versus ".fsi"), this does not try to load the file off disk.<br />
       Instead, 'sourceCodeOfTheFile' should contain the entire file as a giant string.</p>
 
@@ -134,6 +114,7 @@ Note: The 'filename' is only used e.g. to look at the filename extension (e.g. "
                 <li><a href="./../navigatetosource.html">Navigate to source</a></li>
 				<li><a href="./../quickinfopanel.html">Quick info panel</a></li>
 				<li><a href="./../lint.html">Lint</a></li>
+				<li><a href="./../outlining.html">Outlining</a></li>
 
                 <li class="nav-header">API Documentation</li>
                 <li><a href="./../reference/index.html">API Reference</a></li>
