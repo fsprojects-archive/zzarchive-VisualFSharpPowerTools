@@ -323,14 +323,14 @@ Target "All" DoNothing
   ==> "AssemblyInfo"
   =?> ("VsixManifest", isAppVeyorBuild)
   ==> "Build"
-  //==> "BuildTests"
-  //==> "UnitTests"
+  ==> "BuildTests"
+  ==> "UnitTests"
   ==> "Main"
 
 "Clean"
   ==> "Build"
   ==> "BuildTests"
-  //==> "ParallelUnitTests"
+  ==> "ParallelUnitTests"
 
 "Clean"
  ==> "RunStatistics"
