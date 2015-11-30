@@ -27,14 +27,14 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                           projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
-    let mutable wordSpans = NormalizedSnapshotSpanCollection()
-    let mutable currentWord = None
+    let mutable wordSpans = []
+    let mutable currentWord: SnapshotSpan option = None
     let mutable requestedPoint = SnapshotPoint()
 
     let buffer = view.TextBuffer
 
     // Perform a synchronous update, in case multiple background threads are running
-    let synchronousUpdate (currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
+    let synchronousUpdate (currentRequest, newSpans, newWord) =
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
@@ -67,16 +67,16 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                         match refSpans with
                         | Some references -> 
                             // Ignore symbols without any use
-                            let word = if Seq.isEmpty references then None else Some newWord
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
+                            let word = if List.isEmpty references then None else Some newWord
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, references, word)
                         | None ->
                             // Return empty values in order to clear up markers
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
                     | None -> 
-                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
                 with e ->
                     Logging.logExceptionWithContext(e, "Failed to update highlight references.")
-                    do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
         }
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
@@ -102,12 +102,11 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                             doUpdate (currentRequest, symbol, newWord, doc.FullName, project, ciuc) |> liftAsync
                     | None ->
                         callInUIContext <| fun _ -> 
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            synchronousUpdate (currentRequest, [], None)
                         |> liftAsync
-
-//                    |> Async.map (Option.iter id)
             | None, _ -> ()
-        } |> Async.Ignore
+        } 
+        |> Async.Ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)
@@ -116,12 +115,12 @@ type HighlightUsageTagger(textDocument: ITextDocument,
 
     let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> list = 
         [
-            match currentWord with
-            | Some word when spans.Count <> 0 && wordSpans.Count <> 0 -> 
+            match currentWord, wordSpans with
+            | Some word, firstWordSpan :: _ when spans.Count > 0 -> 
                 let currentSnapshot = spans.[0].Snapshot
                 let wordSpans = 
-                    if currentSnapshot = wordSpans.[0].Snapshot then
-                        wordSpans
+                    if currentSnapshot = firstWordSpan.Snapshot then
+                        NormalizedSnapshotSpanCollection wordSpans
                     else
                         // If the requested snapshot isn't the same as the one our words are on, translate our spans
                         // to the expected snapshot
@@ -138,7 +137,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                 // the duplication is not expected.
                 for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
                     if span <> word then yield tagSpan span
-            | Some _ | None -> ()
+            | _ -> ()
         ]
 
     interface ITagger<HighlightUsageTag> with
