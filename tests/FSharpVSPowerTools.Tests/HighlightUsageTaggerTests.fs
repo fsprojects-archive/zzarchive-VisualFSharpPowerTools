@@ -51,10 +51,10 @@ module HighlightUsageTaggerTaggerTests =
         let content = """
 let x = 0
 x
-"""     
+"""
         let buffer = createMockTextBuffer content fileName
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName, content)        
+        helper.SetActiveDocument(fileName, content)
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
@@ -79,10 +79,10 @@ x
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
-                |> Seq.toList
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (3, 1) => (3, 1);
-                       (2, 5) => (2, 5) ])
+                     (set [ (3, 1) => (3, 1);
+                            (2, 5) => (2, 5) ]))
 
     [<Test>]
     let ``should not generate duplicated highlight usage tags for generic types``() = 
@@ -99,11 +99,11 @@ module GenericClass =
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 13) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                |> Seq.toList
+                helper.TagsOf(buffer, tagger)
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (5, 13) => (5, 17);
-                       (3, 10) => (3, 14) ])
+                    (set [ (5, 13) => (5, 17);
+                           (3, 10) => (3, 14) ]))
 
     [<Test>]
     let ``should generate correct tags for attributes from definitions``() = 
@@ -120,11 +120,11 @@ type Class () = class end
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 7) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                |> Seq.toList
+                helper.TagsOf(buffer, tagger)
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (2, 6) => (2, 20);
-                       (4, 3) => (4, 8) ])
+                    (set [ (2, 6) => (2, 20);
+                           (4, 3) => (4, 8) ]))
 
     [<Test>]
     let ``should generate correct tags for attributes from usage``() = 
@@ -141,11 +141,11 @@ type Class () = class end
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 7) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                |> Seq.toList
+                helper.TagsOf(buffer, tagger)
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (4, 3) => (4, 8);
-                       (2, 6) => (2, 11) ])
+                    (set [ (4, 3) => (4, 8);
+                           (2, 6) => (2, 11) ]))
 
     [<Test>]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 
@@ -155,11 +155,11 @@ do printfn "Hello world!"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let view = helper.GetView(buffer)
-        let tagger = helper.GetTagger(buffer, view)        
+        let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 1) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
+                helper.TagsOf(buffer, tagger)
                 |> Seq.isEmpty
                 |> assertTrue)
 
@@ -176,14 +176,14 @@ let _ = Project.GetSample()
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let view = helper.GetView(buffer)
-        let tagger = helper.GetTagger(buffer, view)        
+        let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 8) |> ignore)
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                |> Seq.toList
+                helper.TagsOf(buffer, tagger)
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (4, 6) => (4, 12); (5, 9) => (5, 15) ])
+                    (set [ (4, 6) => (4, 12); (5, 9) => (5, 15) ]))
 
     [<Test; Category "AppVeyorLongRunning">]
     let ``should generate highlight usage tags for multi-project symbols``() = 
@@ -201,11 +201,11 @@ module Test =
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let view = helper.GetView(buffer)
         view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore
-        let tagger = helper.GetTagger(buffer, view)        
+        let tagger = helper.GetTagger(buffer, view)
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
-                helper.TagsOf(buffer, tagger)                 
-                |> Seq.toList
+                helper.TagsOf(buffer, tagger)
+                |> Set.ofSeq
                 |> assertEqual
-                     [ (5, 22) => (5, 28); (6, 22) => (6, 28) ])
+                    (set [ (5, 22) => (5, 28); (6, 22) => (6, 28) ]))
 
