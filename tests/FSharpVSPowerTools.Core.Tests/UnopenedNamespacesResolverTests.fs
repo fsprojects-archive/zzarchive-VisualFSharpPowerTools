@@ -671,7 +671,7 @@ let forEntity (ns: LongIdent) (fullName: LongIdent) (ident: string, source: Sour
     match ParsedInput.tryFindInsertionContext line ast (ident.Split '.') (None, None, Some (ns.Split '.'), fullName.Split '.') with
     | [||] -> failwith "Cannot find nearest open statement block"
     | [|e, ctx|] -> source, e, ctx, ast
-    | es -> failwith "More than one entity: %A" es
+    | es -> failwithf "More than one entity: %A" es
 
 let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
