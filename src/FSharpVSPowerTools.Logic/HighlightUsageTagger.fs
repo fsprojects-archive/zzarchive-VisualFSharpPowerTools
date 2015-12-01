@@ -13,8 +13,18 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
-type HighlightUsageTag(marker) = 
-    inherit TextMarkerTag(marker)
+[<AutoOpen>]
+module private Utils =
+    let getMarker vsVersion isDef =
+        match vsVersion, isDef with
+        | VisualStudioVersion.VS2015, true ->
+            "MarkerFormatDefinition/HighlightedDefinition"
+        | _ ->
+            "MarkerFormatDefinition/HighlightedReference"
+
+type HighlightUsageTag(vsVersion, isDef)= 
+    inherit TextMarkerTag(getMarker vsVersion isDef)
+    member __.IsFromDefinition = isDef
 
 // Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
 
@@ -80,7 +90,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                     do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
         }
 
-    let dte = lazy(serviceProvider.GetService<EnvDTE.DTE, SDTE>())
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
@@ -91,7 +101,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let! doc = dte.Value.GetCurrentDocument(textDocument.FilePath)
+                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 return!
                     match vsLanguageService.GetSymbol(currentRequest, doc.FullName, project) with
@@ -113,14 +123,10 @@ type HighlightUsageTagger(textDocument: ITextDocument,
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)
 
+    let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
+
     let createHighlightUsageTag isDef span = 
-        let highlightMarker =
-            match VisualStudioVersion.fromDTEVersion dte.Value.Version, isDef with
-            | VisualStudioVersion.VS2015, true ->
-                HighlightUsageTag("MarkerFormatDefinition/HighlightedDefinition")
-            | _ ->
-                HighlightUsageTag("MarkerFormatDefinition/HighlightedReference")
- 
+        let highlightMarker = HighlightUsageTag(vsVersion, isDef)
         TagSpan<_>(span, highlightMarker) :> ITagSpan<_>
 
     let getTags (spans: NormalizedSnapshotSpanCollection) = 

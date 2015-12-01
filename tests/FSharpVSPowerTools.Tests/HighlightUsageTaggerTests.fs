@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
+open FSharpVSPowerTools.HighlightUsage
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -23,16 +24,19 @@ type HighlightUsageTaggerHelper() =
     member __.TagsOf(buffer: ITextBuffer, tagger: ITagger<_>) =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
         tagger.GetTags(NormalizedSnapshotSpanCollection(span))
-        |> Seq.map(fun span ->
-            let snapshot = span.Span.Snapshot
-            // Use 1-based position for intuitive comparison
-            let lineStart = snapshot.GetLineNumberFromPosition(span.Span.Start.Position) + 1 
-            let lineEnd = snapshot.GetLineNumberFromPosition(span.Span.End.Position) + 1
-            let firstLine = snapshot.GetLineFromPosition(span.Span.Start.Position)
-            let lastLine = snapshot.GetLineFromPosition(span.Span.End.Position)
-            let colStart = span.Span.Start.Position - firstLine.Start.Position + 1
-            let colEnd = span.Span.End.Position - lastLine.Start.Position + 1
-            (lineStart, colStart, lineEnd, colEnd - 1))
+        |> Seq.choose(fun span ->
+            match box span.Tag with
+            | :? HighlightUsageTag as tag ->
+                let snapshot = span.Span.Snapshot
+                // Use 1-based position for intuitive comparison
+                let lineStart = snapshot.GetLineNumberFromPosition(span.Span.Start.Position) + 1 
+                let lineEnd = snapshot.GetLineNumberFromPosition(span.Span.End.Position) + 1
+                let firstLine = snapshot.GetLineFromPosition(span.Span.Start.Position)
+                let lastLine = snapshot.GetLineFromPosition(span.Span.End.Position)
+                let colStart = span.Span.Start.Position - firstLine.Start.Position + 1
+                let colEnd = span.Span.End.Position - lastLine.Start.Position + 1
+                Some ((lineStart, colStart, lineEnd, colEnd - 1), tag.IsFromDefinition)
+            | _ -> None)
 
 module HighlightUsageTaggerTaggerTests =
     open System.IO
@@ -81,8 +85,8 @@ x
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                     (set [ (3, 1) => (3, 1);
-                            (2, 5) => (2, 5) ]))
+                     (set [ (3, 1) => (3, 1), false;
+                            (2, 5) => (2, 5), true ]))
 
     [<Test>]
     let ``should not generate duplicated highlight usage tags for generic types``() = 
@@ -102,8 +106,8 @@ module GenericClass =
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                    (set [ (5, 13) => (5, 17);
-                           (3, 10) => (3, 14) ]))
+                    (set [ (5, 13) => (5, 17), false;
+                           (3, 10) => (3, 14), true ]))
 
     [<Test>]
     let ``should generate correct tags for attributes from definitions``() = 
@@ -123,8 +127,8 @@ type Class () = class end
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                    (set [ (2, 6) => (2, 20);
-                           (4, 3) => (4, 8) ]))
+                    (set [ (2, 6) => (2, 20), true;
+                           (4, 3) => (4, 8), false ]))
 
     [<Test>]
     let ``should generate correct tags for attributes from usage``() = 
@@ -144,8 +148,8 @@ type Class () = class end
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                    (set [ (4, 3) => (4, 8);
-                           (2, 6) => (2, 11) ]))
+                    (set [ (4, 3) => (4, 8), false;
+                           (2, 6) => (2, 11), true ]))
 
     [<Test>]
     let ``should not generate highlight usage tags for keywords or whitespaces``() = 
@@ -183,7 +187,7 @@ let _ = Project.GetSample()
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                    (set [ (4, 6) => (4, 12); (5, 9) => (5, 15) ]))
+                    (set [ (4, 6) => (4, 12), true; (5, 9) => (5, 15), false ]))
 
     [<Test; Category "AppVeyorLongRunning">]
     let ``should generate highlight usage tags for multi-project symbols``() = 
@@ -207,5 +211,5 @@ module Test =
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq
                 |> assertEqual
-                    (set [ (5, 22) => (5, 28); (6, 22) => (6, 28) ]))
+                    (set [ (5, 22) => (5, 28), false; (6, 22) => (6, 28), false ]))
 
