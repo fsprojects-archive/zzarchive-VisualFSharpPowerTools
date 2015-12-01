@@ -47,19 +47,20 @@ type RenameCommandFilter(textDocument: ITextDocument,
                 |> Option.iter (fun doc ->
                     for (fileName, ranges) in foundUsages do
                         let buffer = documentUpdater.GetBufferForDocument(fileName)
-                        let spans =
-                            match state with
-                            | Some { Word = Some (word, _); File = currentFile } when currentFile = fileName ->
-                                seq {
-                                    let spans = List.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
-                                    if List.forall ((<>) word) spans then
-                                        // Ensure that current word is always renamed
-                                        yield word
-                                    yield! spans
-                                }
-                            | _ -> Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
-                            |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
-                        spans
+                        match state with
+                        | Some { Word = Some (word, _); File = currentFile } when currentFile = fileName ->
+                            seq {
+                                let spans = List.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                                if List.forall ((<>) word) spans then
+                                    // Ensure that current word is always renamed
+                                    yield word
+                                yield! spans
+                            }
+                        | _ -> 
+                            Seq.choose (fromFSharpRange buffer.CurrentSnapshot) ranges
+                        |> Seq.map (fun range -> (), range)
+                        |> fixInvalidSymbolSpans buffer.CurrentSnapshot oldText
+                        |> List.map snd
                         |> List.fold (fun (snapshot: ITextSnapshot) span ->
                             let span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive)
                             snapshot.TextBuffer.Replace(span.Span, newText)) buffer.CurrentSnapshot
@@ -161,4 +162,4 @@ type RenameCommandFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
-                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
