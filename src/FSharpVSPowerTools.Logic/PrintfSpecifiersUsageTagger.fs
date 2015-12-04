@@ -70,7 +70,7 @@ type PrintfSpecifiersUsageTagger
             let! project = projectFactory.CreateForDocument buffer doc
             try
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FullName, project)
-                return! PrintfSpecifiersUsageGetter.getAll checkResults
+                return! PrintfSpecifiersUsageGetter.getAll checkResults (fun e -> Logging.logError (fun _ -> e))
             with e ->
                 Logging.logExceptionWithContext(e, "Failed to update printf specifier usages.")
                 return! None

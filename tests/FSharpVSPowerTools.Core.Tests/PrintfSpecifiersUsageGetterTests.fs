@@ -33,7 +33,7 @@ let (=>) source (expected: (int * (((int * int) * (int * int)) list)) list) =
     let actual = ref []
     try
         actual :=
-            PrintfSpecifiersUsageGetter.getAll results
+            PrintfSpecifiersUsageGetter.getAll results ignore
             |> Async.RunSynchronously
             |> Option.getOrElse [||]
             |> Array.toList
