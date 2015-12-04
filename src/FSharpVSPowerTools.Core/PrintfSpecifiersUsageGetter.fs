@@ -10,7 +10,7 @@ type PrintfSpecifierUse =
 
 let private startPos (r: Range.range) = r.StartLine, r.StartColumn
 
-let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
+let getAll (input: ParseAndCheckResults) (onError: string -> unit): PrintfSpecifierUse[] option Async =
     asyncMaybe {
         let! specifierRanges = input.GetFormatSpecifierLocations()
         let specifierRanges = 
@@ -31,7 +31,8 @@ let getAll (input: ParseAndCheckResults): PrintfSpecifierUse[] option Async =
                 | [||] -> restSpecifiers, acc
                 | _ ->
                     if func.Args.Length > ownSpecifiers.Length then
-                        failwithf "Too many Printf arguments for %+A (%d > %d)" func func.Args.Length ownSpecifiers.Length
+                        onError (sprintf "Too many Printf arguments for %+A (%d > %d)" 
+                                         func func.Args.Length ownSpecifiers.Length)
                     
                     let uses = 
                         func.Args
