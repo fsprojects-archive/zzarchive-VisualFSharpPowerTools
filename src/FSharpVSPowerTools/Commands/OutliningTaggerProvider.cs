@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Outlining;
 
-namespace FSharpVSPowerTools
+namespace FSharpVSPowerTools.Outlining
 {
     [Export(typeof(ITaggerProvider))]
     [Export(typeof(IWpfTextViewCreationListener))]
@@ -58,7 +58,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return (ITagger<T>)buffer.Properties.GetOrCreateSingletonProperty(() =>
-                   new Outlining.OutliningTagger(                       
+                   new OutliningTagger(                       
                        doc,
                        _serviceProvider,
                        _textEditorFactoryService,

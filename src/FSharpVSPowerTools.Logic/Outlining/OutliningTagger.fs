@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Outlining
+﻿namespace FSharpVSPowerTools.Outlining
 
 open System
 open Microsoft.VisualStudio.Text
@@ -17,16 +17,35 @@ open Microsoft.FSharp.Compiler.Ast
 open FSharpVSPowerTools.UntypedAstUtils
 open AsyncMaybe
 
-let [<Literal>] private UpdateDelay = 200us
-let [<Literal>] private MaxTooltipLines = 25
+[<AutoOpen>]
+module OutliningImpl =
+    let [<Literal>] UpdateDelay = 200us
+    let [<Literal>] MaxTooltipLines = 25
 
-[<Struct; NoComparison>]
-type ScopeSpan =
-    val Scope : Scope
-    val Collapse : Collapse
-    val SnapSpan : SnapshotSpan
-    new (scope, collapse, snapSpan) =
-        {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
+    [<Struct; NoComparison>]
+    type ScopeSpan =
+        val Scope : Scope
+        val Collapse : Collapse
+        val SnapSpan : SnapshotSpan
+        new (scope, collapse, snapSpan) =
+            {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
+
+    let inline scaleToFit (view: IWpfTextView) =
+        let isNormal d = not (Double.IsNaN d || Double.IsInfinity d)
+        let suffixLineCount = 2
+        view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
+
+        // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
+        // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
+        // 'Height' above.
+        view.LayoutChanged.Add  (fun _ ->
+            view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
+                let newWidth = view.MaxTextRightCoordinate
+                let currentWidth = view.VisualElement.Width
+                if not (isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth) then
+                    view.VisualElement.Width <- view.MaxTextRightCoordinate))
+            |> ignore)
+        view
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
@@ -51,23 +70,6 @@ type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as se
             createBuffer().CurrentSnapshot.GetText ()
         | content ->
             (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText ()
-
-let inline scaleToFit (view: IWpfTextView) =
-    let isNormal d = not (Double.IsNaN d || Double.IsInfinity d)
-    let suffixLineCount = 2
-    view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
-
-    // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
-    // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
-    // 'Height' above.
-    view.LayoutChanged.Add  (fun _ ->
-        view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
-            let newWidth = view.MaxTextRightCoordinate
-            let currentWidth = view.VisualElement.Width
-            if not (isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth) then
-                view.VisualElement.Width <- view.MaxTextRightCoordinate))
-        |> ignore)
-    view
 
 type OutliningTagger
     (textDocument: ITextDocument,
