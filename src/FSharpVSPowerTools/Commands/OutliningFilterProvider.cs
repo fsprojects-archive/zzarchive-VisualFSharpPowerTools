@@ -14,10 +14,10 @@ using Microsoft.VisualStudio.Text;
 
 namespace FSharpVSPowerTools.Outlining
 {
-    [Export(typeof(IWpfTextViewCreationListener))]
+    [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
-    internal class OutliningFilterProvider : IWpfTextViewCreationListener
+    internal class OutliningFilterProvider : IVsTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
@@ -43,22 +43,6 @@ namespace FSharpVSPowerTools.Outlining
             _fsharpVsLanguageService = fsharpVsLanguageService;
         }
 
-        public void TextViewCreated(IWpfTextView textView)
-        {
-            var textViewAdapter = _editorFactory.GetViewAdapter(textView);
-            if (textViewAdapter == null) return;
-
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.OutliningEnabled) return;
-
-            ITextDocument doc;
-            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
-            {
-                var filter = new OutliningFilter(textView, null);
-                AddCommandFilter(textViewAdapter, filter);
-            }
-        }
-
         private static void AddCommandFilter(IVsTextView viewAdapter, OutliningFilter commandFilter)
         {
             if (!commandFilter.IsAdded)
@@ -73,6 +57,22 @@ namespace FSharpVSPowerTools.Outlining
                     // You'll need the next target for Exec and QueryStatus
                     if (next != null) commandFilter.NextTarget = next;
                 }
+            }
+        }
+
+        public void VsTextViewCreated(IVsTextView textViewAdapter)
+        {
+            var textView = _editorFactory.GetWpfTextView(textViewAdapter);
+            if (textView == null) return;
+
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (generalOptions == null || !generalOptions.OutliningEnabled) return;
+
+            ITextDocument doc;
+            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
+            {
+                var filter = new OutliningFilter();
+                AddCommandFilter(textViewAdapter, filter);
             }
         }
     }
