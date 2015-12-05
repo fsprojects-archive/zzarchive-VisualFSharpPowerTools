@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Outlining;
 
-namespace FSharpVSPowerTools
+namespace FSharpVSPowerTools.Outlining
 {
     [Export(typeof(ITaggerProvider))]
     [Export(typeof(IWpfTextViewCreationListener))]
@@ -58,7 +58,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return (ITagger<T>)buffer.Properties.GetOrCreateSingletonProperty(() =>
-                   new Outlining.OutliningTagger(                       
+                   new OutliningTagger(                       
                        doc,
                        _serviceProvider,
                        _textEditorFactoryService,
@@ -83,12 +83,7 @@ namespace FSharpVSPowerTools
                 if (isFirstOutlining)
                 {
                     var fullSpan = new SnapshotSpan(textView.TextSnapshot, 0, textView.TextSnapshot.Length);
-                    // Ensure that first tags have been computed.
-                    var tags = outliningTagger.GetTags(new NormalizedSnapshotSpanCollection(fullSpan));
                     var outliningManager = _outliningManagerService.GetOutliningManager(textView);
-                    // Keep the outlining manager in the lifetime of the text view.
-                    // This prevents the outlining manager being disposed while it should still be used.
-                    textView.Properties.GetOrCreateSingletonProperty(() => outliningManager);
                     if (outliningManager != null)
                     {
                         outliningManager.CollapseAll(fullSpan, match: c => c.Tag.IsDefaultCollapsed);
