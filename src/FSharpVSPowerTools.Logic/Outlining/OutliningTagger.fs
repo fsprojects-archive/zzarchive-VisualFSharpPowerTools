@@ -423,7 +423,7 @@ type OutliningTagger
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
                         member __.IsDefaultCollapsed = collapseByDefault scope
-                        member __.IsImplementation   = false
+                        member __.IsImplementation   = true
                         member __.CollapsedHintForm  =
                             OutliningHint (createElisionBufferView textEditorFactoryService, createBuffer) :> _
                     }) :> ITagSpan<_> 

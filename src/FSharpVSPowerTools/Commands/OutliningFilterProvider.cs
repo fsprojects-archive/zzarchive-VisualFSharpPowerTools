@@ -20,27 +20,15 @@ namespace FSharpVSPowerTools.Outlining
     internal class OutliningFilterProvider : IVsTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;
-        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
-        private readonly ProjectFactory _projectFactory;
-        private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
-        private readonly FileSystem _fileSystem;
-
+        
         [ImportingConstructor]
         public OutliningFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
-            ITextDocumentFactoryService textDocumentFactoryService,
-            IVsEditorAdaptersFactoryService editorFactory,
-            FileSystem fileSystem,
-            ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+            IVsEditorAdaptersFactoryService editorFactory)
         {
             _serviceProvider = serviceProvider;
-            _textDocumentFactoryService = textDocumentFactoryService;
             _editorFactory = editorFactory;
-            _fileSystem = fileSystem;
-            _projectFactory = projectFactory;
-            _fsharpVsLanguageService = fsharpVsLanguageService;
         }
 
         private static void AddCommandFilter(IVsTextView viewAdapter, OutliningFilter commandFilter)
@@ -68,12 +56,7 @@ namespace FSharpVSPowerTools.Outlining
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.OutliningEnabled) return;
 
-            ITextDocument doc;
-            if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
-            {
-                var filter = new OutliningFilter();
-                AddCommandFilter(textViewAdapter, filter);
-            }
+            AddCommandFilter(textViewAdapter, new OutliningFilter());
         }
     }
 }
