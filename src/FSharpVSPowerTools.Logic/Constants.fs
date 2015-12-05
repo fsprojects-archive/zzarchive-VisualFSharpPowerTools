@@ -59,7 +59,3 @@ let [<Literal>] guidAddReferenceInFSICmdSetString = "8c9a49dd-2d34-4d18-905b-c55
 let guidGenerateReferencesForFsiCmdSet = Guid(guidAddReferenceInFSICmdSetString)
 let [<Literal>] QuickInfoMargin = "vfpt.quickinfo.margin"
 let [<Literal>] LintTagErrorType = "F# Lint"
-
-let cmdidOutliningToggleCurrent = uint32 VSConstants.VSStd2KCmdID.OUTLN_TOGGLE_CURRENT
-let cmdidOutliningExpandAll = uint32 VSConstants.VSStd2010CmdID.OUTLN_EXPAND_ALL
-let cmdidOutliningCollapseAll = uint32 VSConstants.VSStd2010CmdID.OUTLN_COLLAPSE_ALL

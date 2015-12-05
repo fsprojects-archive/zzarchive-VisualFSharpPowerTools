@@ -12,7 +12,6 @@ open Microsoft.VisualStudio
 open System.Windows.Forms
 
 type OutliningFilter() =
-
     member val IsAdded = false with get, set
     member val NextTarget: IOleCommandTarget = null with get, set
 
