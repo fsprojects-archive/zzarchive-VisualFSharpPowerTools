@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
