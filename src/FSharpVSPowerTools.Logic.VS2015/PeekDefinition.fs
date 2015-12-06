@@ -5,6 +5,7 @@ open System.IO
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
@@ -32,16 +33,15 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
                             peekResultFactory.Create(
                                                 displayInfo, 
                                                 filePath, 
+                                                range.StartLine - 1,
+                                                range.StartColumn,
+                                                range.EndLine - 1,
+                                                range.EndColumn,
                                                 span.StartLine.LineNumber,
                                                 span.StartColumn,
-                                                span.EndLine.LineNumber,
-                                                span.EndColumn,
-                                                range.StartLine,
-                                                range.StartColumn, 
                                                 true)
 
                         resultCollection.Add result
-    //                resultCollection.Add(PeekHelpers.CreateDocumentPeekResult(declarationLocation.Path, declarationLocation.Span, entityOfInterestSpan, _peekableItem.PeekResultFactory));
     //                callback.ReportProgress(100 * ++processedSourceLocations / sourceLocations.Count);
             }
 
@@ -107,23 +107,18 @@ type PeekableItemSource
 [<SupportsPeekRelationship "IsDefinedBy">]
 type PeekableItemSourceProvider
     [<ImportingConstructor>]
-    (_peekResultFactory: IPeekResultFactory,
-     _textDocumentFactoryService: ITextDocumentFactoryService,
-     _serviceProvider: System.IServiceProvider) =
-//     projectFactory: ProjectFactory,
-//     vsLanguageService: VSLanguageService) =
-
-    do System.Diagnostics.Debug.Fail "PeekableItemSourceProvider ctor"
+    (peekResultFactory: IPeekResultFactory,
+     textDocumentFactoryService: ITextDocumentFactoryService,
+     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: System.IServiceProvider,
+     projectFactory: ProjectFactory,
+     vsLanguageService: VSLanguageService) =
 
     interface IPeekableItemSourceProvider with
-        member __.TryCreatePeekableItemSource(_buffer: ITextBuffer) =
-            do System.Diagnostics.Debug.Fail "Getting text doc..."
-            null
-//            match textDocumentFactoryService.TryGetTextDocument buffer with
-//            | true, doc ->
-//                do System.Diagnostics.Debug.Fail "Got doc, creating source provider..."
-//                buffer.Properties.GetOrCreateSingletonProperty(
-//                    fun() -> 
-//                        upcast new PeekableItemSource(buffer, doc, peekResultFactory,
-//                                                      serviceProvider, projectFactory, vsLanguageService))
-//            | _ -> null
+        member __.TryCreatePeekableItemSource(buffer: ITextBuffer) =
+            match textDocumentFactoryService.TryGetTextDocument buffer with
+            | true, doc ->
+                buffer.Properties.GetOrCreateSingletonProperty(
+                    fun() -> 
+                        upcast new PeekableItemSource(buffer, doc, peekResultFactory,
+                                                      serviceProvider, projectFactory, vsLanguageService))
+            | _ -> null
