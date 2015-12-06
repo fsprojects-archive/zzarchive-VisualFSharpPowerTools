@@ -11,6 +11,7 @@ open System.Windows.Controls
 open Microsoft.Win32
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.VisualStudio.PlatformUI
 
 // An inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 
@@ -33,8 +34,7 @@ type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self =
 // for more about how an 'adornment manager' works
 type DepthColorizerAdornment(view: IWpfTextView, 
                              tagAggregator: ITagAggregator<DepthRegionTag>,
-                             themeManager: ThemeManager,
-                             shellEventListener: ShellEventListener) = 
+                             themeManager: ThemeManager) = 
     let LayerName = Constants.depthAdornmentLayerName // must match the Name attribute Export-ed, further below
     let adornmentLayer = view.GetAdornmentLayer(LayerName)
 
@@ -168,10 +168,10 @@ type DepthColorizerAdornment(view: IWpfTextView,
         for line in view.TextViewLines do
             refreshLine(line)
 
-    let recomputeColors = EventHandler(fun _ _ -> computeColors())
+    let recomputeColors = ThemeChangedEventHandler(fun _ -> computeColors())
     
     do 
-        shellEventListener.ThemeChanged.AddHandler(recomputeColors)
+        VSColorTheme.add_ThemeChanged(recomputeColors)
         // Initial computation of colors
         computeColors()
         view.ViewportWidthChanged.Add(fun _ -> refreshView())
@@ -190,5 +190,5 @@ type DepthColorizerAdornment(view: IWpfTextView,
 
     interface IDisposable with
         member __.Dispose() = 
-            shellEventListener.ThemeChanged.RemoveHandler(recomputeColors)
+            VSColorTheme.remove_ThemeChanged(recomputeColors)
         

@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools
+open FSharpVSPowerTools.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -15,7 +16,8 @@ type OutliningTaggerHelper() =
                             textDocumentFactoryService = base.DocumentFactoryService,
                             textEditorFactoryService = null,
                             projectionBufferFactoryService = null,
-                            outliningManagerService = null)
+                            outliningManagerService = null,
+                            openDocumentsTracker = base.OpenDocumentsTracker)
 
     member __.GetView(buffer) =
         createMockTextView buffer
@@ -36,6 +38,7 @@ type OutliningTaggerHelper() =
                     Some ((lineStart, colStart), tag.CollapsedForm.ToString())
                 | _ -> 
                     None)
+        |> Seq.sortBy (fun ((line, _), _) -> line)
 
 module OutliningTaggerTests =
 
@@ -45,6 +48,8 @@ module OutliningTaggerTests =
     [<Test>]
     let ``should generate outlining tags``() = 
         let content = """
+/// Color
+/// type
 type Color =
     | Red
     | Green
@@ -59,7 +64,8 @@ type Color =
         testEvent tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
-                |> Seq.toList 
+                |> Seq.toList
                 |> assertEqual 
-                    [((2, 13), "..."); 
-                     ((3, 5), "| Red...")])
+                    [(2, 1), "/// Color..."
+                     (4, 13), "..." 
+                     (5, 5), "| Red..." ])

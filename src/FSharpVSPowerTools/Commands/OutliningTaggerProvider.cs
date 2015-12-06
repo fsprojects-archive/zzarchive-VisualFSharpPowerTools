@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Outlining;
 
-namespace FSharpVSPowerTools
+namespace FSharpVSPowerTools.Outlining
 {
     [Export(typeof(ITaggerProvider))]
     [Export(typeof(IWpfTextViewCreationListener))]
@@ -25,6 +25,7 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _vsLanguageService;
         private readonly IProjectionBufferFactoryService _projectionBufferFactoryService;
         private readonly IOutliningManagerService _outliningManagerService;
+        private readonly IOpenDocumentsTracker _openDocumentsTracker;
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
@@ -34,7 +35,8 @@ namespace FSharpVSPowerTools
             IProjectionBufferFactoryService projectionBufferFactoryService,
             IOutliningManagerService outliningManagerService,
             ProjectFactory projectFactory,
-            VSLanguageService vsLanguageService)
+            VSLanguageService vsLanguageService,
+            IOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -43,6 +45,7 @@ namespace FSharpVSPowerTools
             _outliningManagerService = outliningManagerService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
+            _openDocumentsTracker = openDocumentsTracker;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
@@ -55,13 +58,14 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return (ITagger<T>)buffer.Properties.GetOrCreateSingletonProperty(() =>
-                   new Outlining.OutliningTagger(                       
+                   new OutliningTagger(                       
                        doc,
                        _serviceProvider,
                        _textEditorFactoryService,
                        _projectionBufferFactoryService,
                        _projectFactory,
-                       _vsLanguageService));
+                       _vsLanguageService,
+                       _openDocumentsTracker));
             }
 
             return null;
@@ -79,12 +83,7 @@ namespace FSharpVSPowerTools
                 if (isFirstOutlining)
                 {
                     var fullSpan = new SnapshotSpan(textView.TextSnapshot, 0, textView.TextSnapshot.Length);
-                    // Ensure that first tags have been computed.
-                    var tags = outliningTagger.GetTags(new NormalizedSnapshotSpanCollection(fullSpan));
                     var outliningManager = _outliningManagerService.GetOutliningManager(textView);
-                    // Keep the outlining manager in the lifetime of the text view.
-                    // This prevents the outlining manager being disposed while it should still be used.
-                    textView.Properties.GetOrCreateSingletonProperty(() => outliningManager);
                     if (outliningManager != null)
                     {
                         outliningManager.CollapseAll(fullSpan, match: c => c.Tag.IsDefaultCollapsed);

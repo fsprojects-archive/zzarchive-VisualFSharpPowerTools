@@ -50,7 +50,6 @@ type VsTestBase() =
                                               openDocumentsTracker, fileSystem, serviceProvider, SkipLexCache = true)
     let projectFactory = new MockProjectFactory(serviceProvider, openDocumentsTracker, vsLanguageService, dte)
 
-    let shellEventListener = new ShellEventListener(serviceProvider)
     let referenceSourceProvider = new DotNetReferenceSourceProvider()
     // Ensure that the timer is activated before running tests
     do if not referenceSourceProvider.IsActivated then referenceSourceProvider.Activate()
@@ -58,7 +57,6 @@ type VsTestBase() =
     static member GlobalServiceProvider = serviceProvider
     member __.ServiceProvider = serviceProvider
 
-    member __.ShellEventListener = shellEventListener
     member __.FSharpLanguageService = fsharpLanguageService
     member __.VsEditorAdaptersFactoryService = vsEditorAdaptersFactoryService
     member __.DocumentFactoryService = documentFactoryService

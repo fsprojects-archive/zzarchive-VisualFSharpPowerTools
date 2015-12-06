@@ -1,4 +1,6 @@
-#### 2.2.0 - Unreleased
+#### 2.3.0 - Unreleased
+
+#### 2.2.0 - November 29 2015
 * Implement outlining support ([#1147](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1147))
 * Fix conflicts between FSharpLint options dialog and ReSharper ([#1166](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1166))
 * Use FCS operation queues more effectively ([#1177](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1177), [#1178](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1178))
@@ -10,6 +12,8 @@
 * Collapse some constructs by default, based on outlining options ([#1215](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1215))
 * Preserve coloring if parsing fails ([#1219](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1219))
 * Move main computations out of UI thread ([#1237](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1237))
+* Add printf specifier highlighting ([#1257](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1257))
+* Fix formatting bugs ([#1267](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1267))
 
 #### 2.1.0 - October 11 2015
 * Fix fonts and colors' appearance on VS 2015 ([#1064](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1064))

@@ -13,8 +13,18 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 
-type HighlightUsageTag() = 
-    inherit TextMarkerTag("MarkerFormatDefinition/HighlightedReference")
+[<AutoOpen>]
+module private Utils =
+    let getMarker vsVersion isDef =
+        match vsVersion, isDef with
+        | VisualStudioVersion.VS2015, true ->
+            "MarkerFormatDefinition/HighlightedDefinition"
+        | _ ->
+            "MarkerFormatDefinition/HighlightedReference"
+
+type HighlightUsageTag(vsVersion, isDef)= 
+    inherit TextMarkerTag(getMarker vsVersion isDef)
+    member __.IsFromDefinition = isDef
 
 // Reference at http://msdn.microsoft.com/en-us/library/vstudio/dd885121.aspx
 
@@ -27,14 +37,14 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                           projectFactory: ProjectFactory) as self =
     let tagsChanged = Event<_, _>()
     let updateLock = obj()
-    let mutable wordSpans = NormalizedSnapshotSpanCollection()
-    let mutable currentWord = None
+    let mutable wordSpans = []
+    let mutable currentWord: SnapshotSpan option = None
     let mutable requestedPoint = SnapshotPoint()
 
     let buffer = view.TextBuffer
 
     // Perform a synchronous update, in case multiple background threads are running
-    let synchronousUpdate (currentRequest: SnapshotPoint, newSpans: NormalizedSnapshotSpanCollection, newWord: SnapshotSpan option) =
+    let synchronousUpdate (currentRequest, newSpans, newWord) =
         lock updateLock (fun () ->
             if currentRequest = requestedPoint then
                 wordSpans <- newSpans
@@ -49,6 +59,7 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             // We have to filter by full paths otherwise the range is invalid wrt current snapshot
             if Path.GetFullPathSafe(symbolUse.FileName) = filePath then
                 fromFSharpRange word.Snapshot symbolUse.RangeAlternate
+                |> Option.map (fun range -> symbolUse.IsFromDefinition, range)
             else None)
         |> fixInvalidSymbolSpans word.Snapshot lastIdent
 
@@ -67,17 +78,19 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                         match refSpans with
                         | Some references -> 
                             // Ignore symbols without any use
-                            let word = if Seq.isEmpty references then None else Some newWord
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection references, word)
+                            let word = if List.isEmpty references then None else Some newWord
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, references, word)
                         | None ->
                             // Return empty values in order to clear up markers
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
                     | None -> 
-                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
                 with e ->
                     Logging.logExceptionWithContext(e, "Failed to update highlight references.")
-                    do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                    do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
         }
+
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
@@ -88,7 +101,6 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                 let! project = projectFactory.CreateForDocument buffer doc
                 return!
@@ -102,43 +114,53 @@ type HighlightUsageTagger(textDocument: ITextDocument,
                             doUpdate (currentRequest, symbol, newWord, doc.FullName, project, ciuc) |> liftAsync
                     | None ->
                         callInUIContext <| fun _ -> 
-                            synchronousUpdate (currentRequest, NormalizedSnapshotSpanCollection(), None)
+                            synchronousUpdate (currentRequest, [], None)
                         |> liftAsync
-
-//                    |> Async.map (Option.iter id)
             | None, _ -> ()
-        } |> Async.Ignore
+        } 
+        |> Async.Ignore
 
     let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
                                                       updateAtCaretPosition)
 
-    let tagSpan span = TagSpan<HighlightUsageTag>(span, HighlightUsageTag()) :> ITagSpan<_>
+    let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
 
-    let getTags (spans: NormalizedSnapshotSpanCollection): ITagSpan<HighlightUsageTag> list = 
+    let createHighlightUsageTag isDef span = 
+        let highlightMarker = HighlightUsageTag(vsVersion, isDef)
+        TagSpan<_>(span, highlightMarker) :> ITagSpan<_>
+
+    let getTags (spans: NormalizedSnapshotSpanCollection) = 
         [
-            match currentWord with
-            | Some word when spans.Count <> 0 && wordSpans.Count <> 0 -> 
+            match currentWord, wordSpans with
+            | Some word, (_, firstWordSpan) :: _ when spans.Count > 0 -> 
                 let currentSnapshot = spans.[0].Snapshot
                 let wordSpans = 
-                    if currentSnapshot = wordSpans.[0].Snapshot then
+                    if currentSnapshot = firstWordSpan.Snapshot then
                         wordSpans
                     else
                         // If the requested snapshot isn't the same as the one our words are on, translate our spans
                         // to the expected snapshot
-                        NormalizedSnapshotSpanCollection
-                            (wordSpans |> Seq.map (fun span -> span.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)))
+                        wordSpans |> List.map (fun (isDef, span) -> isDef, span.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive))
                 
                 let word = 
                     if currentSnapshot = word.Snapshot then word
                     else word.TranslateTo(currentSnapshot, SpanTrackingMode.EdgeExclusive)
-                // First, yield back the word the cursor is under (if it overlaps)
-                if spans.OverlapsWith(NormalizedSnapshotSpanCollection word) then yield tagSpan word
-                // Second, yield all the other words in the file
+                
+                let duplicated = ref false
+                // First, yield all the other words in the file
+                for (isDef, span) in wordSpans do
+                    if not !duplicated && word = span then
+                        duplicated := true
+                    if spans.OverlapsWith span then
+                        yield createHighlightUsageTag isDef span
+                
+                // Second, yield back the word the cursor is under (if it overlaps)
                 // Note that we won't yield back the same word again in the word spans collection;
                 // the duplication is not expected.
-                for span in NormalizedSnapshotSpanCollection.Overlap(spans, wordSpans) do
-                    if span <> word then yield tagSpan span
-            | Some _ | None -> ()
+                if spans.OverlapsWith word && not !duplicated then 
+                    yield createHighlightUsageTag false word
+                
+            | _ -> ()
         ]
 
     interface ITagger<HighlightUsageTag> with

@@ -120,9 +120,6 @@
     <Compile Include="VSLanguageService.fs">
       <Link>ProjectSystem/VSLanguageService.fs</Link>
     </Compile>
-    <Compile Include="ShellEventListener.fs">
-      <Link>ProjectSystem/ShellEventListener.fs</Link>
-    </Compile>
     <Compile Include="ProjectProvider.fs">
       <Link>ProjectSystem/ProjectProvider.fs</Link>
     </Compile>
@@ -174,7 +171,7 @@
     <Compile Include="HighlightUsageFilter.fs">
       <Link>Symbol/HighlightUsageFilter.fs</Link>
     </Compile>
-	<Compile Include="PrintfSpecifiersUsageTagger.fs">
+    <Compile Include="PrintfSpecifiersUsageTagger.fs">
       <Link>Symbol/PrintfSpecifiersUsageTagger.fs</Link>
     </Compile>
     <Compile Include="RenameDialog.fs">
@@ -256,6 +253,7 @@
       <Link>Linting/LintQuickInfoSource.fs</Link>
     </Compile>
     <Compile Include="Outlining\OutliningTagger.fs" />
+    <Compile Include="Outlining\OutliningFilter.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -350,6 +348,14 @@
     <ReferencePath>$(ReferencePath);$(MSBuildThisFileDirectory)..\..\lib\vs2012</ReferencePath>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
   </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETCore'">
       <ItemGroup>
@@ -568,12 +574,4 @@
       </ItemGroup>
     </When>
   </Choose>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
-  <Import Project="$(SolutionDir)\.paket\paket.targets" />
 </Project>

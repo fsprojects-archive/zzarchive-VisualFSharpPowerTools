@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Outlining
+﻿namespace FSharpVSPowerTools.Outlining
 
 open System
 open Microsoft.VisualStudio.Text
@@ -17,16 +17,35 @@ open Microsoft.FSharp.Compiler.Ast
 open FSharpVSPowerTools.UntypedAstUtils
 open AsyncMaybe
 
-let [<Literal>] private UpdateDelay = 200us
-let [<Literal>] private MaxTooltipLines = 25
+[<AutoOpen>]
+module OutliningImpl =
+    let [<Literal>] UpdateDelay = 200us
+    let [<Literal>] MaxTooltipLines = 25
 
-[<Struct; NoComparison>]
-type ScopeSpan =
-    val Scope : Scope
-    val Collapse : Collapse
-    val SnapSpan : SnapshotSpan
-    new (scope, collapse, snapSpan) =
-        {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
+    [<Struct; NoComparison>]
+    type ScopeSpan =
+        val Scope : Scope
+        val Collapse : Collapse
+        val SnapSpan : SnapshotSpan
+        new (scope, collapse, snapSpan) =
+            {Scope = scope; Collapse = collapse; SnapSpan = snapSpan}
+
+    let inline scaleToFit (view: IWpfTextView) =
+        let isNormal d = not (Double.IsNaN d || Double.IsInfinity d)
+        let suffixLineCount = 2
+        view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
+
+        // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
+        // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
+        // 'Height' above.
+        view.LayoutChanged.Add  (fun _ ->
+            view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
+                let newWidth = view.MaxTextRightCoordinate
+                let currentWidth = view.VisualElement.Width
+                if not (isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth) then
+                    view.VisualElement.Width <- view.MaxTextRightCoordinate))
+            |> ignore)
+        view
 
 /// A colored outlining hint control similar to
 /// https://github.com/dotnet/roslyn/blob/57aaa6c9d8bc1995edfc261b968777666172f1b8/src/EditorFeatures/Core/Implementation/Outlining/OutliningTaggerProvider.Tag.cs
@@ -52,43 +71,24 @@ type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as se
         | content ->
             (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText ()
 
-let inline scaleToFit (view: IWpfTextView) =
-    let isNormal d = not (Double.IsNaN d || Double.IsInfinity d)
-    let suffixLineCount = 2
-    view.VisualElement.Height <- view.LineHeight * float (view.TextBuffer.CurrentSnapshot.LineCount + suffixLineCount)
-
-    // In order to compute the width, we need "MaxTextRightCoordinate", but we won't have
-    // that until a layout event occurs.  Fortunately, a layout event is going to occur because we set
-    // 'Height' above.
-    view.LayoutChanged.Add  (fun _ ->
-        view.VisualElement.Dispatcher.BeginInvoke (Action (fun () ->
-            let newWidth = view.MaxTextRightCoordinate
-            let currentWidth = view.VisualElement.Width
-            if not (isNormal newWidth && isNormal currentWidth && newWidth <= currentWidth) then
-                view.VisualElement.Width <- view.MaxTextRightCoordinate))
-        |> ignore)
-    view
-
-
 type OutliningTagger
     (textDocument: ITextDocument,
      serviceProvider : IServiceProvider,
      textEditorFactoryService: ITextEditorFactoryService,
      projectionBufferFactoryService: IProjectionBufferFactoryService,
      projectFactory: ProjectFactory,
-     languageService: VSLanguageService) as self =
+     languageService: VSLanguageService,
+     openDocumentsTracker: IOpenDocumentsTracker) as self =
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
     let mutable scopedSnapSpans: ScopeSpan [] = [||]
     let mutable oldAST: ParsedInput option = None
 
-
     /// triggerUpdate -=> tagsChanged
     let triggerUpdate newSnapshotSpans =
         scopedSnapSpans <- newSnapshotSpans
         tagsChanged.Trigger (self, SnapshotSpanEventArgs buffer.CurrentSnapshot.FullSpan)
-
 
     /// convert the FSharp compiler range in SRanges into a snapshot span and tuple it with its Scope tag
     let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopeSpan option =
@@ -96,7 +96,6 @@ type OutliningTagger
         match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
         | Some sshot -> ScopeSpan (sr.Scope, sr.Collapse, sshot) |> Some
         | None       -> None
-
 
     // There are times when the compiler will return an empty parse tree due to an error in the source file
     // when this happens if we use that empty tree outlining tags will not be created and any scopes that had
@@ -156,6 +155,8 @@ type OutliningTagger
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
+        | Scope.XmlDocComment         -> options.XmlDocCommentsEnabled
+        | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
@@ -165,13 +166,14 @@ type OutliningTagger
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc
+            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
             let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast
                 let scopedSpans = 
-                    ast 
-                    |> getOutliningRanges 
+                    (String.getLines source, ast)
+                    ||> getOutliningRanges 
                     |> Seq.filter (fun x -> outliningEnabled x.Scope)
                     |> Seq.choose (fromScopeRange snapshot)
                     |> Array.ofSeq
@@ -180,7 +182,7 @@ type OutliningTagger
         |> Async.Ignore
 
     /// viewUpdate -=> doUpdate -=> triggerUpdate -=> tagsChanged
-    let docEventListener =
+    let _docEventListener =
         new DocumentEventListener ([ViewChange.bufferEvent buffer], UpdateDelay, doUpdate) :> IDisposable
 
     /// Find the length of the shortest whitespace indentation in the textblock used for the outlining
@@ -319,6 +321,8 @@ type OutliningTagger
         | Scope.UnionDefn             -> options.SimpleTypesCollapsedByDefault
         | Scope.For                   
         | Scope.While                 -> options.LoopsCollapsedByDefault
+        | Scope.Comment               -> options.CommentsCollapsedByDefault
+        | Scope.XmlDocComment         -> options.XmlDocCommentsCollapsedByDefault
 //        | Scope.Namespace             ->
 //        | Scope.Do                    -> 
 //        | Scope.Lambda
@@ -419,7 +423,7 @@ type OutliningTagger
                     { new IOutliningRegionTag with
                         member __.CollapsedForm      = collapseText :> obj
                         member __.IsDefaultCollapsed = collapseByDefault scope
-                        member __.IsImplementation   = false
+                        member __.IsImplementation   = true
                         member __.CollapsedHintForm  =
                             OutliningHint (createElisionBufferView textEditorFactoryService, createBuffer) :> _
                     }) :> ITagSpan<_> 
@@ -446,16 +450,9 @@ type OutliningTagger
             |> Seq.filter (fun s -> normalizedSnapshotSpans.IntersectsWith s.SnapSpan)
             |> Seq.choose createTagSpan
 
-
     interface ITagger<IOutliningRegionTag> with
         member __.GetTags spans =
             protectOrDefault (fun _ -> getTags spans) Seq.empty
 
         [<CLIEvent>]
         member __.TagsChanged = tagsChanged.Publish
-
-
-    interface IDisposable with
-        member __.Dispose () =
-            docEventListener.Dispose ()
-            scopedSnapSpans <- [||]

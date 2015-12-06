@@ -345,14 +345,14 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                         r.StartLine
 
                 match url with
-                | String.StartsWith "https://raw.githubusercontent.com" _-> formattedGithubUrl
-                | String.StartsWith "https://raw.github.com" _-> formattedGithubUrl
-                | String.StartsWith "https://github.com" _-> formattedGithubUrl
-                | String.StartsWith "https://bitbucket.org" _-> 
+                | String.StartsWith "https://raw.githubusercontent.com" -> formattedGithubUrl
+                | String.StartsWith "https://raw.github.com" -> formattedGithubUrl
+                | String.StartsWith "https://github.com" -> formattedGithubUrl
+                | String.StartsWith "https://bitbucket.org" -> 
                     let fileName = Path.GetFileName r.FileName
                     sprintf "%s?fileviewer=file-view-default#%s-%d" (url |> replace "/raw/" "/src/") fileName r.StartLine
-                | String.Contains ".codebasehq.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
-                | String.StartsWith "https://gitlab.com" _-> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                | String.Contains ".codebasehq.com" -> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
+                | String.StartsWith "https://gitlab.com" -> sprintf "%s#L%d" (url |> replace "/raw/" "/blob/") r.StartLine
                 | other -> other
 
             if fireNavigationEvent then

@@ -799,6 +799,8 @@ module Outlining =
         | SimpleType = 40
         | RecordDefn = 41
         | UnionDefn = 42
+        | Comment = 43
+        | XmlDocComment = 44
 
     [<NoComparison; Struct>]
     type ScopeRange (scope:Scope, collapse:Collapse, r:range) =
@@ -1149,11 +1151,74 @@ module Outlining =
               yield! collectOpens decls
               yield! Seq.collect parseDeclaration decls }
 
-    let getOutliningRanges tree =
+    type private LineNum = int
+    type private LineStr = string
+    type private CommentType = Regular | XmlDoc
+    
+    [<NoComparison>]
+    type private CommentList = 
+        { Lines: ResizeArray<LineNum * LineStr>
+          Type: CommentType }
+        static member New ty lineStr = 
+            { Type = ty; Lines = ResizeArray [| lineStr |] }
+
+    let private (|Comment|_|) line =
+        match line with
+        | String.StartsWith "///" -> Some XmlDoc
+        | String.StartsWith "//" -> Some Regular
+        | _ -> None
+
+    let getCommentRanges (lines: string[]) =
+        let comments: CommentList list =
+            lines
+            |> Array.foldi (fun ((lastLineNum, currentComment: CommentList option, result) as state) lineNum lineStr ->
+                match lineStr.TrimStart(), currentComment with
+                | Comment commentType, Some comment ->
+                    if comment.Type = commentType && lineNum = lastLineNum + 1 then
+                        comment.Lines.Add (lineNum, lineStr)
+                        lineNum, currentComment, result
+                    else lineNum, Some (CommentList.New commentType (lineNum, lineStr)), comment :: result
+                | Comment commentType, None -> 
+                    lineNum, Some (CommentList.New commentType (lineNum, lineStr)), result
+                | _, Some comment -> 
+                    lineNum, None, comment :: result
+                | _ -> state) 
+               (-1, None, [])
+            |> fun (_, lastComment, comments) -> 
+                match lastComment with 
+                | Some comment -> 
+                    comment :: comments 
+                | _ -> comments
+                |> List.rev
+
+        comments
+        |> List.filter (fun comment -> comment.Lines.Count > 1)
+        |> List.map (fun comment ->
+            let lines = comment.Lines
+            let startLine, startStr = lines.[0]
+            let endLine, endStr = lines.[lines.Count - 1]
+            let startCol = startStr.IndexOf '/'
+            let endCol = endStr.TrimEnd().Length
+
+            let scopeType =
+                match comment.Type with 
+                | Regular -> Scope.Comment
+                | XmlDoc -> Scope.XmlDocComment
+            ScopeRange(
+                scopeType, 
+                Collapse.Same, 
+                Range.mkRange 
+                    "" 
+                    (Range.mkPos (startLine + 1) startCol)
+                    (Range.mkPos (endLine + 1) endCol)))
+
+    let getOutliningRanges sourceLines tree =
         match tree with
-        | ParsedInput.ImplFile(implFile) ->
+        | ParsedInput.ImplFile implFile ->
             let (ParsedImplFileInput (_, _, _, _, _, modules, _)) = implFile
-            Seq.collect parseModuleOrNamespace modules
+            let astBasedRanges = Seq.collect parseModuleOrNamespace modules
+            let commentRanges = getCommentRanges sourceLines
+            Seq.append astBasedRanges commentRanges
         | _ -> Seq.empty
 
 module Printf =

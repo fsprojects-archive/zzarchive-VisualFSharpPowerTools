@@ -19,7 +19,7 @@ nuget NUnit
 nuget Foq
 nuget FsCheck
 nuget FSharp.Core 3.1.2.5 redirects:on
-nuget FAKE 4.0.3
+nuget FAKE
 
 group Build
 source http://nuget.org/api/v2
