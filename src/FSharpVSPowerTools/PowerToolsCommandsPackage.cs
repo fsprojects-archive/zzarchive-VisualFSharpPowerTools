@@ -69,20 +69,20 @@ namespace FSharpVSPowerTools
                 SetupReferenceMenu();
             }
 
-            if (generalOptions.TaskListCommentsEnabled)
-            {
-                try
-                {
-                    var componentModel = GetService(typeof(SComponentModel)) as IComponentModel;
-                    taskListCommentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>();
-                    Debug.Assert(taskListCommentManager != null, "This instance should have been MEF exported.");
-                    taskListCommentManager.Activate();
-                }
-                catch (Exception ex)
-                {
-                    LoggingModule.logException(ex);
-                }
-            }
+            //if (generalOptions.TaskListCommentsEnabled)
+            //{
+            //    try
+            //    {
+            //        var componentModel = GetService(typeof(SComponentModel)) as IComponentModel;
+            //        taskListCommentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>();
+            //        Debug.Assert(taskListCommentManager != null, "This instance should have been MEF exported.");
+            //        taskListCommentManager.Activate();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LoggingModule.logException(ex);
+            //    }
+            //}
         }
 
         private void SetupReferenceMenu()

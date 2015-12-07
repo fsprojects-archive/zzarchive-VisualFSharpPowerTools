@@ -11,14 +11,14 @@ type LogType =
     | Information
     | Warning
     | Error
-    override x.ToString() = 
+    override x.ToString() =
         match x with
         | Information -> "Information"
         | Warning -> "Warning"
         | Error -> "Error"
 
 [<Export>]
-type internal Logger [<ImportingConstructor>] 
+type internal Logger [<ImportingConstructor>]
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
      globalOptions:IGlobalOptions) =
 
@@ -32,11 +32,11 @@ type internal Logger [<ImportingConstructor>]
         | LogType.Warning -> OLEMSGICON.OLEMSGICON_WARNING
         | LogType.Error -> OLEMSGICON.OLEMSGICON_CRITICAL
 
-    let getShellService() = 
+    let getShellService() =
         serviceProvider.GetService<IVsUIShell, SVsUIShell>()
 
     let getActivityLogService() =
-        let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>() 
+        let service = serviceProvider.GetService<IVsActivityLog, SVsActivityLog>()
         Option.ofNull service
 
     static let mutable globalServiceProvider: IServiceProvider option = None
@@ -44,19 +44,19 @@ type internal Logger [<ImportingConstructor>]
     member internal __.GlobalOptions = globalOptions
 
     /// Quick and dirty global service provider for testing purpose.
-    static member internal GlobalServiceProvider 
+    static member internal GlobalServiceProvider
         with get () = globalServiceProvider |> Option.getOrElse (ServiceProvider.GlobalProvider :> _)
         and set v = globalServiceProvider <- Some v
 
     member __.Log(logType, message) =
         getActivityLogService()
         |> Option.iter (fun s -> s.LogEntry(uint32 (getEntryTypeInt logType), Resource.vsPackageTitle, message) |> ignore)
-        
+
     member __.MessageBox(logType, message) =
         let icon = getIcon logType
         let service = getShellService()
         let result = ref 0
-        service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u, 
+        service.ShowMessageBox(0u, ref Guid.Empty, Resource.vsPackageTitle, message, "", 0u,
             OLEMSGBUTTON.OLEMSGBUTTON_OK, OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST, icon, 0, result)
 
 module OutputWindowHelper =
@@ -74,17 +74,17 @@ module OutputWindowHelper =
             | _ -> None)
 
     let writeToOutputWindow (logType: LogType) (message: string) (window: IVsOutputWindowPane) =
-        let outputMessage = 
+        let outputMessage =
             String.Format("[VFPT][{0} {1}] {2}{3}",
                 logType.ToString(), DateTime.Now.ToString("hh:mm:ss tt"), message, Environment.NewLine)
         window.OutputString(outputMessage) |> ignore
-    
+
     /// This global output window is initialized once for each Visual Studio session.
     let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
     //let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =
-        outputWindowPane.Value 
+        outputWindowPane.Value
         |> Option.iter (writeToOutputWindow logType msg)
 
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -96,13 +96,13 @@ module Logging =
     /// This is a global logger, please make sure that it is executed after the package is loaded.
     let internal logger = lazy (Logger(Logger.GlobalServiceProvider, globalOptions))
 
-    let internal log logType (produceMessage: _ -> string) = 
+    let internal log logType (produceMessage: _ -> string) =
         // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.
         if (try globalOptions.DiagnosticMode with _ -> false) then
             let msg = produceMessage()
             diagnose logType msg
             logger.Value.Log(logType, msg)
-            
+
     let logInfo msg = log LogType.Information msg
     let logWarning msg = log LogType.Warning msg
     let logError msg = log LogType.Error msg
@@ -119,8 +119,8 @@ module Logging =
     let logWarningMessage (msg: Func<string>) = logWarning msg.Invoke
     let logErrorMessage (msg: Func<string>) = logError msg.Invoke
 
-    let logExceptionWithContext(ex: Exception, context) = 
+    let logExceptionWithContext(ex: Exception, context) =
         logError (fun _ -> sprintf "Context: %s\nException Message: %s\nStack Trace: %s" context ex.Message ex.StackTrace)
 
-    let logException (ex: Exception) = 
+    let logException (ex: Exception) =
         logError (fun _ -> sprintf "Exception Message: %s\nStack Trace: %s" ex.Message ex.StackTrace)

@@ -34,7 +34,7 @@ module Extensions =
             if this.HasElement name then this.Element name else this.AddElement name
 
         member this.SetOrCreateElement name value =
-            if this.HasElement name then (this.Element name).Value <- value 
+            if this.HasElement name then (this.Element name).Value <- value
             else (this.AddElement name).Value <- value
 
 
@@ -73,7 +73,7 @@ module StoreUtils =
 
     let defaultSettingsPath = configurePath ""
 
-    let writerSettings = 
+    let writerSettings =
         XmlWriterSettings (Indent=true, NewLineOnAttributes=true, Async=true, WriteEndDocumentOnClose=true)
 
 
@@ -395,7 +395,7 @@ type GeneralOptions () as self =
         member __.GetContents() = settingsStore.GetContents()
 
         member __.Load ()   = settingsStore.Load ()
-        member self.Save () = 
+        member self.Save () =
             settingsStore.Save ()
             settingsChanged.Trigger EventArgs.Empty
 
@@ -460,7 +460,7 @@ type FormattingOptions () as self  =
 
         member __.Load () = settingsStore.Load ()
 
-        member self.Save () = 
+        member self.Save () =
             settingsStore.Save ()
             settingsChanged.Trigger EventArgs.Empty
 
@@ -537,7 +537,7 @@ type GlobalOptions  () as self =
             and  set v  = setValue PROJECT_CACHE_SIZE v
 
         member __.Load () = settingsStore.Load ()
-        member self.Save () = 
+        member self.Save () =
             settingsStore.Save ()
             settingsChanged.Trigger EventArgs.Empty
 
@@ -738,7 +738,7 @@ type OutliningOptions () as self =
             and  set v  = setValue TOOLTIP_ZOOM_LEVEL v
 
         member __.Load () = settingsStore.Load ()
-        member self.Save () = 
+        member self.Save () =
             settingsStore.Save ()
             settingsChanged.Trigger EventArgs.Empty
 
