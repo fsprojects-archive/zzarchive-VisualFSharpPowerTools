@@ -40,6 +40,7 @@ namespace FSharpVSPowerTools
         private readonly ReferenceSourceProvider _referenceSourceProvider;
         private readonly System.IServiceProvider _serviceProvider;
         private readonly SolutionEvents _solutionEvents;
+        readonly IGeneralOptions _generalOptions;
 
         private static readonly Type serviceType = typeof(GoToDefinitionFilterProvider);
         
@@ -51,7 +52,8 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             [Import(typeof(DotNetReferenceSourceProvider))] ReferenceSourceProvider referenceSourceProvider,
             VSLanguageService languageService,
-            ProjectFactory projectFactory)
+            ProjectFactory projectFactory ,
+            IGeneralOptions generalOptions)
         {
             _serviceProvider = serviceProvider;
             _editorFactory = editorFactory;
@@ -60,6 +62,8 @@ namespace FSharpVSPowerTools
             _referenceSourceProvider = referenceSourceProvider;
             _fsharpVsLanguageService = languageService;
             _projectFactory = projectFactory;
+            _generalOptions = generalOptions;
+
 
             var dte = serviceProvider.GetService(typeof(SDTE)) as DTE;
             var events = dte.Events as Events2;
@@ -91,11 +95,11 @@ namespace FSharpVSPowerTools
 
         private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || (!_generalOptions.GoToMetadataEnabled && !_generalOptions.GoToSymbolSourceEnabled)) return null;
             // Favor Navigate to Source feature over Go to Metadata
-            var preference = generalOptions.GoToSymbolSourceEnabled
-                                ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
+            var preference = _generalOptions.GoToSymbolSourceEnabled
+                                ? (_generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
                                 : NavigationPreference.Metadata;
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
@@ -103,7 +107,7 @@ namespace FSharpVSPowerTools
                 var commandFilter = new GoToDefinitionFilter(doc, textView, _editorOptionsFactory,
                                                              _fsharpVsLanguageService, _serviceProvider, _projectFactory,
                                                              _referenceSourceProvider, preference, fireNavigationEvent);
-                if (!_referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
+                if (!_referenceSourceProvider.IsActivated && _generalOptions.GoToSymbolSourceEnabled)
                     _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
                 AddCommandFilter(textViewAdapter, commandFilter);

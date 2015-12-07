@@ -19,7 +19,8 @@ type LogType =
 
 [<Export>]
 type internal Logger [<ImportingConstructor>] 
-    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+    ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     globalOptions:IGlobalOptions) =
 
     let getEntryTypeInt = function
         | LogType.Information -> __ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION
@@ -39,6 +40,8 @@ type internal Logger [<ImportingConstructor>]
         Option.ofNull service
 
     static let mutable globalServiceProvider: IServiceProvider option = None
+
+    member internal __.GlobalOptions = globalOptions
 
     /// Quick and dirty global service provider for testing purpose.
     static member internal GlobalServiceProvider 
@@ -78,7 +81,7 @@ module OutputWindowHelper =
     
     /// This global output window is initialized once for each Visual Studio session.
     let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
-    let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
+    //let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
 
     let diagnose logType msg =
         outputWindowPane.Value 
@@ -87,13 +90,14 @@ module OutputWindowHelper =
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Logging =
     open OutputWindowHelper
-
+    [<Import>]
+    let globalOptions = Logger.GlobalServiceProvider.GetService<IGlobalOptions>()
     /// This is a global logger, please make sure that it is executed after the package is loaded.
-    let internal logger = lazy (Logger(Logger.GlobalServiceProvider))
+    let internal logger = lazy (Logger(Logger.GlobalServiceProvider, globalOptions))
 
     let internal log logType (produceMessage: _ -> string) = 
         // Guard against exceptions since it's not entirely clear that GlobalProvider will be populated correctly.
-        if (try globalOptions.Value.DiagnosticMode with _ -> false) then
+        if (try globalOptions.DiagnosticMode with _ -> false) then
             let msg = produceMessage()
             diagnose logType msg
             logger.Value.Log(logType, msg)

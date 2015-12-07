@@ -27,6 +27,11 @@ namespace FSharpVSPowerTools.Outlining
         private readonly IProjectionBufferFactoryService _projectionBufferFactoryService;
         private readonly IOutliningManagerService _outliningManagerService;
         private readonly IOpenDocumentsTracker _openDocumentsTracker;
+        private readonly IGeneralOptions _generalOptions;
+        private readonly IOutliningOptions _outliningOptions;
+        
+
+
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
@@ -37,7 +42,9 @@ namespace FSharpVSPowerTools.Outlining
             IOutliningManagerService outliningManagerService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentsTracker)
+            IOpenDocumentsTracker openDocumentsTracker,
+            IGeneralOptions generalOptions,
+            IOutliningOptions outliningOptions)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -47,12 +54,14 @@ namespace FSharpVSPowerTools.Outlining
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
             _openDocumentsTracker = openDocumentsTracker;
+            _generalOptions = generalOptions;
+            _outliningOptions = outliningOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.OutliningEnabled)
+           // var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.OutliningEnabled)
                 return null;
 
             ITextDocument doc;
@@ -66,7 +75,8 @@ namespace FSharpVSPowerTools.Outlining
                        _projectionBufferFactoryService,
                        _projectFactory,
                        _vsLanguageService,
-                       _openDocumentsTracker));
+                       _openDocumentsTracker,
+                       _outliningOptions));
             }
 
             return null;
@@ -74,8 +84,8 @@ namespace FSharpVSPowerTools.Outlining
 
         public void TextViewCreated(IWpfTextView textView)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.OutliningEnabled) return;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.OutliningEnabled) return;
             var textBuffer = textView.TextBuffer;
             var outliningTagger = CreateTagger<IOutliningRegionTag>(textBuffer);
             bool isFirstOutlining = true;

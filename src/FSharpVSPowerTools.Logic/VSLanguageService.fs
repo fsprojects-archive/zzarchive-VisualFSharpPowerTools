@@ -58,9 +58,10 @@ type VSLanguageService
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: IOpenDocumentsTracker,
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
-     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
+     [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
+     globalOptions:IGlobalOptions) =
 
-    let globalOptions = Setting.getGlobalOptions serviceProvider
+    //let globalOptions = Setting.getGlobalOptions serviceProvider
     let instance = LanguageService (globalOptions.BackgroundCompilation, globalOptions.ProjectCacheSize, fileSystem)
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.
