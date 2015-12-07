@@ -155,6 +155,12 @@ namespace FSharpVSPowerTools
             set { chbOutlining.Checked = value; }
         }
 
+        public bool PeekDefinitionEnabled
+        {
+            get { return chbPeekDefinition.Checked; }
+            set { chbPeekDefinition.Checked = value; }
+        }
+
         private void GeneralOptionsControl_Load(object sender, EventArgs e)
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
@@ -181,6 +187,7 @@ namespace FSharpVSPowerTools
             QuickInfoPanelEnabled = _optionsPage.QuickInfoPanelEnabled;
             LinterEnabled = _optionsPage.LinterEnabled;
             OutliningEnabled = _optionsPage.OutliningEnabled;
+            PeekDefinitionEnabled = _optionsPage.PeekDefinitionEnabled;
         }
     }
 }

@@ -45,6 +45,7 @@ namespace FSharpVSPowerTools
             QuickInfoPanelEnabled = true;
             LinterEnabled = false;
             OutliningEnabled = false;
+            PeekDefinitionEnabled = true;
         }
 
         bool GetNavigationBarConfig()
@@ -183,6 +184,9 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool OutliningEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool PeekDefinitionEnabled { get; set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -237,6 +241,7 @@ namespace FSharpVSPowerTools
                 QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
                 LinterEnabled = _optionsControl.LinterEnabled;
                 OutliningEnabled = _optionsControl.OutliningEnabled;
+                PeekDefinitionEnabled = _optionsControl.PeekDefinitionEnabled;
             }
 
             base.OnApply(e);

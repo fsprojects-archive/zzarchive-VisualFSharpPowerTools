@@ -115,10 +115,13 @@ type PeekableItemSourceProvider
 
     interface IPeekableItemSourceProvider with
         member __.TryCreatePeekableItemSource(buffer: ITextBuffer) =
-            match textDocumentFactoryService.TryGetTextDocument buffer with
-            | true, doc ->
-                buffer.Properties.GetOrCreateSingletonProperty(
-                    fun() -> 
-                        upcast new PeekableItemSource(buffer, doc, peekResultFactory,
-                                                      serviceProvider, projectFactory, vsLanguageService))
-            | _ -> null
+            let generalOptions = Setting.getGeneralOptions serviceProvider
+            if generalOptions == null || not generalOptions.PeekDefinitionEnabled then null
+            else
+                match textDocumentFactoryService.TryGetTextDocument buffer with
+                | true, doc ->
+                    buffer.Properties.GetOrCreateSingletonProperty(
+                        fun() -> 
+                            upcast new PeekableItemSource(buffer, doc, peekResultFactory,
+                                                          serviceProvider, projectFactory, vsLanguageService))
+                | _ -> null
