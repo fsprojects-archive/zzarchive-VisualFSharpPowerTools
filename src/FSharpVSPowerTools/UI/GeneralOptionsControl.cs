@@ -188,6 +188,12 @@ namespace FSharpVSPowerTools
             LinterEnabled = _optionsPage.LinterEnabled;
             OutliningEnabled = _optionsPage.OutliningEnabled;
             PeekDefinitionEnabled = _optionsPage.PeekDefinitionEnabled;
+
+            if (!_optionsPage.PeekDefinitionAvailable)
+            {
+                chbPeekDefinition.Enabled = false;
+                chbPeekDefinition.Text = chbPeekDefinition.Text + " (VS2015+ only)";
+            }
         }
     }
 }
