@@ -139,8 +139,12 @@ type FileState =
 // --------------------------------------------------------------------------------------
 // Language service 
 
+type ICachingFileSystem =
+    inherit IFileSystem
+    abstract ClearCache: unit -> unit
+
 /// Provides functionality for working with the F# interactive checker running in background
-type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fileSystem: IFileSystem) =
+type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fileSystem: ICachingFileSystem) =
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
   let mutable errorHandler = None
@@ -197,6 +201,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                    
                    debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
                    debug "[LanguageService] Parse and typecheck source..."
+                   fileSystem |> Option.iter (fun x -> x.ClearCache())
                    return! x.ParseAndCheckFileInProject (fixedFilePath, 0, source, options, 
                                                          IsResultObsolete (fun _ -> isResultObsolete filePath), null) 
               finally 
