@@ -12,6 +12,7 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open EnvDTE
 
 type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, peekResultFactory: IPeekResultFactory) =
     interface IPeekableItem with
@@ -19,7 +20,7 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
         member __.Relationships = seq [PredefinedPeekRelationships.Definitions]
         member __.GetOrCreateResultSource _relationshipName = 
             { new IPeekResultSource with
-                member __.FindResults(relationshipName, resultCollection, cancellationToken, callback) =
+                member __.FindResults(relationshipName, resultCollection, _ct, _callback) =
                     if relationshipName <> PredefinedPeekRelationships.Definitions.Name then ()
                     else 
                         let filePath = range.FileName
@@ -118,10 +119,16 @@ type PeekableItemSourceProvider
             let generalOptions = Setting.getGeneralOptions serviceProvider
             if generalOptions == null || not generalOptions.PeekDefinitionEnabled then null
             else
-                match textDocumentFactoryService.TryGetTextDocument buffer with
-                | true, doc ->
-                    buffer.Properties.GetOrCreateSingletonProperty(
-                        fun() -> 
-                            upcast new PeekableItemSource(buffer, doc, peekResultFactory,
-                                                          serviceProvider, projectFactory, vsLanguageService))
-                | _ -> null
+                let dte = serviceProvider.GetService<DTE, SDTE>()
+                match VisualStudioVersion.fromDTEVersion dte.Version with
+                | VisualStudioVersion.Unknown
+                | VisualStudioVersion.VS2012
+                | VisualStudioVersion.VS2013 -> null
+                | _ ->
+                    match textDocumentFactoryService.TryGetTextDocument buffer with
+                    | true, doc ->
+                        buffer.Properties.GetOrCreateSingletonProperty(
+                            fun() -> 
+                                upcast new PeekableItemSource(buffer, doc, peekResultFactory,
+                                                              serviceProvider, projectFactory, vsLanguageService))
+                    | _ -> null
