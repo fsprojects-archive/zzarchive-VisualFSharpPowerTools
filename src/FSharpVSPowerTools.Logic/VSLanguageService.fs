@@ -57,7 +57,7 @@ type VSLanguageService
     (editorFactory: IVsEditorAdaptersFactoryService, 
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: IOpenDocumentsTracker,
-     [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
+     [<Import(typeof<FileSystem>)>] fileSystem: ICachingFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
     let globalOptions = Setting.getGlobalOptions serviceProvider
