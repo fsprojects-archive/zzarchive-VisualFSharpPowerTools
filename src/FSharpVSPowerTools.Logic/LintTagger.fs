@@ -17,13 +17,14 @@ type LintTagger(textDocument: ITextDocument,
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
                 projectFactory: ProjectFactory,
-                openDocumentsTracker: IOpenDocumentsTracker) as self =
+                openDocumentsTracker: IOpenDocumentsTracker,
+                lintOptions:ILintOptions) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer
 
     let lintData = lazy(
-        let lintOptions = Setting.getLintOptions serviceProvider
+        //let lintOptions = Setting.getLintOptions serviceProvider
         lintOptions.UpdateDirectories()
         let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
         let shouldFileBeIgnored =

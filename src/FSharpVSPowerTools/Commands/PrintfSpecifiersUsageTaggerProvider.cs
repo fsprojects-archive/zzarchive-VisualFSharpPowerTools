@@ -24,6 +24,7 @@ namespace FSharpVSPowerTools
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
         readonly PrintfColorManager _printfColorManager;
+        private readonly IGeneralOptions _generalOptions;
 
         [ImportingConstructor]
         public PrintfSpecifiersUsageTaggerProvider(
@@ -31,13 +32,17 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            PrintfColorManager printfColorManager)
+                    IGeneralOptions generalOptions,
+
+
+        PrintfColorManager printfColorManager)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _printfColorManager = printfColorManager;
+            _generalOptions = generalOptions;
 
             VSColorTheme.ThemeChanged += UpdateTheme;
         }
@@ -52,8 +57,8 @@ namespace FSharpVSPowerTools
             // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.HighlightPrintfUsageEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.HighlightPrintfUsageEnabled) return null;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))

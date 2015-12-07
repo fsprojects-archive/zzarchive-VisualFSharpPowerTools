@@ -1,25 +1,53 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Shell;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace FSharpVSPowerTools
 {
     [Guid("30829e04-262b-4af7-89e3-d4bf7a1d0c23")]
     public class FantomasOptionsPage : DialogPage, IFormattingOptions
     {
-        public FantomasOptionsPage()
-        {
-            var config = Fantomas.FormatConfig.FormatConfig.Default;
 
-            PageWidth = 120;
-            SemicolonAtEndOfLine = config.SemicolonAtEndOfLine;
-            SpaceBeforeArgument = config.SpaceBeforeArgument;
-            SpaceBeforeColon = config.SpaceBeforeColon;
-            SpaceAfterComma = config.SpaceAfterComma;
-            SpaceAfterSemicolon = config.SpaceAfterSemicolon;
-            IndentOnTryWith = config.IndentOnTryWith;
-            ReorderOpenDeclaration = config.ReorderOpenDeclaration;
-            SpaceAroundDelimiter = config.SpaceAroundDelimiter;
+        IFormattingOptions settings;
+
+        //[ImportingConstructor]
+        //public FantomasOptionsPage(IFormattingOptions _settings)
+        //{
+        //    settings = _settings;
+        //}
+
+        public override void LoadSettingsFromStorage()
+        {
+            base.LoadSettingsFromStorage();
+            settings = VFPT_Settings.getFormattingOptions();
+            PageWidth                = settings.PageWidth                 ;
+            SemicolonAtEndOfLine     = settings.SemicolonAtEndOfLine      ;
+            SpaceBeforeArgument      = settings.SpaceBeforeArgument       ;
+            SpaceBeforeColon         = settings.SpaceBeforeColon          ;
+            SpaceAfterComma          = settings.SpaceAfterComma           ;
+            SpaceAfterSemicolon      = settings.SpaceAfterSemicolon       ;
+            SpaceAroundDelimiter     = settings.SpaceAroundDelimiter      ;
+            IndentOnTryWith          = settings.IndentOnTryWith           ;
+            ReorderOpenDeclaration   = settings.ReorderOpenDeclaration    ;
+
+        }
+
+        public override void SaveSettingsToStorage()
+        {
+            base.SaveSettingsToStorage();
+            settings = VFPT_Settings.getFormattingOptions();
+            settings.PageWidth              =   PageWidth               ;
+            settings.SemicolonAtEndOfLine   =   SemicolonAtEndOfLine    ;
+            settings.SpaceBeforeArgument    =   SpaceBeforeArgument     ;
+            settings.SpaceBeforeColon       =   SpaceBeforeColon        ;
+            settings.SpaceAfterComma        =   SpaceAfterComma         ;
+            settings.SpaceAfterSemicolon    =   SpaceAfterSemicolon     ;
+            settings.SpaceAroundDelimiter   =   SpaceAroundDelimiter    ;
+            settings.IndentOnTryWith        =   IndentOnTryWith         ;
+            settings.ReorderOpenDeclaration = ReorderOpenDeclaration;
+            settings.Save();
         }
 
         [Category("Layout")]
@@ -66,5 +94,13 @@ namespace FSharpVSPowerTools
         [DisplayName("Reorder open declarations")]
         [Description("Reorder and deduplicate open statements while doing formatting.")]
         public bool ReorderOpenDeclaration { get; set; }
+
+
+        public override void SaveSettingsToXml(IVsSettingsWriter writer)
+        {
+            base.SaveSettingsToXml(writer);
+        }
     }
+
+
 }

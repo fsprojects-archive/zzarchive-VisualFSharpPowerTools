@@ -26,14 +26,19 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
         private readonly IEditorOptionsFactoryService _editorOptionsFactory;
-       
+        private readonly IGeneralOptions _generalOptions;
+        private readonly ICodeGenerationOptions _codeGenOptions;
+
         [ImportingConstructor]
         public ImplementInterfaceSmartTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             IEditorOptionsFactoryService editorOptionsFactory,
             ITextUndoHistoryRegistry undoHistoryRegistry,
-            ProjectFactory projectFactory,
+                    IGeneralOptions generalOptions,
+                    ICodeGenerationOptions codeGenOptions,
+
+        ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
@@ -42,6 +47,9 @@ namespace FSharpVSPowerTools
             _undoHistoryRegistry = undoHistoryRegistry;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _generalOptions = generalOptions;
+                _codeGenOptions = codeGenOptions;
+
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -49,10 +57,10 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.InterfaceImplementationEnabled) return null;
-            var codeGenOptions = Setting.getCodeGenerationOptions(_serviceProvider);
-            if (codeGenOptions == null) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.InterfaceImplementationEnabled) return null;
+            //var codeGenOptions = Setting.getCodeGenerationOptions(_serviceProvider);
+            if (_codeGenOptions == null) return null;
 
             var dte = _serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
             var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
@@ -61,12 +69,15 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                var implementInterface = 
+                var implementInterface =
                     new ImplementInterface(doc, textView,
                         _editorOptionsFactory, _undoHistoryRegistry.RegisterHistory(buffer),
                         _fsharpVsLanguageService, _serviceProvider, _projectFactory,
-                        Setting.getInterfaceMemberIdentifier(codeGenOptions),
-                        Setting.getDefaultMemberBody(codeGenOptions));
+                        //Setting.getInterfaceMemberIdentifier(codeGenOptions),
+                        //Setting.getDefaultMemberBody(codeGenOptions));
+                        _codeGenOptions.InterfaceMemberIdentifier,
+                        _codeGenOptions.DefaultBody);
+
                 return new ImplementInterfaceSmartTagger(buffer, implementInterface) as ITagger<T>;
             }
 

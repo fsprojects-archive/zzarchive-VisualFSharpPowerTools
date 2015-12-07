@@ -24,20 +24,26 @@ namespace FSharpVSPowerTools
     {
         private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
         private readonly IServiceProvider _serviceProvider;
-        
+        private readonly IGeneralOptions _generalOptions;
+
+
         [ImportingConstructor]
         public UnusedDeclarationMarginProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-            IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
+                    IGeneralOptions generalOptions,
+
+
+        IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
         {
             _serviceProvider = serviceProvider;
             _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
+            _generalOptions = generalOptions;
         }
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost wpfTextViewHost, IWpfTextViewMargin marginContainer)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !(generalOptions.UnusedReferencesEnabled || generalOptions.UnusedOpensEnabled)) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !(_generalOptions.UnusedReferencesEnabled || _generalOptions.UnusedOpensEnabled)) return null;
 
  	        var textView = wpfTextViewHost.TextView;
             var tagAggregator = _viewTagAggregatorFactoryService.CreateTagAggregator<UnusedDeclarationTag>(textView);

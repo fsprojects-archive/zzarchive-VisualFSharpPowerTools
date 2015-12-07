@@ -28,7 +28,9 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
         private readonly IOpenDocumentsTracker _openDocumentTracker;
-       
+        private readonly IGeneralOptions _generalOptions;
+
+
         [ImportingConstructor]
         public XmlDocCommandFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
@@ -36,7 +38,8 @@ namespace FSharpVSPowerTools
             IVsEditorAdaptersFactoryService editorFactory,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker)
+            IOpenDocumentsTracker openDocumentTracker,
+            IGeneralOptions generalOptions)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -44,6 +47,8 @@ namespace FSharpVSPowerTools
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _openDocumentTracker = openDocumentTracker;
+            _generalOptions = generalOptions;
+
         }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
@@ -51,8 +56,8 @@ namespace FSharpVSPowerTools
             var wpfTextView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (wpfTextView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.XmlDocEnabled) return;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.XmlDocEnabled) return;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))

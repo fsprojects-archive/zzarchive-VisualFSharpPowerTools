@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using FSharpVSPowerTools.UI;
@@ -10,30 +11,74 @@ namespace FSharpVSPowerTools {
     public class OutliningOptionsPage : DialogPage, IOutliningOptions
     {
         OutliningOptionsControl _control;
+        IOutliningOptions settings;
+        //IOutliningOptions settings;
+        //[ImportingConstructor]
+        //public OutliningOptionsPage (IOutliningOptions _settings)
+        //{
+        //    settings = _settings;
+
+        //}
+
 
         public OutliningOptionsPage()
         {
-            OpensEnabled = true;
-            OpensCollapsedByDefault = true;
+            base.LoadSettingsFromStorage();
+            settings = VFPT_Settings.getOutliningOptions();
+            OpensEnabled                            = settings.OpensEnabled;
+            OpensCollapsedByDefault                 = settings.OpensCollapsedByDefault              ;
+            ModulesEnabled                          = settings.ModulesEnabled                       ;
+            ModulesCollapsedByDefault               = settings.ModulesCollapsedByDefault            ;
+            HashDirectivesEnabled                   = settings.HashDirectivesEnabled                ;
+            HashDirectivesCollapsedByDefault        = settings.HashDirectivesCollapsedByDefault     ;
+            TypesEnabled                            = settings.TypesEnabled                         ;
+            TypesCollapsedByDefault                 = settings.TypesCollapsedByDefault              ;
+            SimpleTypesEnabled                      = settings.SimpleTypesEnabled                   ;
+            SimpleTypesCollapsedByDefault           = settings.SimpleTypesCollapsedByDefault        ;
+            TypeExpressionsEnabled                  = settings.TypeExpressionsEnabled               ;
+            TypeExpressionsCollapsedByDefault       = settings.TypeExpressionsCollapsedByDefault    ;
+            MembersEnabled                          = settings.MembersEnabled                       ;
+            MembersCollapsedByDefault               = settings.MembersCollapsedByDefault            ;
+            LetOrUseEnabled                         = settings.LetOrUseEnabled                      ;
+            LetOrUseCollapsedByDefault              = settings.LetOrUseCollapsedByDefault           ;
+            CollectionsEnabled                      = settings.CollectionsEnabled                   ;
+            CollectionsCollapsedByDefault           = settings.CollectionsCollapsedByDefault        ;
+            PatternMatchesEnabled                   = settings.PatternMatchesEnabled                ;
+            PatternMatchesCollapsedByDefault        = settings.PatternMatchesCollapsedByDefault     ;
+            TryWithFinallyEnabled                   = settings.TryWithFinallyEnabled                ;
+            TryWithFinallyCollapsedByDefault        = settings.TryWithFinallyCollapsedByDefault     ;
+            IfThenElseEnabled                       = settings.IfThenElseEnabled                    ;
+            IfThenElseCollapsedByDefault            = settings.IfThenElseCollapsedByDefault         ;
+            CExpressionMembersEnabled               = settings.CExpressionMembersEnabled            ;
+            CExpressionMembersCollapsedByDefault    = settings.CExpressionMembersCollapsedByDefault ;
+            LoopsEnabled                            = settings.LoopsEnabled                         ;
+            LoopsCollapsedByDefault                 = settings.LoopsCollapsedByDefault              ;
+            AttributesEnabled                       = settings.AttributesEnabled                    ;
+            AttributesCollapsedByDefault            = settings.AttributesCollapsedByDefault         ;
+            XmlDocCommentsEnabled                   = settings.XmlDocCommentsEnabled                ;
+            XmlDocCommentsCollapsedByDefault        = settings.XmlDocCommentsCollapsedByDefault     ;
+            CommentsEnabled                         = settings.CommentsEnabled                      ;
+            CommentsCollapsedByDefault              = settings.CommentsCollapsedByDefault           ;
+            TooltipZoomLevel                        = settings.TooltipZoomLevel                     ;
 
             ModulesEnabled = true;
             ModulesCollapsedByDefault = false;
-            
+
             HashDirectivesEnabled = true;
             HashDirectivesCollapsedByDefault = true;
-            
+
             TypesEnabled = true;
             TypesCollapsedByDefault = false;
-            
+
             SimpleTypesEnabled = true;
             SimpleTypesCollapsedByDefault = false;
 
             TypeExpressionsEnabled = true;
             TypeExpressionsCollapsedByDefault = false;
-            
+
             MembersEnabled = true;
             MembersCollapsedByDefault = false;
-            
+
             LetOrUseEnabled = true;
             LetOrUseCollapsedByDefault = false;
 
@@ -63,7 +108,7 @@ namespace FSharpVSPowerTools {
 
             XmlDocCommentsEnabled = true;
             XmlDocCommentsCollapsedByDefault = true;
-            
+
             TooltipZoomLevel = 80;
         }
 

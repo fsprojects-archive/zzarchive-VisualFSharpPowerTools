@@ -20,20 +20,24 @@ namespace FSharpVSPowerTools
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IViewTagAggregatorFactoryService _viewTagAggregatorFactoryService;
-     
+        private readonly IGeneralOptions _generalOptions;
+
+
         [ImportingConstructor]
         public LintQuickInfoProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            IGeneralOptions generalOptions,
             IViewTagAggregatorFactoryService viewTagAggregatorFactoryService)
         {
             _serviceProvider = serviceProvider;
             _viewTagAggregatorFactoryService = viewTagAggregatorFactoryService;
-        }
+            _generalOptions = generalOptions;
+    }
 
         public IQuickInfoSource TryCreateQuickInfoSource(ITextBuffer textBuffer)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.LinterEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.LinterEnabled) return null;
 
             return new LintQuickInfoSource(textBuffer, _viewTagAggregatorFactoryService);
         }
