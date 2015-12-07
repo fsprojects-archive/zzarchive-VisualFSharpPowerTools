@@ -78,7 +78,8 @@ type OutliningTagger
      projectionBufferFactoryService: IProjectionBufferFactoryService,
      projectFactory: ProjectFactory,
      languageService: VSLanguageService,
-     openDocumentsTracker: IOpenDocumentsTracker) as self =
+     openDocumentsTracker: IOpenDocumentsTracker,
+     options:IOutliningOptions) as self =
 
     let buffer = textDocument.TextBuffer
     let tagsChanged = Event<_,_> ()
@@ -107,10 +108,9 @@ type OutliningTagger
         | Some _, emptyTree when emptyTree.Range.IsEmpty -> false 
         | Some _, _ -> true
 
-    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
+//    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
 
     let outliningEnabled scope =
-        let options = outliningOptions.Value
         match scope with
         | Scope.Open                  -> options.OpensEnabled
         | Scope.Module                -> options.ModulesEnabled
@@ -221,7 +221,7 @@ type OutliningTagger
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =
         let roles = textEditorFactoryService.CreateTextViewRoleSet ""
         let view = textEditorFactoryService.CreateTextView (finalBuffer, roles, Background = Brushes.Transparent)
-        let zoomLevel = float (outliningOptions.Value.TooltipZoomLevel) / 100.0
+        let zoomLevel = float (options.TooltipZoomLevel) / 100.0
         wpfTextView.Value
         |>  Option.iterElse (fun cv -> view.ZoomLevel <- zoomLevel * cv.ZoomLevel)
                             (fun _ -> view.ZoomLevel <- zoomLevel * view.ZoomLevel)
@@ -279,7 +279,6 @@ type OutliningTagger
         loop firstLineNum
 
     let collapseByDefault scope =
-        let options = outliningOptions.Value
         match scope with
         | Scope.Open                  -> options.OpensCollapsedByDefault
         | Scope.Module                -> options.ModulesCollapsedByDefault

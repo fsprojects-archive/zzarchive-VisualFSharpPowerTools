@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Shell;
 using System.Runtime.InteropServices;
 
@@ -7,11 +8,34 @@ namespace FSharpVSPowerTools
     [Guid("CE38C84E-BE03-472C-8741-952DAE4EDA2B")]
     public class GlobalOptionsPage : DialogPage, IGlobalOptions
     {
-        public GlobalOptionsPage()
+
+
+        IGlobalOptions settings;
+
+        //[ImportingConstructor]
+        //public GlobalOptionsPage (IGlobalOptions _settings)
+        //{
+        //    settings = _settings;
+        //}
+
+        public override void LoadSettingsFromStorage()
         {
-            DiagnosticMode = false;
-            BackgroundCompilation = true;
-            ProjectCacheSize = 50;
+            base.LoadSettingsFromStorage();
+            settings = VFPT_Settings.getGlobalOptions();
+            BackgroundCompilation = settings.BackgroundCompilation;
+            DiagnosticMode        = settings.DiagnosticMode;
+            ProjectCacheSize      = settings.ProjectCacheSize;
+        }
+
+        public override void SaveSettingsToStorage()
+        {
+            base.SaveSettingsToStorage();
+            settings = VFPT_Settings.getGlobalOptions();
+            settings.BackgroundCompilation = BackgroundCompilation;
+            settings.DiagnosticMode = DiagnosticMode;
+            settings.ProjectCacheSize = ProjectCacheSize;
+            settings.Save();
+
         }
 
         [Category("Debugging")]

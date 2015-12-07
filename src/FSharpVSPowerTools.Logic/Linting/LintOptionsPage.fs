@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Linting
 
 open System
+open System.ComponentModel.Composition
 open FSharpVSPowerTools
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
@@ -15,6 +16,7 @@ open FSharpVSPowerTools.ProjectSystem
 
 [<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
+[<Export(typeof<ILintOptions>)>]
 type LintOptionsPage private (dte:EnvDTE.DTE option) =
     inherit UIElementDialogPage()
 
@@ -27,13 +29,13 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
     let saveViewModel promptRetryDialog (viewModel:LintViewModel) =
         match viewModel.ViewModel with
-        | Some(optionsViewModel) -> 
+        | Some(optionsViewModel) ->
             loadedConfigs <- saveViewModelToLoadedConfigs loadedConfigs optionsViewModel
 
             let rec trySave () =
                 match saveViewModel loadedConfigs optionsViewModel with
                 | Success -> ()
-                | Failure reason -> 
+                | Failure reason ->
                     match promptRetryDialog reason with
                     | MessageBoxRetryButtonClicked -> trySave ()
                     | _ -> ()
@@ -73,16 +75,16 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
                 0) with
         | VSConstants.S_OK, result -> result
         | _ -> 0
-            
-    override this.OnApply e = 
+
+    override this.OnApply e =
         protect (fun _ ->
             match lintOptionsPageControl.Value.DataContext with
-            | :? LintViewModel as viewModel -> 
+            | :? LintViewModel as viewModel ->
                 saveViewModel this.RetrySaveDialog viewModel
             | _ -> ())
         base.OnApply e
 
-    override this.OnActivate e = 
+    override this.OnActivate e =
         protect (fun _ ->
             let dte = this.Dte
 
@@ -96,7 +98,7 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
                     let rec getFileViewModel files =
                         let getFile (file: FileViewModel) =
-                            if file.Path = path then Some file 
+                            if file.Path = path then Some file
                             else getFileViewModel file.Files
 
                         Seq.tryPick getFile files
@@ -107,18 +109,18 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
                             (getConfigForDirectory loadedConfigs),
                             files,
                             file) |> Some
-                    | None -> 
+                    | None ->
                         Debug.Assert(false, "No file view model for the initial file found.")
                         None
-                | None -> 
+                | None ->
                     None
 
-            lintOptionsPageControl.Value.DataContext <- 
+            lintOptionsPageControl.Value.DataContext <-
                 LintViewModel(lintOptions, saveViewModel this.RetrySaveDialog))
 
         base.OnActivate e
-            
-    override __.Child = 
+
+    override __.Child =
         protectOrDefault (fun _ ->
             let control = lintOptionsPageControl.Value
             control :> UIElement)

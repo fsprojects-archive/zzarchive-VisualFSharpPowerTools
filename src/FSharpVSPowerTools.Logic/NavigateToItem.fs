@@ -274,6 +274,7 @@ type NavigateToItemProviderFactory
         openDocumentsTracker: IOpenDocumentsTracker,
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         languageService: VSLanguageService,
+        generalOptions:IGeneralOptions,
         [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
         vsCompositionService: ICompositionService,
         projectFactory: ProjectFactory
@@ -299,7 +300,6 @@ type NavigateToItemProviderFactory
     interface INavigateToItemProviderFactory with
         member __.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
             let navigateToEnabled = 
-                let generalOptions = Setting.getGeneralOptions(serviceProvider)
                 generalOptions.NavigateToEnabled
             if not navigateToEnabled then
                 provider <- null

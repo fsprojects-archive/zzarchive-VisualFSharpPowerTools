@@ -27,7 +27,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(Linting.LintOptionsPage), Resource.vsPackageTitle, "Lint", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(OutliningOptionsPage), Resource.vsPackageTitle, "Outlining", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
-    [ProvideService(typeof(IGeneralOptions))]   
+    [ProvideService(typeof(IGeneralOptions))]
     [ProvideService(typeof(IFormattingOptions))]
     [ProvideService(typeof(ICodeGenerationOptions))]
     [ProvideService(typeof(IGlobalOptions))]
@@ -44,7 +44,7 @@ namespace FSharpVSPowerTools
 
         private uint pctCookie;
         private uint objectManagerCookie;
-        
+
         internal static Lazy<DTE2> DTE
             = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
 
@@ -96,26 +96,26 @@ namespace FSharpVSPowerTools
                 SetupReferenceMenu();
             }
 
-            if (generalOptions.TaskListCommentsEnabled)
-            {
-                try
-                {
-                    var componentModel = GetService(typeof(SComponentModel)) as IComponentModel;
-                    taskListCommentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>();
-                    Debug.Assert(taskListCommentManager != null, "This instance should have been MEF exported.");
-                    taskListCommentManager.Activate();
-                }
-                catch (Exception ex)
-                {
-                    LoggingModule.logException(ex);
-                }
-            }
+            //if (generalOptions.TaskListCommentsEnabled)
+            //{
+            //    try
+            //    {
+            //        var componentModel = GetService(typeof(SComponentModel)) as IComponentModel;
+            //        taskListCommentManager = componentModel.DefaultExportProvider.GetExportedValue<CrossSolutionTaskListCommentManager>();
+            //        Debug.Assert(taskListCommentManager != null, "This instance should have been MEF exported.");
+            //        taskListCommentManager.Activate();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LoggingModule.logException(ex);
+            //    }
+            //}
         }
 
         private void SetupReferenceMenu()
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            
+
             if (mcs != null)
             {
                 fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs);
@@ -152,7 +152,7 @@ namespace FSharpVSPowerTools
                     pctCookie = 0;
                 }
             }
-        }    
+        }
 
         private void RegisterLibrary()
         {
