@@ -16,50 +16,38 @@ open FSharpVSPowerTools
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Record Stub Generator Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
-type RecordStubGeneratorSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
-
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
-
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
-
-    [<Import; DefaultValue>]
-    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
-
-    [<Import; DefaultValue>]
-    val mutable OpenDocumentsTracker: IOpenDocumentsTracker
+[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
+   (FSharpVsLanguageService: VSLanguageService,
+    TextDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>]
+    ServiceProvider: IServiceProvider,
+    UndoHistoryRegistry: ITextUndoHistoryRegistry,
+    ProjectFactory: ProjectFactory,
+    EditorOptionsFactory: IEditorOptionsFactoryService,
+    OpenDocumentsTracker: IOpenDocumentsTracker ) =
 
 
     interface ISuggestedActionsSourceProvider with
-        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
+        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions x.ServiceProvider
-                if generalOptions == null 
+                let generalOptions = Setting.getGeneralOptions ServiceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
+                if generalOptions == null
                    || codeGenOptions == null
                    || not generalOptions.GenerateRecordStubEnabled then null
-                else 
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc -> 
-                        let generator = 
+                else
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    | true, doc ->
+                        let generator =
                             new RecordStubGenerator(
                                   doc, textView,
-                                  x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                  x.FSharpVsLanguageService, x.ServiceProvider,
-                                  x.ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  x.OpenDocumentsTracker)
-                    
+                                  UndoHistoryRegistry.RegisterHistory(buffer),
+                                  FSharpVsLanguageService, ServiceProvider,
+                                  ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  OpenDocumentsTracker)
+
                         new RecordStubGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null
 
@@ -68,7 +56,7 @@ and RecordStubGeneratorSuggestedActionsSource (generator: RecordStubGenerator) a
     do generator.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
         member __.Dispose() = (generator :> IDisposable).Dispose()
-        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
+        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) =
             match generator.CurrentWord, generator.Suggestions with
             | None, _
             | _, [] ->
@@ -90,11 +78,11 @@ and RecordStubGeneratorSuggestedActionsSource (generator: RecordStubGenerator) a
                            member __.TryGetTelemetryId _telemetryId = false })
                 |> fun xs -> [ SuggestedActionSet xs ] :> _
 
-        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
+        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) =
             Task.FromResult(
-                Option.isSome generator.CurrentWord && 
-                generator.Suggestions 
-                |> List.isEmpty 
+                Option.isSome generator.CurrentWord &&
+                generator.Suggestions
+                |> List.isEmpty
                 |> not)
 
         [<CLIEvent>]

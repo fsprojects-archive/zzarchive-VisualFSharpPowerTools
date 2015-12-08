@@ -10,9 +10,9 @@ open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
 [<Export>]
-type DocumentNavigator() =
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable serviceProvider: IServiceProvider
+type DocumentNavigator [<ImportingConstructor>]
+   ([<Import(typeof<SVsServiceProvider>)>]
+    serviceProvider: IServiceProvider) =
 
     member internal x.NavigateTo(position: NavigateToItemExtraData) =
         let mutable hierarchy = Unchecked.defaultof<_>
@@ -21,16 +21,16 @@ type DocumentNavigator() =
 
         let canShow = 
             VsShellUtilities.IsDocumentOpen(
-                x.serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) ||
+                serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) ||
                 // TODO: track the project that contains document and open document in project context
             (VsShellUtilities.TryOpenDocument(
-                x.serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame)
+                serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame)
              |> ErrorHandler.Succeeded)
 
         if canShow then
             windowFrame.Show() |> ensureSucceeded
             let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-            let vsTextManager = x.serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
+            let vsTextManager = serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
             let mutable vsTextBuffer = Unchecked.defaultof<_>
             vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
             vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, 
@@ -55,15 +55,11 @@ type NavigateToItemDisplay(item: NavigateToItem, icon, navigator: DocumentNaviga
             member __.PreviewItem() = navigator.PreviewItem extraData
 
 [<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2013)>]
-type VS2013NavigateToItemDisplayFactory() =
-    [<Import; DefaultValue>]
-    val mutable navigator: DocumentNavigator
-
-    [<Import; DefaultValue>]
-    val mutable iconCache: NavigationItemIconCache
+type VS2013NavigateToItemDisplayFactory [<ImportingConstructor>] 
+    (navigator: DocumentNavigator, iconCache: NavigationItemIconCache)=
     
     interface INavigateToItemDisplayFactory with
-        member x.CreateItemDisplay item = 
-            let icon = x.iconCache.GetIconForNavigationItemKind item.Kind
-            upcast NavigateToItemDisplay(item, icon, x.navigator)
+        member __.CreateItemDisplay item = 
+            let icon = iconCache.GetIconForNavigationItemKind item.Kind
+            upcast NavigateToItemDisplay(item, icon, navigator)
 

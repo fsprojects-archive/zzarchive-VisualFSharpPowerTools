@@ -16,46 +16,36 @@ open FSharpVSPowerTools
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Implement Interface Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
-type ImplementInterfaceSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
-
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
-
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
-
-    [<Import; DefaultValue>]
-    val mutable EditorOptionsFactory: IEditorOptionsFactoryService
+[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
+   (FSharpVsLanguageService: VSLanguageService,
+    TextDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>]
+    ServiceProvider: IServiceProvider,
+    UndoHistoryRegistry: ITextUndoHistoryRegistry,
+    ProjectFactory: ProjectFactory,
+    EditorOptionsFactory: IEditorOptionsFactoryService) =
 
     interface ISuggestedActionsSourceProvider with
-        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
+        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions x.ServiceProvider
-                if generalOptions == null 
+                let generalOptions = Setting.getGeneralOptions ServiceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
+                if generalOptions == null
                    || codeGenOptions == null
                    || not generalOptions.ResolveUnopenedNamespacesEnabled then null
-                else 
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc -> 
-                        let implementInterface = 
+                else
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    | true, doc ->
+                        let implementInterface =
                             new ImplementInterface(
                                   doc, textView,
-                                  x.EditorOptionsFactory, x.UndoHistoryRegistry.RegisterHistory buffer,
-                                  x.FSharpVsLanguageService, x.ServiceProvider, x.ProjectFactory,
+                                  EditorOptionsFactory, UndoHistoryRegistry.RegisterHistory buffer,
+                                  FSharpVsLanguageService, ServiceProvider, ProjectFactory,
                                   Setting.getInterfaceMemberIdentifier codeGenOptions,
                                   Setting.getDefaultMemberBody codeGenOptions)
-                    
+
                         new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
                     | _ -> null
 
@@ -64,7 +54,7 @@ and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInter
     do implementInterface.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
         member __.Dispose() = (implementInterface :> IDisposable).Dispose()
-        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
+        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) =
             match implementInterface.CurrentWord, implementInterface.Suggestions with
             | Some _, (_ :: _ as suggestions)  ->
                 suggestions
@@ -84,7 +74,7 @@ and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInter
                 |> fun xs -> [ SuggestedActionSet xs ] :> _
             | _ -> Seq.empty
 
-        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
+        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) =
             Task.FromResult(
                 Option.isSome implementInterface.CurrentWord &&
                 not (List.isEmpty implementInterface.Suggestions))
