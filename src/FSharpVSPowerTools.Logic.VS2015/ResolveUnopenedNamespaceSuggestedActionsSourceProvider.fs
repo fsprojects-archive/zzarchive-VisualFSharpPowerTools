@@ -17,7 +17,7 @@ open Microsoft.VisualStudio.Imaging.Interop
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Resolve Unopened Namespaces Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
     val mutable FSharpVsLanguageService: VSLanguageService

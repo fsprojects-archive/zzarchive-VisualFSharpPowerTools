@@ -17,6 +17,7 @@ namespace FSharpVSPowerTools
     [ContentType("F#")]
     [TagType(typeof(ResolveUnopenedNamespaceSmartTag))]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class ResolveUnopenedNamespaceSmartTaggerProvider : IViewTaggerProvider
     {
         private readonly IServiceProvider _serviceProvider;

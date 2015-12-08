@@ -17,6 +17,7 @@ namespace FSharpVSPowerTools.Outlining
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal class OutliningFilterProvider : IVsTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;

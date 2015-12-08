@@ -6,6 +6,9 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Shell.Interop;
+using EnvDTE;
+using FSharpVSPowerTools.ProjectSystem;
 
 namespace FSharpVSPowerTools
 {
@@ -20,7 +23,9 @@ namespace FSharpVSPowerTools
         public GeneralOptionsPage()
         {
             var componentModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
-        
+            var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+            var visualStudioVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+
             XmlDocEnabled = true;
             FormattingEnabled = true;
             _navBarEnabledInAppConfig = GetNavigationBarConfig();
@@ -45,13 +50,18 @@ namespace FSharpVSPowerTools
             QuickInfoPanelEnabled = true;
             LinterEnabled = false;
             OutliningEnabled = false;
+            PeekDefinitionEnabled = true;
+            PeekDefinitionAvailable =
+                visualStudioVersion != VisualStudioVersion.Unknown
+                && visualStudioVersion != VisualStudioVersion.VS2012
+                && visualStudioVersion != VisualStudioVersion.VS2013;
         }
 
         bool GetNavigationBarConfig()
         {
             try
             {
-                var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                var config = System.Configuration.ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
                 var configValue = config.AppSettings.Settings[navBarConfig];
                 bool result;
                 return configValue != null && bool.TryParse(configValue.Value, out result) ? result : false;
@@ -88,7 +98,7 @@ namespace FSharpVSPowerTools
             {
                 if (IsUserAdministrator())
                 {
-                    var config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                    var config = System.Configuration.ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
                     config.AppSettings.Settings.Remove(navBarConfig);
                     config.AppSettings.Settings.Add(navBarConfig, v.ToString().ToLower());
                     config.Save(ConfigurationSaveMode.Minimal);
@@ -183,6 +193,12 @@ namespace FSharpVSPowerTools
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool OutliningEnabled { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public bool PeekDefinitionEnabled { get; set; }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool PeekDefinitionAvailable { get; private set; }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
@@ -237,6 +253,7 @@ namespace FSharpVSPowerTools
                 QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
                 LinterEnabled = _optionsControl.LinterEnabled;
                 OutliningEnabled = _optionsControl.OutliningEnabled;
+                PeekDefinitionEnabled = _optionsControl.PeekDefinitionEnabled;
             }
 
             base.OnApply(e);

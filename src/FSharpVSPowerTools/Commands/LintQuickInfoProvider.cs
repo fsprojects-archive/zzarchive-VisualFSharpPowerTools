@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
@@ -13,6 +14,8 @@ namespace FSharpVSPowerTools
     [Name("F# Lint Quick Info Provider")]
     [Order(Before = "Default Quick Info Presenter")]
     [ContentType("F#")]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal class LintQuickInfoProvider : IQuickInfoSourceProvider
     {
         private readonly IServiceProvider _serviceProvider;

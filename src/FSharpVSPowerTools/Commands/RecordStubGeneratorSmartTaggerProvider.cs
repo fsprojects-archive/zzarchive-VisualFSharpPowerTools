@@ -15,6 +15,8 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(RecordStubGeneratorSmartTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class RecordStubGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         private readonly IServiceProvider _serviceProvider;

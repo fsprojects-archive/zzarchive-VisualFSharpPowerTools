@@ -65,12 +65,16 @@
     <Compile Include="ImplementInterfaceSuggestedActionsSourceProvider.fs" />
     <Compile Include="RecordStubGeneratorSuggestedActionsSourceProvider.fs" />
     <Compile Include="UnionPatternMatchCaseGeneratorSuggestedActionsSourceProvider.fs" />
+    <Compile Include="PeekDefinition.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="EnvDTE, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.CoreUtility">
       <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Editor">
+      <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Editor.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
       <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
@@ -80,6 +84,7 @@
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Immutable.10.0, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+    <Reference Include="Microsoft.VisualStudio.Shell.Interop.8.0, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Text.Data">
       <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Text.Data.dll</HintPath>
       <Private>True</Private>
@@ -96,6 +101,7 @@
       <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Threading">
       <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Threading.dll</HintPath>
     </Reference>
@@ -122,6 +128,7 @@
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
       <Private>True</Private>
     </ProjectReference>
+    <Reference Include="VSLangProj, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

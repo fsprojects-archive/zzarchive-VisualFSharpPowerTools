@@ -17,6 +17,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal class RenameCommandFilterProvider : IVsTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;

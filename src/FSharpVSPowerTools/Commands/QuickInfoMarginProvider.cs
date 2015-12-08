@@ -14,7 +14,8 @@ namespace FSharpVSPowerTools.QuickInfo
     [Order(After = PredefinedMarginNames.HorizontalScrollBar)]
     [MarginContainer(PredefinedMarginNames.Bottom)]
     [ContentType("F#")]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class QuickInfoMarginProvider : IWpfTextViewMarginProvider
     {
         private readonly IServiceProvider _serviceProvider;

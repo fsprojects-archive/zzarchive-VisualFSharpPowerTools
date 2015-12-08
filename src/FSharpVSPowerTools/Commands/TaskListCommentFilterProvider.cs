@@ -12,6 +12,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal class TaskListCommentFilterProvider : IVsTextViewCreationListener
     {
         internal IWpfTextView _textView;
