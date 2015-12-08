@@ -32,7 +32,7 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>
             else
                 let generalOptions = Setting.getGeneralOptions serviceProvider
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                if generalOptions == null 
+                if generalOptions == null
                    || codeGenOptions == null
                    || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
                 else
