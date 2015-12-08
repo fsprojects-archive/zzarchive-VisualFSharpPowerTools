@@ -18,34 +18,26 @@ open Microsoft.VisualStudio.Imaging.Interop
 [<Name "Resolve Unopened Namespaces Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
-
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
-
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
+type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstructor>]
+   (FSharpVsLanguageService: VSLanguageService,
+    TextDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>]
+    ServiceProvider: IServiceProvider,
+    UndoHistoryRegistry: ITextUndoHistoryRegistry,
+    ProjectFactory: ProjectFactory) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
+                let generalOptions = Setting.getGeneralOptions ServiceProvider
                 if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let resolver = 
-                            new UnopenedNamespaceResolver(doc, textView, x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                                          x.FSharpVsLanguageService, x.ServiceProvider, x.ProjectFactory)
+                            new UnopenedNamespaceResolver(doc, textView, UndoHistoryRegistry.RegisterHistory(buffer),
+                                                          FSharpVsLanguageService, ServiceProvider, ProjectFactory)
                     
                         new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
                     | _ -> null

@@ -17,44 +17,34 @@ open FSharpVSPowerTools
 [<Name "Union Pattern Match Case Generator Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type UnionPatternMatchCaseSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
-
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
-
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
-
-    [<Import; DefaultValue>]
-    val mutable OpenDocumentsTracker: IOpenDocumentsTracker
+type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>]
+   (FSharpVsLanguageService: VSLanguageService,
+    TextDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>]
+    ServiceProvider: IServiceProvider,
+    UndoHistoryRegistry: ITextUndoHistoryRegistry,
+    ProjectFactory: ProjectFactory,
+    OpenDocumentsTracker: IOpenDocumentsTracker) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions x.ServiceProvider
+                let generalOptions = Setting.getGeneralOptions ServiceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
                 else 
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let generator = 
                             new UnionPatternMatchCaseGenerator(
                                   doc, textView,
-                                  x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                  x.FSharpVsLanguageService, x.ServiceProvider,
-                                  x.ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  x.OpenDocumentsTracker)
+                                  UndoHistoryRegistry.RegisterHistory(buffer),
+                                  FSharpVsLanguageService, ServiceProvider,
+                                  ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  OpenDocumentsTracker)
                     
                         new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null
