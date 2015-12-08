@@ -16,6 +16,7 @@ namespace FSharpVSPowerTools.Outlining
     [TagType(typeof(IOutliningRegionTag))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Structured)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class OutliningTaggerProvider : ITaggerProvider, IWpfTextViewCreationListener
     {
         private readonly IServiceProvider _serviceProvider;

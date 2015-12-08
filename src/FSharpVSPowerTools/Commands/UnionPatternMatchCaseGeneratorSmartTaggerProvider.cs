@@ -16,6 +16,8 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(UnionPatternMatchCaseGeneratorSmartTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class UnionPatternMatchCaseGeneratorSmartTaggerProvider : IViewTaggerProvider
     {
         private readonly IServiceProvider _serviceProvider;

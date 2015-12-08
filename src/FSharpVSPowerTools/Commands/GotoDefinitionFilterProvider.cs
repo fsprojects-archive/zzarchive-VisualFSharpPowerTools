@@ -29,6 +29,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IWpfTextViewConnectionListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class GoToDefinitionFilterProvider : IVsTextViewCreationListener, IWpfTextViewConnectionListener, IDisposable
     {
         private readonly IVsEditorAdaptersFactoryService _editorFactory;

@@ -16,6 +16,8 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(ImplementInterfaceSmartTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class ImplementInterfaceSmartTaggerProvider : IViewTaggerProvider
     {
         private readonly IServiceProvider _serviceProvider;

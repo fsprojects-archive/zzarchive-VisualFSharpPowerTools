@@ -13,6 +13,7 @@ open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open EnvDTE
+open Microsoft.VisualStudio.Text.Editor
 
 type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, peekResultFactory: IPeekResultFactory) =
     interface IPeekableItem with
@@ -106,6 +107,7 @@ type PeekableItemSource
 [<ContentType "F#">]
 [<Name "F# Peekable Item Provider">]
 [<SupportsPeekRelationship "IsDefinedBy">]
+[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type PeekableItemSourceProvider
     [<ImportingConstructor>]
     (peekResultFactory: IPeekResultFactory,

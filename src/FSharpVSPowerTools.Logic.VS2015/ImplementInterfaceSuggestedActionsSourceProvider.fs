@@ -16,7 +16,7 @@ open FSharpVSPowerTools
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Implement Interface Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type ImplementInterfaceSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
     val mutable FSharpVsLanguageService: VSLanguageService
