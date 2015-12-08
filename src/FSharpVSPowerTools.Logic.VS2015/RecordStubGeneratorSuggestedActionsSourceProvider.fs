@@ -16,7 +16,7 @@ open FSharpVSPowerTools
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Record Stub Generator Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type RecordStubGeneratorSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
     val mutable FSharpVsLanguageService: VSLanguageService

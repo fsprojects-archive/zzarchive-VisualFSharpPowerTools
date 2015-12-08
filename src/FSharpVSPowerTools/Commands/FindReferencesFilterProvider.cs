@@ -17,6 +17,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     internal class FindReferencesFilterProvider : IWpfTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;

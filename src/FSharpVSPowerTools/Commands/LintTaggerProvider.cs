@@ -38,6 +38,8 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(LintTag))]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class LintTaggerProvider : IViewTaggerProvider
     {
         readonly IServiceProvider _serviceProvider;

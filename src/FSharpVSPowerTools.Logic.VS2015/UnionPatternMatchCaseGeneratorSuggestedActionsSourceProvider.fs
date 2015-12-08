@@ -16,7 +16,7 @@ open FSharpVSPowerTools
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Union Pattern Match Case Generator Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type UnionPatternMatchCaseSuggestedActionsSourceProvider() =
     [<Import; DefaultValue>]
     val mutable FSharpVsLanguageService: VSLanguageService

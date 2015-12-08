@@ -25,6 +25,7 @@ type IGeneralOptions =
     abstract QuickInfoPanelEnabled: bool with get, set
     abstract LinterEnabled: bool with get, set
     abstract OutliningEnabled: bool with get, set
+    abstract PeekDefinitionEnabled: bool with get, set
 
 type IFormattingOptions =
     abstract PageWidth: int with get, set

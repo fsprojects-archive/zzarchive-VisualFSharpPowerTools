@@ -18,7 +18,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IWpfTextViewCreationListener))]
     [Name("F# Formatting Command Hook")]
     [ContentType("F#")]
-    [TextViewRole(PredefinedTextViewRoles.Interactive)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class CodeFormattingHookHelper : IWpfTextViewCreationListener
     {
         private readonly IVsEditorAdaptersFactoryService _adaptersFactory;

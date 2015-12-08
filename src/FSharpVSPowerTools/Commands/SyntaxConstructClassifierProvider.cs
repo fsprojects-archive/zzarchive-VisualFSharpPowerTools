@@ -406,7 +406,7 @@ namespace FSharpVSPowerTools
     [TagType(typeof(UnusedDeclarationTag))]
     [Export(typeof(IClassifierProvider))]
     [ContentType("F#")]
-    [TextViewRole(PredefinedTextViewRoles.Document)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
         private readonly ClassificationColorManager _classificationColorManager;

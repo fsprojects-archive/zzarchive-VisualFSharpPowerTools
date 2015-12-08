@@ -6,7 +6,6 @@ open System.Diagnostics
 open EnvDTE
 open FSharpVSPowerTools
 open VSLangProj
-open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type internal ProjectProvider(project: Project, 

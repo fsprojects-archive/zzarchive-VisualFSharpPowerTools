@@ -18,7 +18,8 @@ namespace FSharpVSPowerTools
 {
     [Export(typeof(IVsTextViewCreationListener))]
     [ContentType("F#")]
-    [TextViewRole(PredefinedTextViewRoles.Interactive)]
+    [TextViewRole(PredefinedTextViewRoles.Editable)]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class XmlDocCommandFilterProvider : IVsTextViewCreationListener
     {
         private readonly System.IServiceProvider _serviceProvider;

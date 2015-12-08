@@ -19,6 +19,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(ITaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(DepthRegionTag))]
+    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
     public class DepthColorizerTaggerProvider : ITaggerProvider
     {
         readonly IServiceProvider _serviceProvider;
