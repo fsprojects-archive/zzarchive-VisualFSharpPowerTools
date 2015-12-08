@@ -34,7 +34,7 @@ type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstruct
                 if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc -> 
+                    | true, doc ->
                         let resolver =
                             new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
                                                           fsharpVsLanguageService, serviceProvider, projectFactory)
