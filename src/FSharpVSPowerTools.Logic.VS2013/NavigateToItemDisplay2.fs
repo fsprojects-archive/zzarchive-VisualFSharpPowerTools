@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.ProjectSystem.VS2013
+﻿namespace FSharpVSPowerTools.Logic.VS2013
 
 open System
 open System.ComponentModel.Composition
