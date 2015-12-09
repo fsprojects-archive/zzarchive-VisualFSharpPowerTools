@@ -123,6 +123,14 @@ type XmlSettingsStore () as self =
             settings |> Seq.iter (fun x -> sb.AppendLine(sprintf "%s | %s" x.Key x.Value) |> ignore)
             string sb
 
+        member __.Get name       = settings.TryFind name
+        member __.Set name value = settings.AddOrUpdate(name, value) |> ignore
+
+        member __.GetContents () =
+            let sb = StringBuilder()
+            settings |> Seq.iter (fun x -> sb.AppendLine(sprintf "%s | %s" x.Key x.Value) |> ignore)
+            string sb
+
 
 [<AutoOpen>]
 module SettingsConverters =
