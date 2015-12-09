@@ -10,7 +10,7 @@
     <RootNamespace>FSharpVSPowerTools.Logic.VS2015</RootNamespace>
     <AssemblyName>FSharpVSPowerTools.Logic.VS2015</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
+    <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>FSharpVSPowerTools.Logic.VS2015</Name>
     <TargetFrameworkProfile />
