@@ -20,6 +20,8 @@ open FSharpVSPowerTools.ProjectSystem
 type LintOptionsPage private (dte:EnvDTE.DTE option) =
     inherit UIElementDialogPage()
 
+//    let settingsStore = VFPT_Settings.GetSettingStore()
+
     [<Literal>]
     let MessageBoxRetryButtonClicked = 4
 
@@ -46,12 +48,17 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
     new () = new LintOptionsPage(None)
 
-    interface ILintOptions with
-        member this.UpdateDirectories() =
-            loadedConfigs <- updateLoadedConfigs this.Dte loadedConfigs
-
-        member __.GetConfigurationForDirectory(dir) =
-            getConfigForDirectory loadedConfigs dir
+//    interface ILintOptions with
+//        member this.UpdateDirectories() =
+//            loadedConfigs <- updateLoadedConfigs this.Dte loadedConfigs
+//
+//        member __.GetConfigurationForDirectory(dir) =
+//            getConfigForDirectory loadedConfigs dir
+//
+//        member __.Load () = settingsStore.Load ()
+//        member self.Save () = 
+//            settingsChanged.Trigger EventArgs.Empty
+//            settingsStore.Save ()
 
     member private this.Dte =
         match dte with

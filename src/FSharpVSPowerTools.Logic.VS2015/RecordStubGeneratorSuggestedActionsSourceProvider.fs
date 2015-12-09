@@ -24,32 +24,25 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
-    editorOptionsFactory: IEditorOptionsFactoryService,
     openDocumentsTracker: IOpenDocumentsTracker ) =
 
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
-            else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                if generalOptions == null
-                   || codeGenOptions == null
-                   || not generalOptions.GenerateRecordStubEnabled then null
-                else
-                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc ->
-                        let generator =
-                            new RecordStubGenerator(
-                                  doc, textView,
-                                  undoHistoryRegistry.RegisterHistory(buffer),
-                                  fsharpVsLanguageService, serviceProvider,
-                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  openDocumentsTracker)
+            elif not SettingsContext.GeneralOptions.GenerateRecordStubEnabled then null else
+            match textDocumentFactoryService.TryGetTextDocument(buffer) with
+            | true, doc ->
+                let generator =
+                    new RecordStubGenerator(
+                            doc, textView,
+                            undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider,
+                            projectFactory, SettingsContext.getDefaultMemberBody(),
+                            openDocumentsTracker)
 
-                        new RecordStubGeneratorSuggestedActionsSource(generator) :> _
-                    | _ -> null
+                new RecordStubGeneratorSuggestedActionsSource(generator) :> _
+            | _ -> null
 
 and RecordStubGeneratorSuggestedActionsSource (generator: RecordStubGenerator) as self =
     let actionsChanged = Event<_,_>()

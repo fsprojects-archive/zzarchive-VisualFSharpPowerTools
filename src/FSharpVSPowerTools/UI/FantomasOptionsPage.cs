@@ -7,21 +7,21 @@ using Microsoft.VisualStudio.Shell.Interop;
 namespace FSharpVSPowerTools
 {
     [Guid("30829e04-262b-4af7-89e3-d4bf7a1d0c23")]
-    public class FantomasOptionsPage : DialogPage, IFormattingOptions
+    public class FantomasOptionsPage : DialogPage //, IFormattingOptions
     {
 
         IFormattingOptions settings;
 
-        //[ImportingConstructor]
-        //public FantomasOptionsPage(IFormattingOptions _settings)
-        //{
-        //    settings = _settings;
-        //}
+        public FantomasOptionsPage()
+        {
+            settings = new FormattingOptions();
+        }
+
 
         public override void LoadSettingsFromStorage()
         {
             base.LoadSettingsFromStorage();
-            settings = VFPT_Settings.getFormattingOptions();
+            settings.Load();
             PageWidth                = settings.PageWidth                 ;
             SemicolonAtEndOfLine     = settings.SemicolonAtEndOfLine      ;
             SpaceBeforeArgument      = settings.SpaceBeforeArgument       ;
@@ -37,7 +37,6 @@ namespace FSharpVSPowerTools
         public override void SaveSettingsToStorage()
         {
             base.SaveSettingsToStorage();
-            settings = VFPT_Settings.getFormattingOptions();
             settings.PageWidth              =   PageWidth               ;
             settings.SemicolonAtEndOfLine   =   SemicolonAtEndOfLine    ;
             settings.SpaceBeforeArgument    =   SpaceBeforeArgument     ;
@@ -48,6 +47,13 @@ namespace FSharpVSPowerTools
             settings.IndentOnTryWith        =   IndentOnTryWith         ;
             settings.ReorderOpenDeclaration = ReorderOpenDeclaration;
             settings.Save();
+        }
+
+        protected override void OnApply(DialogPage.PageApplyEventArgs e)
+        {
+            base.OnApply(e);
+            SaveSettingsToStorage();
+            SettingsContext.triggerSettingsChanged(e);
         }
 
         [Category("Layout")]
@@ -96,10 +102,7 @@ namespace FSharpVSPowerTools
         public bool ReorderOpenDeclaration { get; set; }
 
 
-        public override void SaveSettingsToXml(IVsSettingsWriter writer)
-        {
-            base.SaveSettingsToXml(writer);
-        }
+
     }
 
 

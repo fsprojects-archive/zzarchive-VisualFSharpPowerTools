@@ -15,81 +15,81 @@ namespace FSharpVSPowerTools
 {
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [Guid("45eabfdf-0a20-4e5e-8780-c3e52360b0f0")]
-    public class GeneralOptionsPage : DialogPage, IGeneralOptions
+    public class GeneralOptionsPage : DialogPage
     {
         GeneralOptionsControl _optionsControl;
         IGeneralOptions settings;
         const string navBarConfig = "fsharp-navigationbar-enabled";
-        //bool _navBarEnabledInAppConfig;
-        //                                           [ImportingConstructor]
-        //public LintTaggerProvider(
-        //    [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
-        //[ImportingConstructor]
-        //public GeneralOptionsPage ( IGeneralOptions _settings){
-        //    settings = _settings;
-        //}
-
 
         public GeneralOptionsPage()
         {
+            settings = new GeneralOptions();
+        }
+
+        public override void LoadSettingsFromStorage()
+        {
             base.LoadSettingsFromStorage();
-            settings = VFPT_Settings.getGeneralOptions();
-            XmlDocEnabled                               = settings.XmlDocEnabled                                  ;
-            FormattingEnabled                           = settings.FormattingEnabled                              ;
-            NavBarEnabled                               = settings.NavBarEnabled                                  ;
-            HighlightUsageEnabled                       = settings.HighlightUsageEnabled                          ;
-            HighlightPrintfUsageEnabled                 = settings.HighlightPrintfUsageEnabled                    ;
-            RenameRefactoringEnabled                    = settings.RenameRefactoringEnabled                       ;
-            DepthColorizerEnabled                       = settings.DepthColorizerEnabled                          ;
-            NavigateToEnabled                           = settings.NavigateToEnabled                              ;
-            SyntaxColoringEnabled                       = settings.SyntaxColoringEnabled                          ;
-            InterfaceImplementationEnabled              = settings.InterfaceImplementationEnabled                 ;
-            FolderOrganizationEnabled                   = settings.FolderOrganizationEnabled                      ;
-            FindAllReferencesEnabled                    = settings.FindAllReferencesEnabled                       ;
-            GenerateRecordStubEnabled                   = settings.GenerateRecordStubEnabled                      ;
-            UnionPatternMatchCaseGenerationEnabled      = settings.UnionPatternMatchCaseGenerationEnabled         ;
-            ResolveUnopenedNamespacesEnabled            = settings.ResolveUnopenedNamespacesEnabled               ;
-            UnusedReferencesEnabled                     = settings.UnusedReferencesEnabled                        ;
-            UnusedOpensEnabled                          = settings.UnusedOpensEnabled                             ;
-            TaskListCommentsEnabled                     = settings.TaskListCommentsEnabled                        ;
-            GoToMetadataEnabled                         = settings.GoToMetadataEnabled                            ;
-            GenerateReferencesEnabled                   = settings.GenerateReferencesEnabled                      ;
-            GoToSymbolSourceEnabled                     = settings.GoToSymbolSourceEnabled                        ;
-            QuickInfoPanelEnabled                       = settings.QuickInfoPanelEnabled                          ;
-            LinterEnabled                               = settings.LinterEnabled                                  ;
-            OutliningEnabled                            = settings.OutliningEnabled                               ;
+            settings.Load();
+
+            XmlDocEnabled = settings.XmlDocEnabled;
+            FormattingEnabled = settings.FormattingEnabled;
+            NavBarEnabled = settings.NavBarEnabled;
+            HighlightUsageEnabled = settings.HighlightUsageEnabled;
+            HighlightPrintfUsageEnabled = settings.HighlightPrintfUsageEnabled;
+            RenameRefactoringEnabled = settings.RenameRefactoringEnabled;
+            DepthColorizerEnabled = settings.DepthColorizerEnabled;
+            NavigateToEnabled = settings.NavigateToEnabled;
+            SyntaxColoringEnabled = settings.SyntaxColoringEnabled;
+            InterfaceImplementationEnabled = settings.InterfaceImplementationEnabled;
+            FolderOrganizationEnabled = settings.FolderOrganizationEnabled;
+            FindAllReferencesEnabled = settings.FindAllReferencesEnabled;
+            GenerateRecordStubEnabled = settings.GenerateRecordStubEnabled;
+            UnionPatternMatchCaseGenerationEnabled = settings.UnionPatternMatchCaseGenerationEnabled;
+            ResolveUnopenedNamespacesEnabled = settings.ResolveUnopenedNamespacesEnabled;
+            UnusedReferencesEnabled = settings.UnusedReferencesEnabled;
+            UnusedOpensEnabled = settings.UnusedOpensEnabled;
+            TaskListCommentsEnabled = settings.TaskListCommentsEnabled;
+            GoToMetadataEnabled = settings.GoToMetadataEnabled;
+            GenerateReferencesEnabled = settings.GenerateReferencesEnabled;
+            GoToSymbolSourceEnabled = settings.GoToSymbolSourceEnabled;
+            QuickInfoPanelEnabled = settings.QuickInfoPanelEnabled;
+            LinterEnabled = settings.LinterEnabled;
+            OutliningEnabled = settings.OutliningEnabled;
         }
 
         public override void SaveSettingsToStorage()
         {
             base.SaveSettingsToStorage();
-            settings = VFPT_Settings.getGeneralOptions();
-            settings.XmlDocEnabled                               =      XmlDocEnabled                                ;
-            settings.FormattingEnabled                           =      FormattingEnabled                            ;
-            settings.NavBarEnabled                               =      NavBarEnabled                                ;
-            settings.HighlightUsageEnabled                       =      HighlightUsageEnabled                        ;
-            settings.HighlightPrintfUsageEnabled                 =      HighlightPrintfUsageEnabled                  ;
-            settings.RenameRefactoringEnabled                    =      RenameRefactoringEnabled                     ;
-            settings.DepthColorizerEnabled                       =      DepthColorizerEnabled                        ;
-            settings.NavigateToEnabled                           =      NavigateToEnabled                            ;
-            settings.SyntaxColoringEnabled                       =      SyntaxColoringEnabled                        ;
-            settings.InterfaceImplementationEnabled              =      InterfaceImplementationEnabled               ;
-            settings.FolderOrganizationEnabled                   =      FolderOrganizationEnabled                    ;
-            settings.FindAllReferencesEnabled                    =      FindAllReferencesEnabled                     ;
-            settings.GenerateRecordStubEnabled                   =      GenerateRecordStubEnabled                    ;
-            settings.UnionPatternMatchCaseGenerationEnabled      =      UnionPatternMatchCaseGenerationEnabled       ;
-            settings.ResolveUnopenedNamespacesEnabled            =      ResolveUnopenedNamespacesEnabled             ;
-            settings.UnusedReferencesEnabled                     =      UnusedReferencesEnabled                      ;
-            settings.UnusedOpensEnabled                          =      UnusedOpensEnabled                           ;
-            settings.TaskListCommentsEnabled                     =      TaskListCommentsEnabled                      ;
-            settings.GoToMetadataEnabled                         =      GoToMetadataEnabled                          ;
-            settings.GenerateReferencesEnabled                   =      GenerateReferencesEnabled                    ;
-            settings.GoToSymbolSourceEnabled                     =      GoToSymbolSourceEnabled                      ;
-            settings.QuickInfoPanelEnabled                       =      QuickInfoPanelEnabled                        ;
-            settings.LinterEnabled                               =      LinterEnabled                                ;
-            settings.OutliningEnabled                            =      OutliningEnabled                             ;
+            settings.XmlDocEnabled = XmlDocEnabled;
+            settings.FormattingEnabled = FormattingEnabled;
+            settings.NavBarEnabled = NavBarEnabled;
+            settings.HighlightUsageEnabled = HighlightUsageEnabled;
+            settings.HighlightPrintfUsageEnabled = HighlightPrintfUsageEnabled;
+            settings.RenameRefactoringEnabled = RenameRefactoringEnabled;
+            settings.DepthColorizerEnabled = DepthColorizerEnabled;
+            settings.NavigateToEnabled = NavigateToEnabled;
+            settings.SyntaxColoringEnabled = SyntaxColoringEnabled;
+            settings.InterfaceImplementationEnabled = InterfaceImplementationEnabled;
+            settings.FolderOrganizationEnabled = FolderOrganizationEnabled;
+            settings.FindAllReferencesEnabled = FindAllReferencesEnabled;
+            settings.GenerateRecordStubEnabled = GenerateRecordStubEnabled;
+            settings.UnionPatternMatchCaseGenerationEnabled = UnionPatternMatchCaseGenerationEnabled;
+            settings.ResolveUnopenedNamespacesEnabled = ResolveUnopenedNamespacesEnabled;
+            settings.UnusedReferencesEnabled = UnusedReferencesEnabled;
+            settings.UnusedOpensEnabled = UnusedOpensEnabled;
+            settings.TaskListCommentsEnabled = TaskListCommentsEnabled;
+            settings.GoToMetadataEnabled = GoToMetadataEnabled;
+            settings.GenerateReferencesEnabled = GenerateReferencesEnabled;
+            settings.GoToSymbolSourceEnabled = GoToSymbolSourceEnabled;
+            settings.QuickInfoPanelEnabled = QuickInfoPanelEnabled;
+            settings.LinterEnabled = LinterEnabled;
+            settings.OutliningEnabled = OutliningEnabled;
+
+            System.Diagnostics.Debug.WriteLine("Saving Settings to Storage");
+            System.Diagnostics.Debug.WriteLine(settings.GetContents());
             settings.Save();
         }
+
 
         bool GetNavigationBarConfig()
         {
@@ -155,85 +155,31 @@ namespace FSharpVSPowerTools
 
         // We are letting Visual Studio know that these property value needs to be persisted
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool XmlDocEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FormattingEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavBarEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool HighlightUsageEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool HighlightPrintfUsageEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool RenameRefactoringEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool DepthColorizerEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool NavigateToEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool SyntaxColoringEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool InterfaceImplementationEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FolderOrganizationEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool FindAllReferencesEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GenerateRecordStubEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnionPatternMatchCaseGenerationEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool ResolveUnopenedNamespacesEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnusedReferencesEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool UnusedOpensEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool TaskListCommentsEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToMetadataEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GenerateReferencesEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool GoToSymbolSourceEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool QuickInfoPanelEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool LinterEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
         public bool OutliningEnabled { get; set; }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
-        public bool PeekDefinitionEnabled { get; set; }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public bool PeekDefinitionAvailable { get; private set; }
-
-        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         protected override IWin32Window Window
         {
             get
@@ -260,8 +206,9 @@ namespace FSharpVSPowerTools
                     }
 
                     NavBarEnabled = _optionsControl.NavBarEnabled;
-                    _navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
+                    //_navBarEnabledInAppConfig = _optionsControl.NavBarEnabled;
                 }
+
 
                 XmlDocEnabled = _optionsControl.XmlDocEnabled;
                 FormattingEnabled = _optionsControl.FormattingEnabled;
@@ -287,10 +234,17 @@ namespace FSharpVSPowerTools
                 QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
                 LinterEnabled = _optionsControl.LinterEnabled;
                 OutliningEnabled = _optionsControl.OutliningEnabled;
-                PeekDefinitionEnabled = _optionsControl.PeekDefinitionEnabled;
+
+
+                System.Diagnostics.Debug.WriteLine("Saving Settings based on apply");
+                System.Diagnostics.Debug.WriteLine(settings.GetContents());
+                SaveSettingsToStorage();
+                SettingsContext.triggerSettingsChanged(e);
+
             }
 
             base.OnApply(e);
         }
+
     }
 }
