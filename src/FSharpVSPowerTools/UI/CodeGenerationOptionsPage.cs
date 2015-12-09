@@ -18,17 +18,16 @@ namespace FSharpVSPowerTools
         private CodeGenerationOptionsControl _optionsControl;
 
         ICodeGenerationOptions settings;
-        //[ImportingConstructor]
-        //public CodeGenerationOptionsPage(ICodeGenerationOptions _settings)
-        //{
-        //    settings = _settings;
-        //}
 
+        public CodeGenerationOptionsPage()
+        {
+            settings = new CodeGenerationOptions();
+        }
 
         public override void LoadSettingsFromStorage()
         {
             base.LoadSettingsFromStorage();
-            settings = VFPT_Settings.getCodeGenerationOptions();
+            settings.Load();
             DefaultBody = settings.DefaultBody;
             CodeGenerationOptions = settings.CodeGenerationOptions;
             InterfaceMemberIdentifier = settings.InterfaceMemberIdentifier;
@@ -37,7 +36,6 @@ namespace FSharpVSPowerTools
         public override void SaveSettingsToStorage()
         {
             base.SaveSettingsToStorage();
-            settings = VFPT_Settings.getCodeGenerationOptions();
             settings.DefaultBody = DefaultBody;
             settings.CodeGenerationOptions = CodeGenerationOptions;
             settings.InterfaceMemberIdentifier = InterfaceMemberIdentifier;
@@ -86,24 +84,12 @@ namespace FSharpVSPowerTools
                     }
                     InterfaceMemberIdentifier = _optionsControl.InterfaceMemberIdentifier;
                 }
-
                 DefaultBody = _optionsControl.DefaultBody;
                 CodeGenerationOptions = _optionsControl.CodeGenerationOptions;
             }
-            SaveSettingsToStorage();
             base.OnApply(e);
+            SaveSettingsToStorage();
             SettingsContext.triggerSettingsChanged(e);
         }
-
-
-            base.OnApply(e);
-        }
-
-        public override void SaveSettingsToStorage()
-        {
-            base.SaveSettingsToStorage();
-        }
-
     }
-
 }

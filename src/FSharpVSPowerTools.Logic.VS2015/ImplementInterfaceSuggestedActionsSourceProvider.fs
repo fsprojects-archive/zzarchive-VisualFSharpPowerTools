@@ -29,25 +29,19 @@ type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
-            else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                if generalOptions == null
-                   || codeGenOptions == null
-                   || not generalOptions.ResolveUnopenedNamespacesEnabled then null
-                else
-                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc ->
-                        let implementInterface =
-                            new ImplementInterface(
-                                  doc, textView,
-                                  editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
-                                  fsharpVsLanguageService, serviceProvider, projectFactory,
-                                  Setting.getInterfaceMemberIdentifier codeGenOptions,
-                                  Setting.getDefaultMemberBody codeGenOptions)
+            elif not SettingsContext.GeneralOptions.ResolveUnopenedNamespacesEnabled then null else
+            match textDocumentFactoryService.TryGetTextDocument(buffer) with
+            | true, doc ->
+                let implementInterface =
+                    new ImplementInterface(
+                            doc, textView,
+                            editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
+                            fsharpVsLanguageService, serviceProvider, projectFactory,
+                            SettingsContext.getInterfaceMemberIdentifier(),
+                            SettingsContext.getDefaultMemberBody())
 
-                        new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
-                    | _ -> null
+                new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
+            | _ -> null
 
 and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInterface) as self =
     let actionsChanged = Event<_,_>()

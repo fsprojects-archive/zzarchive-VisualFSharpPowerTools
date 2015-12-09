@@ -3,13 +3,13 @@ using System.Windows.Forms;
 
 namespace FSharpVSPowerTools.UI {
     public partial class OutliningOptionsControl : UserControl {
-        readonly IOutliningOptions _outliningOptions;
+        readonly OutliningOptionsPage _outliningOptions;
 
         public OutliningOptionsControl() {
             InitializeComponent();
         }
 
-        public OutliningOptionsControl(IOutliningOptions outliningOptions) {
+        public OutliningOptionsControl(OutliningOptionsPage outliningOptions) {
             InitializeComponent();
             _outliningOptions = outliningOptions;
         }

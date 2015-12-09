@@ -6,22 +6,22 @@ using System.Runtime.InteropServices;
 namespace FSharpVSPowerTools
 {
     [Guid("CE38C84E-BE03-472C-8741-952DAE4EDA2B")]
-    public class GlobalOptionsPage : DialogPage, IGlobalOptions
+    public class GlobalOptionsPage : DialogPage
     {
 
 
         IGlobalOptions settings;
 
-        //[ImportingConstructor]
-        //public GlobalOptionsPage (IGlobalOptions _settings)
-        //{
-        //    settings = _settings;
-        //}
+        public GlobalOptionsPage ()
+        {
+            settings = new GlobalOptions();
+        }
+
 
         public override void LoadSettingsFromStorage()
         {
             base.LoadSettingsFromStorage();
-            settings = VFPT_Settings.getGlobalOptions();
+            settings.Load();
             BackgroundCompilation = settings.BackgroundCompilation;
             DiagnosticMode        = settings.DiagnosticMode;
             ProjectCacheSize      = settings.ProjectCacheSize;
@@ -30,7 +30,6 @@ namespace FSharpVSPowerTools
         public override void SaveSettingsToStorage()
         {
             base.SaveSettingsToStorage();
-            settings = VFPT_Settings.getGlobalOptions();
             settings.BackgroundCompilation = BackgroundCompilation;
             settings.DiagnosticMode = DiagnosticMode;
             settings.ProjectCacheSize = ProjectCacheSize;
@@ -53,5 +52,14 @@ namespace FSharpVSPowerTools
         [Description("The number of projects where their parse and check results are cached. A large value may cause high memory load, " +
                      "which will make Visual Studio sluggish.")]
         public int ProjectCacheSize { get; set; }
+
+        protected override void OnApply(DialogPage.PageApplyEventArgs e)
+        {
+            base.OnApply(e);
+            SaveSettingsToStorage();
+            SettingsContext.triggerSettingsChanged(e);
+        }
+
+
     }
 }

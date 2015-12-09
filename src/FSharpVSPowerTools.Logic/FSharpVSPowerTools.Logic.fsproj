@@ -35,11 +35,11 @@
     <Tailcalls>true</Tailcalls>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-    <WarningLevel>5</WarningLevel>
+    <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\Release\FSharpVSPowerTools.Logic.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52</NoWarn>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
   <PropertyGroup>

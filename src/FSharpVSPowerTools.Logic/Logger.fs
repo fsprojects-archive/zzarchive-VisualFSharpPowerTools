@@ -90,8 +90,9 @@ module OutputWindowHelper =
 [<RequireQualifiedAccess; CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Logging =
     open OutputWindowHelper
-    [<Import>]
-    let globalOptions = Logger.GlobalServiceProvider.GetService<IGlobalOptions>()
+//    [<Import>]
+//    let globalOptions = Logger.GlobalServiceProvider.GetService<IGlobalOptions>()
+    let globalOptions = SettingsContext.GlobalOptions
     /// This is a global logger, please make sure that it is executed after the package is loaded.
     let internal logger = lazy (Logger(Logger.GlobalServiceProvider, globalOptions))
 

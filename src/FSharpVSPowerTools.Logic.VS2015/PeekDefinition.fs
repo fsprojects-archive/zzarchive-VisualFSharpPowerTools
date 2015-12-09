@@ -19,22 +19,22 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
     interface IPeekableItem with
         member __.DisplayName = null
         member __.Relationships = seq [PredefinedPeekRelationships.Definitions]
-        member __.GetOrCreateResultSource _relationshipName = 
+        member __.GetOrCreateResultSource _relationshipName =
             { new IPeekResultSource with
                 member __.FindResults(relationshipName, resultCollection, _ct, _callback) =
                     if relationshipName <> PredefinedPeekRelationships.Definitions.Name then ()
-                    else 
+                    else
                         let filePath = range.FileName
                         let fileName = Path.GetFileName filePath
                         let label = sprintf "%s - (%d, %d)" filePath range.StartLine range.StartColumn
-                        let displayInfo = 
-                            new PeekResultDisplayInfo(label = label, labelTooltip = box filePath, title = fileName, 
+                        let displayInfo =
+                            new PeekResultDisplayInfo(label = label, labelTooltip = box filePath, title = fileName,
                                                       titleTooltip = filePath)
-                        
+
                         let result =
                             peekResultFactory.Create(
-                                                displayInfo, 
-                                                filePath, 
+                                                displayInfo,
+                                                filePath,
                                                 range.StartLine - 1,
                                                 range.StartColumn,
                                                 range.EndLine - 1,
@@ -69,13 +69,13 @@ type PeekableItemSource
 
     let getDefinitionRange (point: SnapshotPoint) =
         async {
-            let projectItems = 
+            let projectItems =
                 maybe {
                     let! _, project, doc = getCurrentFilePathProjectAndDoc()
                     let! span, symbol = vsLanguageService.GetSymbol(point, doc.FullName, project)
-                    return doc.FullName, project, span, symbol 
+                    return doc.FullName, project, span, symbol
                 }
-                 
+
             match projectItems with
             | Some (file, project, span, symbol) ->
                 let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
@@ -95,7 +95,7 @@ type PeekableItemSource
     interface IPeekableItemSource with
         member __.AugmentPeekSession (session, peekableItems) =
             asyncMaybe {
-                do! if String.Equals(session.RelationshipName, PredefinedPeekRelationships.Definitions.Name, 
+                do! if String.Equals(session.RelationshipName, PredefinedPeekRelationships.Definitions.Name,
                                      StringComparison.OrdinalIgnoreCase) then Some() else None
                 let! triggerPoint = session.GetTriggerPoint(buffer.CurrentSnapshot) |> Option.ofNullable
                 let! symbolSpan, definitionRange = getDefinitionRange triggerPoint
@@ -117,7 +117,7 @@ type PeekableItemSourceProvider
      projectFactory: ProjectFactory,
      vsLanguageService: VSLanguageService) =
 
-    let vsVersion = 
+    let vsVersion =
         lazy(let dte = serviceProvider.GetService<DTE, SDTE>()
              VisualStudioVersion.fromDTEVersion dte.Version)
 
@@ -134,7 +134,7 @@ type PeekableItemSourceProvider
                     match textDocumentFactoryService.TryGetTextDocument buffer with
                     | true, doc ->
                         buffer.Properties.GetOrCreateSingletonProperty(
-                            fun () -> 
+                            fun () ->
                                 upcast new PeekableItemSource(buffer, doc, peekResultFactory,
                                                               serviceProvider, projectFactory, vsLanguageService))
                     | _ -> null

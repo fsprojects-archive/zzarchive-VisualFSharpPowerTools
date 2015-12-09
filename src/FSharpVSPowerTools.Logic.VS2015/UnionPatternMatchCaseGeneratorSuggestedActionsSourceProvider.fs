@@ -29,25 +29,19 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
-            else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
-                if generalOptions == null
-                   || codeGenOptions == null
-                   || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
-                else
-                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc ->
-                        let generator =
-                            new UnionPatternMatchCaseGenerator(
-                                  doc, textView,
-                                  undoHistoryRegistry.RegisterHistory(buffer),
-                                  fsharpVsLanguageService, serviceProvider,
-                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  openDocumentsTracker)
+            elif not SettingsContext.GeneralOptions.UnionPatternMatchCaseGenerationEnabled then null else
+            match textDocumentFactoryService.TryGetTextDocument(buffer) with
+            | true, doc ->
+                let generator =
+                    new UnionPatternMatchCaseGenerator(
+                            doc, textView,
+                            undoHistoryRegistry.RegisterHistory(buffer),
+                            fsharpVsLanguageService, serviceProvider,
+                            projectFactory, SettingsContext.getDefaultMemberBody(),
+                            openDocumentsTracker)
 
-                        new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
-                    | _ -> null
+                new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
+            | _ -> null
 
 and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatternMatchCaseGenerator) as self =
     let actionsChanged = Event<_,_>()

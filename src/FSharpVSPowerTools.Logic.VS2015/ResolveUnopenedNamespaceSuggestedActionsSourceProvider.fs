@@ -29,18 +29,15 @@ type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstruct
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
-            else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
-                else
-                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
-                    | true, doc ->
-                        let resolver =
-                            new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
-                                                          fsharpVsLanguageService, serviceProvider, projectFactory)
+            elif not SettingsContext.GeneralOptions.ResolveUnopenedNamespacesEnabled then null else
+            match textDocumentFactoryService.TryGetTextDocument(buffer) with
+            | true, doc ->
+                let resolver =
+                    new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
+                                                    fsharpVsLanguageService, serviceProvider, projectFactory)
 
-                        new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
-                    | _ -> null
+                new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
+            | _ -> null
 
 and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceResolver) as self =
     let actionsChanged = Event<_,_>()

@@ -6,23 +6,37 @@ open System.Runtime.CompilerServices
 open System.Xml
 open System.Xml.Linq
 open System.IO
+open System.Text
 open System.Collections.Generic
 open System.ComponentModel.Composition
+open EnvDTE
 open Microsoft.VisualStudio.Settings
 open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Shell.Settings
 open Microsoft.VisualStudio.Editor
 open System.Runtime.CompilerServices
 open FSharpVSPowerTools.Pervasive
 
+
+
 [<AutoOpen>]
 module Extensions =
 
+    let inline xelem  name (content:'a)  = new XElement(XName.Get name, content)
+
     type XContainer with
-        member this.Descendants name = this.Descendants(XName.Get name)
-        member this.Element     name = this.Element(XName.Get name)
-        member this.Elements    name = this.Elements(XName.Get name)
-        static member nodes (xcon:XContainer) : XNode seq = xcon.Nodes()
+        member this.Element     name            = this.Element(XName.Get name)
+        member this.HasElement (name:string)    = isNotNull (this.Element name)
+        member this.AddElement  name            = this.Add (xelem name []); this.Element name
+
+        member this.GetOrCreateElement name =
+            if this.HasElement name then this.Element name else this.AddElement name
+
+        member this.SetOrCreateElement name value =
+            if this.HasElement name then (this.Element name).Value <- value 
+            else (this.AddElement name).Value <- value
+
 
     type Dictionary<'key,'value> with
         member self.TryFind key =
@@ -30,10 +44,10 @@ module Extensions =
             | true  -> Some self.[key]
             | false -> None
 
-        member self.TryAdd (key, value) =
+        member self.AddOrUpdate (key, value) =
             match self.ContainsKey key with
-            | true  -> false
-            | false -> self.[key] <- value; true
+            | true  -> self.[key] <- value
+            | false -> self.Add (key,value)
 
     type System.IServiceProvider with
         member x.GetService<'T>()     = x.GetService(typeof<'T>) :?> 'T
@@ -41,96 +55,108 @@ module Extensions =
 
 
 
- type ISettingsStore =
-    abstract member Get : name:string -> string option
-    abstract member Set : name:string -> value:string -> unit
-    abstract member Load : unit -> unit
-    abstract member Save : unit -> unit
+[<AutoOpen>]
+module StoreUtils =
 
-
-[<Export (typeof<ISettingsStore>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type XmlSettingsStore (file:string) as self =
     let [<Literal>] VFPT_SETTINGS = "vfpt_settings.xml"
-
-    let settings = Dictionary<string,string>()
 
     let configurePath (filepath:string) =
         let filename, folder =
             if String.IsNullOrEmpty filepath then
                 VFPT_SETTINGS, Path.Combine
-                    (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),"VFPT")
+                    (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),@".configs/.vfpt")
             else
                 Path.GetFileName filepath, Path.GetDirectoryName filepath
         if not (Directory.Exists folder) then Directory.CreateDirectory folder |> ignore
 
         Path.Combine (folder, filename)
 
-    let filepath = configurePath file
-    do
-        self.Load()
-        self.Save()
+    let defaultSettingsPath = configurePath ""
+
+    let writerSettings = 
+        XmlWriterSettings (Indent=true, NewLineOnAttributes=true, Async=true, WriteEndDocumentOnClose=true)
 
 
-    member __.Save () =
-        using (XmlWriter.Create filepath) (fun writer ->
-            writer.WriteStartElement "VFPT"
-            settings |> Seq.iter (fun kvp -> writer.WriteElementString (kvp.Key, kvp.Value))
-            writer.WriteEndElement ()
-        )
+type ISettingsStore =
+    abstract member Get : name:string -> string option
+    abstract member Set : name:string -> value:string -> unit
+    abstract member Load : unit -> unit
+    abstract member Save : unit -> unit
+    abstract member GetContents : unit -> string
 
-    member __.Load () =
-        if File.Exists filepath then
-            try let doc = XDocument.Load filepath
-                doc.Root.Elements "VFPT"
-                |> Seq.iter (fun elem -> settings.[elem.Name.LocalName] <- elem.Value)
-            with _ -> ()
 
-    member __.Get name       = settings.TryFind name
-    member __.Set name value = settings.TryAdd (name, value) |> ignore
+[<Sealed>]
+type XmlSettingsStore () as self =
 
-    new () = XmlSettingsStore ("")
+    let settings = Dictionary<string,string>()
+    do  (self :> ISettingsStore).Load()
+
     interface ISettingsStore with
-        member __.Save ()  = self.Save ()
-        member __.Load ()  = self.Load ()
-        member __.Get name = self.Get name
-        member __.Set name value = self.Set name value
 
+        member __.Save ()  =
+            if (not<<File.Exists) defaultSettingsPath then
+                using (XmlWriter.Create(defaultSettingsPath, writerSettings)) (fun writer ->
+                    writer.WriteStartElement "VFPT"
+                    settings |> Seq.iter (fun kvp -> writer.WriteElementString (kvp.Key, kvp.Value))
+                    writer.WriteEndElement ())
+            else
+                let xdoc = XDocument.Load defaultSettingsPath
+                let vfptNode =  xdoc.GetOrCreateElement "VFPT"
+                settings |> Seq.iter (fun kvp -> vfptNode.SetOrCreateElement kvp.Key kvp.Value)
+                xdoc.Save defaultSettingsPath
+
+
+        member __.Load () =
+            try if File.Exists defaultSettingsPath then
+                    let doc = XDocument.Load defaultSettingsPath
+                    (doc.Element "VFPT").Descendants()
+                    |> Seq.iter (fun elem -> settings.AddOrUpdate(elem.Name.LocalName, elem.Value) )
+            with exn -> debug "%s" exn.Message
+                        debug "%s" exn.InnerException.Message
+
+
+        member __.Get name       = settings.TryFind name
+        member __.Set name value = settings.AddOrUpdate(name, value) |> ignore
+
+        member __.GetContents () =
+            let sb = StringBuilder()
+            settings |> Seq.iter (fun x -> sb.AppendLine(sprintf "%s | %s" x.Key x.Value) |> ignore)
+            string sb
 
 
 [<AutoOpen>]
 module SettingsConverters =
 
+    let settingsStore = XmlSettingsStore () :> ISettingsStore
+
     let settingsChanged = Event<EventArgs>()
     let settingsEvents  = settingsChanged.Publish
 
-    let boolScaffold (store:ISettingsStore) =
-        let getBool (name:string) (defaultValue:bool) : bool =
-            match store.Get name with
-            | None | Some "" -> defaultValue
-            | Some value -> Convert.ToBoolean value
-        getBool
-
-    let intScaffold (store:ISettingsStore) =
-        let getInt (name:string) (defaultValue:int) : int =
-            match store.Get name with
-            | None | Some "" -> defaultValue
-            | Some value -> Convert.ToInt32 value
-        getInt
-
-    let stringScaffold (store:ISettingsStore) =
-        let getInt (name:string) (defaultValue:string) : string =
-            match store.Get name with
-            | None | Some "" -> defaultValue
-            | Some value     -> value
-        getInt
+    // when settings have changed repopulate the settings dictionary based on the new values
+    settingsEvents.Add (fun _ -> settingsStore.Load ())
 
 
-    let inline setScaffold  (store:ISettingsStore) =
-        let setValue  (name:string) (value:obj) : unit =
-            if isNull value then store.Set name "" else
-            store.Set name (Convert.ToString (value, CultureInfo.InvariantCulture))
-        setValue
+    let getBool (name:string) (defaultValue:bool) : bool =
+        match settingsStore.Get name with
+        | None | Some "" -> defaultValue
+        | Some value -> Convert.ToBoolean value
+
+
+    let getInt (name:string) (defaultValue:int) : int =
+        match settingsStore.Get name with
+        | None | Some "" -> defaultValue
+        | Some value -> Convert.ToInt32 value
+
+
+    let getString (name:string) (defaultValue:string) : string =
+        match settingsStore.Get name with
+        | None | Some "" -> defaultValue
+        | Some value     -> value
+
+
+    let setValue  (name:string) (value:obj) : unit =
+        if isNull value then settingsStore.Set name "" else
+        settingsStore.Set name (Convert.ToString (value, CultureInfo.InvariantCulture))
 
 
 [<AutoOpen>]
@@ -138,7 +164,6 @@ module SettingsStrings =
 
     // GENERAL OPTIONS
     //----------------------
-
     let XML_DOC_ENABLED                             = "XmlDocEnabled"
     let FORMATTING_ENABLED                          = "FormattingEnabled"
     let NAVBAR_ENABLED                              = "NavBarEnabled"
@@ -258,13 +283,17 @@ type IGeneralOptions =
     abstract OutliningEnabled                       : bool with get, set
     abstract Load : unit -> unit
     abstract Save : unit -> unit
+    abstract member GetContents : unit -> string
 
 
+[<Sealed>]
 [<Export(typeof<IGeneralOptions>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type GeneralOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
-    let getBool  = boolScaffold settingsStore
-    let setValue = setScaffold  settingsStore
+type GeneralOptions () as self =
+
+    do
+        settingsStore.Load()
+        settingsEvents.Add (fun _ -> (self :> IGeneralOptions).Load ())
+
 
     interface IGeneralOptions with
         member __.XmlDocEnabled
@@ -363,11 +392,12 @@ type GeneralOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
             with get () = getBool  OUTLINING_ENABLED true
             and  set v  = setValue OUTLINING_ENABLED v
 
-        member __.Load () = settingsStore.Load ()
-        member self.Save () =
-            settingsChanged.Trigger EventArgs.Empty
-            settingsStore.Save ()
+        member __.GetContents() = settingsStore.GetContents()
 
+        member __.Load ()   = settingsStore.Load ()
+        member self.Save () = 
+            settingsStore.Save ()
+            settingsChanged.Trigger EventArgs.Empty
 
 
 type IFormattingOptions =
@@ -383,15 +413,16 @@ type IFormattingOptions =
     abstract Load : unit -> unit
     abstract Save : unit -> unit
 
+[<Sealed>]
 [<Export(typeof<IFormattingOptions>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type FormattingOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
-    let getBool  = boolScaffold settingsStore
-    let getInt   = intScaffold  settingsStore
-    let setValue x = setScaffold  settingsStore x
+type FormattingOptions () as self  =
+
+    do
+        settingsStore.Load()
+        settingsEvents.Add (fun _ -> (self :> IFormattingOptions).Load ())
 
     interface IFormattingOptions with
-       member __.PageWidth
+        member __.PageWidth
             with get () = getInt PAGE_WIDTH 120
             and  set v  = setValue PAGE_WIDTH v
 
@@ -429,36 +460,10 @@ type FormattingOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
 
         member __.Load () = settingsStore.Load ()
 
-        member self.Save () =
-            //settingsChanged.Trigger ( EventArgs() )
+        member self.Save () = 
             settingsStore.Save ()
+            settingsChanged.Trigger EventArgs.Empty
 
-
-[<Export(typeof<IFormattingOptions>)>]
-type FormattingOptions () =
-    member val PageWidth              = 120   with get, set
-    member val SemicolonAtEndOfLine   = true  with get, set
-    member val SpaceBeforeArgument    = true  with get, set
-    member val SpaceBeforeColon       = true  with get, set
-    member val SpaceAfterComma        = true  with get, set
-    member val SpaceAfterSemicolon    = true  with get, set
-    member val SpaceAroundDelimiter   = true  with get, set
-    member val IndentOnTryWith        = true  with get, set
-    member val ReorderOpenDeclaration = true  with get, set
-
-
-
-[<Export(typeof<IFormattingOptions>)>]
-type FormattingOptions () =
-    member val PageWidth              = 120   with get, set
-    member val SemicolonAtEndOfLine   = true  with get, set
-    member val SpaceBeforeArgument    = true  with get, set
-    member val SpaceBeforeColon       = true  with get, set
-    member val SpaceAfterComma        = true  with get, set
-    member val SpaceAfterSemicolon    = true  with get, set
-    member val SpaceAroundDelimiter   = true  with get, set
-    member val IndentOnTryWith        = true  with get, set
-    member val ReorderOpenDeclaration = true  with get, set
 
 
 type CodeGenerationKinds =
@@ -475,11 +480,14 @@ type ICodeGenerationOptions =
     abstract Load : unit -> unit
     abstract Save : unit -> unit
 
+[<Sealed>]
 [<Export(typeof<ICodeGenerationOptions>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type CodeGenerationOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
-    let setValue x = setScaffold settingsStore x
-    let getString  = stringScaffold settingsStore
+type CodeGenerationOptions () as self =
+
+    do
+        settingsStore.Load()
+        settingsEvents.Add (fun _ -> (self :> ICodeGenerationOptions).Load ())
+
 
     interface ICodeGenerationOptions with
 
@@ -496,8 +504,8 @@ type CodeGenerationOptions [<ImportingConstructor>](settingsStore:ISettingsStore
 
         member __.Load () = settingsStore.Load ()
         member self.Save () =
-            settingsChanged.Trigger EventArgs.Empty
             settingsStore.Save ()
+            settingsChanged.Trigger EventArgs.Empty
 
 
 type IGlobalOptions =
@@ -507,13 +515,13 @@ type IGlobalOptions =
     abstract Load : unit -> unit
     abstract Save : unit -> unit
 
+[<Sealed>]
 [<Export(typeof<IGlobalOptions>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type GlobalOptions  [<ImportingConstructor>](settingsStore:ISettingsStore)  =
-    let getBool    = boolScaffold settingsStore
-    let getInt     = intScaffold settingsStore
-    let setValue x = setScaffold settingsStore x
+type GlobalOptions  () as self =
 
+    do
+        settingsStore.Load()
+        settingsEvents.Add (fun _ -> (self :> IGlobalOptions).Load ())
 
     interface IGlobalOptions with
         member __.DiagnosticMode
@@ -529,35 +537,15 @@ type GlobalOptions  [<ImportingConstructor>](settingsStore:ISettingsStore)  =
             and  set v  = setValue PROJECT_CACHE_SIZE v
 
         member __.Load () = settingsStore.Load ()
-        member self.Save () =
-            settingsChanged.Trigger EventArgs.Empty
+        member self.Save () = 
             settingsStore.Save ()
-
-
-[<Export(typeof<IGlobalOptions>)>]
-type GlobalOptions () =
-    interface IGlobalOptions with
-        member val DiagnosticMode        = false with get, set
-        member val BackgroundCompilation = true  with get, set
-        member val ProjectCacheSize      = 50    with get, set
-
-
-[<Export(typeof<IGlobalOptions>)>]
-type GlobalOptions () =
-    interface IGlobalOptions with
-        member val DiagnosticMode        = false with get, set
-        member val BackgroundCompilation = true  with get, set
-        member val ProjectCacheSize      = 50    with get, set
+            settingsChanged.Trigger EventArgs.Empty
 
 type ILintOptions =
     abstract UpdateDirectories: unit -> unit
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
-//
-//[<Export(typeof<ILintOptions>)>]
-//type LintOptions () =
-//    interface ILintOptions with
-//        member __.UpdateDirectories()  = ()
-//        member __.GetConfigurationForDirectory _ = Unchecked.defaultof<FSharpLint.Framework.Configuration.Configuration>
+    abstract Load : unit -> unit
+    abstract Save : unit -> unit
 
 
 type IOutliningOptions =
@@ -599,20 +587,14 @@ type IOutliningOptions =
     abstract Load : unit -> unit
     abstract Save : unit -> unit
 
+
+[<Sealed>]
 [<Export(typeof<IOutliningOptions>)>]
-[<PartCreationPolicy (CreationPolicy.Shared)>]
-type OutliningOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
+type OutliningOptions () as self =
 
-    let getBool    = boolScaffold settingsStore
-    let getInt     = intScaffold settingsStore
-    let setValue x = setScaffold settingsStore x
-
-    member __.Load () = settingsStore.Load ()
-    member self.Save () =
-        settingsChanged.Trigger EventArgs.Empty
-        settingsStore.Save ()
-
-
+    do
+        settingsStore.Load()
+        settingsEvents.Add (fun _ -> (self :> IOutliningOptions).Load ())
 
     interface IOutliningOptions with
         member __.OpensEnabled
@@ -756,63 +738,27 @@ type OutliningOptions [<ImportingConstructor>](settingsStore:ISettingsStore)  =
             and  set v  = setValue TOOLTIP_ZOOM_LEVEL v
 
         member __.Load () = settingsStore.Load ()
-        member self.Save () =
-            settingsChanged.Trigger EventArgs.Empty
+        member self.Save () = 
             settingsStore.Save ()
+            settingsChanged.Trigger EventArgs.Empty
 
 
-//type SComponentModel () =
-//    let [<Literal>] SComponentModelHost = "E431B33F-5E9E-4065-9480-C4FAC626BDBF"
-//    let scomponentModel = ServiceProvider.GlobalProvider.GetService(Guid SComponentModelHost)
-//
-//    member __.GetService<'T>() =
-//        let generic = scomponentModel.GetType().GetMethod("GetService")
-//        let concrete = generic.MakeGenericMethod(typeof<'T>)
-//        concrete.Invoke(scomponentModel,null) :?> 'T
+module SettingsContext =
 
+    let triggerSettingsChanged (e) = settingsChanged.Trigger(e)
 
-module VFPT_Settings =
-    let getSettingStore           () = ServiceProvider.GlobalProvider.GetService<ISettingsStore>()
-    let getGeneralOptions         () = ServiceProvider.GlobalProvider.GetService<IGeneralOptions>()
-    let getGlobalOptions          () = ServiceProvider.GlobalProvider.GetService<IGlobalOptions>()
-    let getFormattingOptions      () = ServiceProvider.GlobalProvider.GetService<IFormattingOptions>()
-    let getCodeGenerationOptions  () = ServiceProvider.GlobalProvider.GetService<ICodeGenerationOptions>()
-    let getOutliningOptions       () = ServiceProvider.GlobalProvider.GetService<IOutliningOptions>()
+    let GeneralOptions = GeneralOptions() :> IGeneralOptions
+    let GlobalOptions  = GlobalOptions()  :> IGlobalOptions
+    let FormattingOptions = FormattingOptions () :> IFormattingOptions
+    let OutliningOptions = OutliningOptions() :> IOutliningOptions
+    let CodeGenerationOptions = CodeGenerationOptions() :> ICodeGenerationOptions
 
-[<AutoOpen>]
-module Utils =
-    type System.IServiceProvider with
-        member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
-        member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T
-
-[<RequireQualifiedAccess>]
-module Setting =
-    open System
-
-    let getGeneralOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IGeneralOptions>()
-
-    let getFormattingOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IFormattingOptions>()
-
-    let getCodeGenerationOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<ICodeGenerationOptions>()
-
-    let getDefaultMemberBody (codeGenOptions: ICodeGenerationOptions) =
-        match codeGenOptions.CodeGenerationOptions with
+    let getDefaultMemberBody () =
+        match CodeGenerationOptions.CodeGenerationOptions with
         | CodeGenerationKinds.Failwith -> "failwith \"Not implemented yet\""
         | CodeGenerationKinds.NotImplementedYet -> "raise (System.NotImplementedException())"
         | CodeGenerationKinds.DefaultValue -> "Unchecked.defaultof<_>"
-        | _ -> codeGenOptions.DefaultBody
+        | _ -> CodeGenerationOptions.DefaultBody
 
-    let getInterfaceMemberIdentifier (codeGenOptions: ICodeGenerationOptions) =
-        IdentifierUtils.encapsulateIdentifier SymbolKind.Ident codeGenOptions.InterfaceMemberIdentifier
-
-    let getGlobalOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IGlobalOptions>()
-
-    let getLintOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<ILintOptions>()
-
-    let getOutliningOptions (serviceProvider: IServiceProvider) =
-        serviceProvider.GetService<IOutliningOptions>()
+    let getInterfaceMemberIdentifier () =
+        IdentifierUtils.encapsulateIdentifier SymbolKind.Ident CodeGenerationOptions.InterfaceMemberIdentifier
