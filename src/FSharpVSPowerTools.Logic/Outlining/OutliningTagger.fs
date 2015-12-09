@@ -4,7 +4,6 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Utils
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Shell.Interop
