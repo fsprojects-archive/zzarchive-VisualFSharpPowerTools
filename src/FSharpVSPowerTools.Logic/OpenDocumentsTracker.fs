@@ -34,9 +34,16 @@ type IOpenDocumentsTracker =
 [<Export(typeof<IOpenDocumentsTracker>)>]
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
     [<VolatileField>]
-    let mutable openDocuments = Map.empty
+    let mutable openDocs = Map.empty
     let documentChanged = Event<_>()
     let documentClosed = Event<_>()
+    let tryFindDoc path = openDocs |> Map.tryFind path
+    let addDoc path doc = openDocs <- openDocs |> Map.add path doc
+    
+    let updateDoc path (f: OpenDocument -> OpenDocument) =
+        match tryFindDoc path with
+        | Some doc -> addDoc path (f doc)
+        | None -> ()
 
     let tryGetDocument buffer = 
         match textDocumentFactoryService.TryGetTextDocument buffer with
@@ -44,47 +51,51 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
         | _ -> None
 
     interface IOpenDocumentsTracker with
-        member __.RegisterView(view: IWpfTextView) = 
+        member __.RegisterView (view: IWpfTextView) = 
             ForegroundThreadGuard.CheckThread()
             maybe {
                 let! doc = tryGetDocument view.TextBuffer
                 let path = doc.FilePath
                 
                 let textBufferChanged (args: TextContentChangedEventArgs) =
-                    match openDocuments |> Map.tryFind path with
-                    | Some doc ->
+                    if openDocs |> Map.containsKey path then
                         ForegroundThreadGuard.CheckThread()
-                        openDocuments <- Map.add path { doc with Snapshot = args.After
-                                                                 LastChangeTime = DateTime.UtcNow } openDocuments
+                        updateDoc path (fun doc -> { doc with Snapshot = args.After
+                                                              LastChangeTime = DateTime.UtcNow })
                         documentChanged.Trigger path
-                    | None -> ()
                 
                 let textBufferChangedSubscription = view.TextBuffer.ChangedHighPriority.Subscribe textBufferChanged
                 
                 let rec viewClosed _ =
-                    ForegroundThreadGuard.CheckThread()
-                    textBufferChangedSubscription.Dispose()
-                    viewClosedSubscription.Dispose()
-                    openDocuments <- Map.remove path openDocuments
-                    documentClosed.Trigger path
+                    match tryFindDoc path with
+                    | Some doc when doc.ViewCount = 1 ->
+                        Logging.logInfo (fun _ -> sprintf "[OpenDocumentTracker] Last view for %s, removing from map." path)
+                        ForegroundThreadGuard.CheckThread()
+                        textBufferChangedSubscription.Dispose()
+                        viewClosedSubscription.Dispose()
+                        openDocs <- Map.remove path openDocs
+                        documentClosed.Trigger path
+                    | Some doc ->
+                        Logging.logInfo (fun _ -> 
+                            sprintf "[OpenDocumentTracker] Still %d view are open for %s, do not remove." 
+                                    (doc.ViewCount - 1) path) 
+                        updateDoc path (fun doc -> { doc with ViewCount = doc.ViewCount - 1 })
+                    | None -> ()
                 
                 and viewClosedSubscription: IDisposable = view.Closed.Subscribe viewClosed
                 let! lastWriteTime = File.tryGetLastWriteTime path
                 
-                let openDocument = 
-                    openDocuments 
-                    |> Map.tryFind path
-                    |> Option.map (fun doc -> { doc with ViewCount = doc.ViewCount + 1 })
-                    |> Option.getOrTry (fun _ ->
-                        OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding lastWriteTime)
-                
-                openDocuments <- Map.add path openDocument openDocuments
+                tryFindDoc path
+                |> Option.map (fun doc -> { doc with ViewCount = doc.ViewCount + 1 })
+                |> Option.getOrTry (fun _ ->
+                    OpenDocument.Create doc view.TextBuffer.CurrentSnapshot doc.Encoding lastWriteTime)
+                |> addDoc path
             } |> ignore
         
-        member __.MapOpenDocuments f = Seq.map f openDocuments
-        member __.TryFindOpenDocument path = Map.tryFind path openDocuments
+        member __.MapOpenDocuments f = Seq.map f openDocs
+        member __.TryFindOpenDocument path = Map.tryFind path openDocs
         member __.TryGetDocumentText path = 
-            let doc = openDocuments |> Map.tryFind path 
+            let doc = openDocs |> Map.tryFind path 
             doc |> Option.map (fun x -> x.Text.Value)
         member __.DocumentChanged = documentChanged.Publish
         member __.DocumentClosed = documentClosed.Publish
