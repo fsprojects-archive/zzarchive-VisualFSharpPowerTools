@@ -116,13 +116,16 @@ type PeekableItemSourceProvider
      projectFactory: ProjectFactory,
      vsLanguageService: VSLanguageService) =
 
+    let vsVersion = 
+        lazy(let dte = serviceProvider.GetService<DTE, SDTE>()
+             VisualStudioVersion.fromDTEVersion dte.Version)
+
     interface IPeekableItemSourceProvider with
         member __.TryCreatePeekableItemSource(buffer: ITextBuffer) =
             let generalOptions = Setting.getGeneralOptions serviceProvider
             if generalOptions == null || not generalOptions.PeekDefinitionEnabled then null
             else
-                let dte = serviceProvider.GetService<DTE, SDTE>()
-                match VisualStudioVersion.fromDTEVersion dte.Version with
+                match vsVersion.Value with
                 | VisualStudioVersion.Unknown
                 | VisualStudioVersion.VS2012
                 | VisualStudioVersion.VS2013 -> null
@@ -130,7 +133,7 @@ type PeekableItemSourceProvider
                     match textDocumentFactoryService.TryGetTextDocument buffer with
                     | true, doc ->
                         buffer.Properties.GetOrCreateSingletonProperty(
-                            fun() -> 
+                            fun () -> 
                                 upcast new PeekableItemSource(buffer, doc, peekResultFactory,
                                                               serviceProvider, projectFactory, vsLanguageService))
                     | _ -> null

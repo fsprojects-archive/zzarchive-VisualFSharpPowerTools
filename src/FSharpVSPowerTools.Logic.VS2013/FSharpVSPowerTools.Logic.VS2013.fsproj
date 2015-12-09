@@ -64,9 +64,10 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="NavigateToItemDisplay2.fs" />
-    <Content Include="paket.references" />
+    <Compile Include="NoPeekDefinitionFilterProvider.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
