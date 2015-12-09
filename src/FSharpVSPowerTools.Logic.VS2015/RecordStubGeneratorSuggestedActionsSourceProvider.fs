@@ -34,7 +34,7 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
             else
                 let generalOptions = Setting.getGeneralOptions ServiceProvider
                 let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
-                if generalOptions == null
+                if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.GenerateRecordStubEnabled then null
                 else
