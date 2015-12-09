@@ -16,8 +16,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(PrintfSpecifiersUsageTag))]
-    [TextViewRole(PredefinedTextViewRoles.Editable)]
-    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
+    [TextViewRole(PredefinedTextViewRoles.Interactive)]
     public class PrintfSpecifiersUsageTaggerProvider : IViewTaggerProvider, IDisposable
     {
         readonly IServiceProvider _serviceProvider;
