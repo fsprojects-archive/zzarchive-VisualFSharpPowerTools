@@ -257,16 +257,18 @@ type DTE with
         | _ -> ()
         doc
 
+    member x.GetProjectItem filePath =
+         x.Solution.FindProjectItem filePath |> Option.ofNull
+         
     member x.GetCurrentDocument(filePath) =
         match x.GetActiveDocument() with
         | Some doc when doc.FullName = filePath -> 
             Some doc
         | docOpt ->
-            let result =
-                // If there is no current document or it refers to a different path,
-                // we try to find the exact document from solution by path.
-                x.Solution.FindProjectItem(filePath)
-                |> Option.ofNull
+            // If there is no current document or it refers to a different path,
+            // we try to find the exact document from solution by path.
+            let result = 
+                x.GetProjectItem filePath 
                 |> Option.bind (fun item -> Option.ofNull item.Document)
             match docOpt, result with
             | Some doc, None ->

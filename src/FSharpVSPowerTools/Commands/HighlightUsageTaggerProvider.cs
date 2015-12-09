@@ -16,8 +16,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(HighlightUsageTag))]
-    [TextViewRole(PredefinedTextViewRoles.Editable)]
-    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
+    [TextViewRole(PredefinedTextViewRoles.Interactive)]
     public class HighlightUsageTaggerProvider : IViewTaggerProvider
     {
         readonly IServiceProvider _serviceProvider;

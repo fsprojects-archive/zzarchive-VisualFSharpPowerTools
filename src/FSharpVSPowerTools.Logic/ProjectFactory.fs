@@ -120,10 +120,12 @@ type ProjectFactory
             new ProjectProvider (project, createProjectProvider, onProjectChanged)) :> _
 
     member x.CreateForDocument buffer (doc: Document) =
-        let filePath = doc.FullName
+        x.CreateForProjectItem buffer doc.FullName doc.ProjectItem
+    
+    member x.CreateForProjectItem buffer filePath (projectItem: ProjectItem) =
         Debug.Assert(mayReferToSameBuffer buffer filePath, 
                 sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
-        let project = doc.ProjectItem.ContainingProject
+        let project = projectItem.ContainingProject
         
         let getText (buffer: ITextBuffer) =
             // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
@@ -139,14 +141,14 @@ type ProjectFactory
             else
                 let ext = Path.GetExtension filePath
                 if isSourceExtension ext then
-                    let vsVersion = VisualStudioVersion.fromDTEVersion doc.DTE.Version
+                    let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.DTE.Version
                     Some (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                 else
                     None
         elif not (filePath === null) then
             let ext = Path.GetExtension filePath
             if isSourceExtension ext then
-                let vsVersion = VisualStudioVersion.fromDTEVersion doc.DTE.Version
+                let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
                 Some (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
             elif isSignatureExtension ext then
                 match signatureProjectData.TryGetValue(filePath) with
