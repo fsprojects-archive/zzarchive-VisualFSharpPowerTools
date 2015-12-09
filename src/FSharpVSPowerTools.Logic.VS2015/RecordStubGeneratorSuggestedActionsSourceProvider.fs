@@ -18,35 +18,35 @@ open FSharpVSPowerTools
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
-   (FSharpVsLanguageService: VSLanguageService,
-    TextDocumentFactoryService: ITextDocumentFactoryService,
+   (fsharpVsLanguageService: VSLanguageService,
+    textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
-    ServiceProvider: IServiceProvider,
-    UndoHistoryRegistry: ITextUndoHistoryRegistry,
-    ProjectFactory: ProjectFactory,
-    EditorOptionsFactory: IEditorOptionsFactoryService,
-    OpenDocumentsTracker: IOpenDocumentsTracker ) =
+    serviceProvider: IServiceProvider,
+    undoHistoryRegistry: ITextUndoHistoryRegistry,
+    projectFactory: ProjectFactory,
+    editorOptionsFactory: IEditorOptionsFactoryService,
+    openDocumentsTracker: IOpenDocumentsTracker ) =
 
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.GenerateRecordStubEnabled then null
                 else
-                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
                         let generator =
                             new RecordStubGenerator(
                                   doc, textView,
-                                  UndoHistoryRegistry.RegisterHistory(buffer),
-                                  FSharpVsLanguageService, ServiceProvider,
-                                  ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  OpenDocumentsTracker)
+                                  undoHistoryRegistry.RegisterHistory(buffer),
+                                  fsharpVsLanguageService, serviceProvider,
+                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  openDocumentsTracker)
 
                         new RecordStubGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null

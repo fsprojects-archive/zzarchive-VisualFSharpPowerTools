@@ -18,31 +18,31 @@ open FSharpVSPowerTools
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
-   (FSharpVsLanguageService: VSLanguageService,
-    TextDocumentFactoryService: ITextDocumentFactoryService,
+   (fsharpVsLanguageService: VSLanguageService,
+    textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
-    ServiceProvider: IServiceProvider,
-    UndoHistoryRegistry: ITextUndoHistoryRegistry,
-    ProjectFactory: ProjectFactory,
-    EditorOptionsFactory: IEditorOptionsFactoryService) =
+    serviceProvider: IServiceProvider,
+    undoHistoryRegistry: ITextUndoHistoryRegistry,
+    projectFactory: ProjectFactory,
+    editorOptionsFactory: IEditorOptionsFactoryService) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
-                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
                         let implementInterface =
                             new ImplementInterface(
                                   doc, textView,
-                                  EditorOptionsFactory, UndoHistoryRegistry.RegisterHistory buffer,
-                                  FSharpVsLanguageService, ServiceProvider, ProjectFactory,
+                                  editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
+                                  fsharpVsLanguageService, serviceProvider, projectFactory,
                                   Setting.getInterfaceMemberIdentifier codeGenOptions,
                                   Setting.getDefaultMemberBody codeGenOptions)
 

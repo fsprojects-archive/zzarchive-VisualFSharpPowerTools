@@ -19,25 +19,25 @@ open Microsoft.VisualStudio.Imaging.Interop
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstructor>]
-   (FSharpVsLanguageService: VSLanguageService,
-    TextDocumentFactoryService: ITextDocumentFactoryService,
+   (fsharpVsLanguageService: VSLanguageService,
+    textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
-    ServiceProvider: IServiceProvider,
-    UndoHistoryRegistry: ITextUndoHistoryRegistry,
-    ProjectFactory: ProjectFactory) =
+    serviceProvider: IServiceProvider,
+    undoHistoryRegistry: ITextUndoHistoryRegistry,
+    projectFactory: ProjectFactory) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions ServiceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
-                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let resolver =
-                            new UnopenedNamespaceResolver(doc, textView, UndoHistoryRegistry.RegisterHistory(buffer),
-                                                          FSharpVsLanguageService, ServiceProvider, ProjectFactory)
+                            new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
+                                                          fsharpVsLanguageService, serviceProvider, projectFactory)
 
                         new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
                     | _ -> null

@@ -18,33 +18,33 @@ open FSharpVSPowerTools
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
 type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>]
-   (FSharpVsLanguageService: VSLanguageService,
-    TextDocumentFactoryService: ITextDocumentFactoryService,
+   (fsharpVsLanguageService: VSLanguageService,
+    textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
-    ServiceProvider: IServiceProvider,
-    UndoHistoryRegistry: ITextUndoHistoryRegistry,
-    ProjectFactory: ProjectFactory,
-    OpenDocumentsTracker: IOpenDocumentsTracker) =
+    serviceProvider: IServiceProvider,
+    undoHistoryRegistry: ITextUndoHistoryRegistry,
+    projectFactory: ProjectFactory,
+    openDocumentsTracker: IOpenDocumentsTracker) =
 
     interface ISuggestedActionsSourceProvider with
         member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions ServiceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions ServiceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
+                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
                 else
-                    match TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
                         let generator =
                             new UnionPatternMatchCaseGenerator(
                                   doc, textView,
-                                  UndoHistoryRegistry.RegisterHistory(buffer),
-                                  FSharpVsLanguageService, ServiceProvider,
-                                  ProjectFactory, Setting.getDefaultMemberBody codeGenOptions,
-                                  OpenDocumentsTracker)
+                                  undoHistoryRegistry.RegisterHistory(buffer),
+                                  fsharpVsLanguageService, serviceProvider,
+                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  openDocumentsTracker)
 
                         new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null
