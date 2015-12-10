@@ -41,7 +41,7 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
                                                 range.EndColumn,
                                                 span.StartLine.LineNumber,
                                                 span.StartColumn,
-                                                true)
+                                                false)
 
                         resultCollection.Add result
     //                callback.ReportProgress(100 * ++processedSourceLocations / sourceLocations.Count);
