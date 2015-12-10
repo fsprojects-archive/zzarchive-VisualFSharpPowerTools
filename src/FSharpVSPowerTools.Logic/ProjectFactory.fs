@@ -122,9 +122,10 @@ type ProjectFactory
     member x.CreateForDocument buffer (doc: Document) =
         x.CreateForProjectItem buffer doc.FullName doc.ProjectItem
     
-    member x.CreateForProjectItem buffer filePath (projectItem: ProjectItem) =
-        Debug.Assert(mayReferToSameBuffer buffer filePath, 
-                sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
+    abstract CreateForProjectItem : buffer: ITextBuffer -> filePath: string -> projectItem: ProjectItem -> IProjectProvider option
+
+    default x.CreateForProjectItem buffer filePath (projectItem: ProjectItem) =
+        Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = projectItem.ContainingProject
         
         let getText (buffer: ITextBuffer) =
@@ -141,7 +142,7 @@ type ProjectFactory
             else
                 let ext = Path.GetExtension filePath
                 if isSourceExtension ext then
-                    let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.DTE.Version
+                    let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
                     Some (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                 else
                     None

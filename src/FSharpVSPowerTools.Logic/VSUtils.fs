@@ -4,7 +4,6 @@ module FSharpVSPowerTools.ProjectSystem.VSUtils
 open System
 open FSharpVSPowerTools
 
-
 type String with
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
@@ -15,12 +14,10 @@ type String with
     member self.SubstringSafe index =
         if   index < 0 then self elif index > self.Length then "" else self.Substring index
 
-
 open System.Diagnostics
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.FSharp.Compiler.Range
-
 
 let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
@@ -97,7 +94,6 @@ type ITextSnapshot with
     /// Get the text at line `num`
     member inline x.LineText num =  x.GetLineFromLineNumber(num).GetText()
 
-
 type SnapshotSpan with
 
     member inline x.StartLine  = x.Snapshot.GetLineFromPosition (x.Start.Position)
@@ -148,7 +144,6 @@ type SnapshotSpan with
     /// (lineStart, colStart, lineEnd, colEnd)
     member inline x.ToRange () =
         (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
-
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 

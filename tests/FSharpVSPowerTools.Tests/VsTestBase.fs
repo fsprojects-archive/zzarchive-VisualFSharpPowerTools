@@ -5,12 +5,14 @@ open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Text.Editor
+open EnvDTE
 
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
     inherit ProjectFactory(serviceProvider, openDocTracker, vsLanguageService)
-    override __.CreateForProject(p) = 
-        dte.GetProject(p.FullName)
+    override __.CreateForProject p = dte.GetProject p.FullName
+    override __.CreateForProjectItem _buffer _filePath (projectItem: ProjectItem) =
+        Some (dte.GetProject projectItem.ContainingProject.FullName)
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =

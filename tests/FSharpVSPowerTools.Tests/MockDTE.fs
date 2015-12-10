@@ -83,13 +83,9 @@ type MockDTE() =
             else
                 MockDocument(filePath, x) :> _
 
-        member __.Events = 
-            MockEvents() :> _
-        
-        member x.Solution = 
-            MockSolution(projects, x) :> _
-        member __.Version = 
-            "12.0"
+        member __.Events = MockEvents() :> _
+        member x.Solution =  MockSolution(projects, x) :> _
+        member __.Version = "12.0"
  
 and MockDocument(filePath, dte: DTE) =
     interface Document with
@@ -257,7 +253,7 @@ and MockProjectItem(filePath, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
         member __.Collection = notimpl
         member __.ConfigurationManager = notimpl
-        member __.DTE = notimpl
+        member __.DTE = dte
         member __.Delete() = notimpl
         member __.ExpandView() = notimpl
         member __.Extender with get (_extenderName) = notimpl
