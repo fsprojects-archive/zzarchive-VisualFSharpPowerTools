@@ -17,36 +17,28 @@ open Microsoft.VisualStudio.Imaging.Interop
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Resolve Unopened Namespaces Suggested Actions">]
 [<ContentType "F#">]
-[<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
-type ResolveUnopenedNamespaceSuggestedActionsSourceProvider() =
-    [<Import; DefaultValue>]
-    val mutable FSharpVsLanguageService: VSLanguageService
-
-    [<Import; DefaultValue>]
-    val mutable TextDocumentFactoryService: ITextDocumentFactoryService
-
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-
-    [<Import; DefaultValue>]
-    val mutable UndoHistoryRegistry: ITextUndoHistoryRegistry
-
-    [<Import; DefaultValue>]
-    val mutable ProjectFactory: ProjectFactory
+[<TextViewRole(PredefinedTextViewRoles.Editable)>]
+type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstructor>]
+   (fsharpVsLanguageService: VSLanguageService,
+    textDocumentFactoryService: ITextDocumentFactoryService,
+    [<Import(typeof<SVsServiceProvider>)>]
+    serviceProvider: IServiceProvider,
+    undoHistoryRegistry: ITextUndoHistoryRegistry,
+    projectFactory: ProjectFactory) =
 
     interface ISuggestedActionsSourceProvider with
-        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource = 
+        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions x.ServiceProvider
+                let generalOptions = Setting.getGeneralOptions serviceProvider
                 if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
-                    match x.TextDocumentFactoryService.TryGetTextDocument(buffer) with
+                    match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
-                        let resolver = 
-                            new UnopenedNamespaceResolver(doc, textView, x.UndoHistoryRegistry.RegisterHistory(buffer),
-                                                          x.FSharpVsLanguageService, x.ServiceProvider, x.ProjectFactory)
-                    
+                        let resolver =
+                            new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
+                                                          fsharpVsLanguageService, serviceProvider, projectFactory)
+
                         new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
                     | _ -> null
 
@@ -55,10 +47,10 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
     do resolver.Updated.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
         member __.Dispose() = (resolver :> IDisposable).Dispose()
-        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) = 
+        member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) =
             match resolver.CurrentWord, resolver.Suggestions with
             | None, _
-            | _, [] -> 
+            | _, [] ->
                 Seq.empty
             | Some _, suggestions ->
                 suggestions
@@ -81,7 +73,7 @@ and ResolveUnopenedNamespaceSuggestedActionsSource (resolver: UnopenedNamespaceR
                                member __.TryGetTelemetryId _telemetryId = false })
                      |> fun xs -> SuggestedActionSet xs) :> _
 
-        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) = 
+        member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) =
             Task.FromResult (Option.isSome resolver.CurrentWord && resolver.Suggestions |> List.isEmpty |> not)
 
         [<CLIEvent>]
