@@ -83,13 +83,9 @@ type MockDTE() =
             else
                 MockDocument(filePath, x) :> _
 
-        member __.Events = 
-            MockEvents() :> _
-        
-        member x.Solution = 
-            MockSolution(projects, x) :> _
-        member __.Version = 
-            "12.0"
+        member __.Events = MockEvents() :> _
+        member x.Solution = MockSolution(projects, x) :> _
+        member __.Version = "12.0"
  
 and MockDocument(filePath, dte: DTE) =
     interface Document with
@@ -126,14 +122,9 @@ and MockDocument(filePath, dte: DTE) =
         member __.Type = notimpl
         member __.Undo() = notimpl
         member __.Windows = notimpl
-        
         member __.DTE = dte
-        
-        member __.FullName = 
-            filePath
-
-        member __.ProjectItem = 
-            dte.Solution.FindProjectItem filePath
+        member __.FullName = filePath
+        member __.ProjectItem = dte.Solution.FindProjectItem filePath
 
 and MockEvents() =
     interface Events with
@@ -257,7 +248,7 @@ and MockProjectItem(filePath, project: IProjectProvider, dte: DTE) =
     interface ProjectItem with
         member __.Collection = notimpl
         member __.ConfigurationManager = notimpl
-        member __.DTE = notimpl
+        member __.DTE = dte
         member __.Delete() = notimpl
         member __.ExpandView() = notimpl
         member __.Extender with get (_extenderName) = notimpl

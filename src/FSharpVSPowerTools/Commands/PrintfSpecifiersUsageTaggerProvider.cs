@@ -16,8 +16,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("F#")]
     [TagType(typeof(PrintfSpecifiersUsageTag))]
-    [TextViewRole(PredefinedTextViewRoles.Editable)]
-    [TextViewRole(PredefinedTextViewRoles.PrimaryDocument)]
+    [TextViewRole(PredefinedTextViewRoles.Interactive)]
     public class PrintfSpecifiersUsageTaggerProvider : IViewTaggerProvider, IDisposable
     {
         readonly IServiceProvider _serviceProvider;
@@ -59,7 +58,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                return buffer.Properties.GetOrCreateSingletonProperty(
+                return textView.Properties.GetOrCreateSingletonProperty(
                     () => new PrintfSpecifiersUsageTagger(doc, textView, _fsharpVsLanguageService, _serviceProvider, _projectFactory)) as ITagger<T>;
             }
 

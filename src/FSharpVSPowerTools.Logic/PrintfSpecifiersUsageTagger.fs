@@ -18,7 +18,7 @@ type PrintfSpecifiersUsageTag() =
 /// This tagger will provide tags for every printf format specifier under the cursor.
 type PrintfSpecifiersUsageTagger
     (
-        textDocument: ITextDocument,
+        doc: ITextDocument,
         view: ITextView, 
         vsLanguageService: VSLanguageService, 
         serviceProvider: IServiceProvider,
@@ -66,10 +66,10 @@ type PrintfSpecifiersUsageTagger
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
             let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
-            let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-            let! project = projectFactory.CreateForDocument buffer doc
+            let! item = dte.GetProjectItem doc.FilePath
+            let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
             try
-                let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FullName, project)
+                let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FilePath, project)
                 return! PrintfSpecifiersUsageGetter.getAll checkResults (fun e -> Logging.logError (fun _ -> e))
             with e ->
                 Logging.logExceptionWithContext(e, "Failed to update printf specifier usages.")

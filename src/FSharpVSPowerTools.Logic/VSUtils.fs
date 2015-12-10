@@ -4,7 +4,6 @@ module FSharpVSPowerTools.ProjectSystem.VSUtils
 open System
 open FSharpVSPowerTools
 
-
 type String with
     /// Splits a string into lines for all platform's linebreaks.
     /// If the string mixes windows, mac, and linux linebreaks, all will be respected
@@ -15,12 +14,10 @@ type String with
     member self.SubstringSafe index =
         if   index < 0 then self elif index > self.Length then "" else self.Substring index
 
-
 open System.Diagnostics
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.FSharp.Compiler.Range
-
 
 let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endColumn) =
     Debug.Assert(startLine <= endLine, sprintf "startLine = %d, endLine = %d" startLine endLine)
@@ -97,18 +94,13 @@ type ITextSnapshot with
     /// Get the text at line `num`
     member inline x.LineText num =  x.GetLineFromLineNumber(num).GetText()
 
-
 type SnapshotSpan with
-
-    member inline x.StartLine  = x.Snapshot.GetLineFromPosition (x.Start.Position)
-    member inline x.StartLineNum  = x.Snapshot.GetLineNumberFromPosition x.Start.Position
-    member inline x.StartColumn  = 
-        x.Start.Position - x.StartLine.Start.Position 
-    
+    member inline x.StartLine = x.Snapshot.GetLineFromPosition (x.Start.Position)
+    member inline x.StartLineNum = x.Snapshot.GetLineNumberFromPosition x.Start.Position
+    member inline x.StartColumn = x.Start.Position - x.StartLine.Start.Position 
     member inline x.EndLine = x.Snapshot.GetLineFromPosition (x.End.Position)
     member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
-    member inline x.EndColumn = 
-        x.End.Position - x.EndLine.Start.Position
+    member inline x.EndColumn = x.End.Position - x.EndLine.Start.Position
 
     member x.ModStart (num) =
         SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
@@ -117,22 +109,20 @@ type SnapshotSpan with
         SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
 
     member x.ModBoth m1 m2 =
-        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1)
-                    ,SnapshotPoint (x.Snapshot, x.End.Position + m2))
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1),
+                     SnapshotPoint (x.Snapshot, x.End.Position + m2))
 
     /// get the position of the token found at (line,.col) if token was not found then -1,-1
     member x.PositionOf (token:string) =
         let firstLine = x.StartLineNum
         let lastLine = x.EndLineNum
-        let lines =  [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
+        let lines = [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
 
         let withinBounds (line, col) =
             match line, col with
             | -1,-1 -> -1,-1 // fast terminate if token wasn't found
-            |  l, c when c < x.StartColumn
-                     &&  l = firstLine -> -1,-1
-            |  l, c when c > x.EndColumn
-                     &&  l = lastLine -> -1,-1
+            |  l, c when c < x.StartColumn &&  l = firstLine -> -1,-1
+            |  l, c when c > x.EndColumn &&  l = lastLine -> -1,-1
             | _ -> line,col
 
         let rec loop idx =
@@ -148,7 +138,6 @@ type SnapshotSpan with
     /// (lineStart, colStart, lineEnd, colEnd)
     member inline x.ToRange () =
         (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
-
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
@@ -257,16 +246,18 @@ type DTE with
         | _ -> ()
         doc
 
-    member x.GetCurrentDocument(filePath) =
+    member x.GetProjectItem filePath =
+         x.Solution.FindProjectItem filePath |> Option.ofNull
+         
+    member x.GetCurrentDocument filePath =
         match x.GetActiveDocument() with
         | Some doc when doc.FullName = filePath -> 
             Some doc
         | docOpt ->
-            let result =
-                // If there is no current document or it refers to a different path,
-                // we try to find the exact document from solution by path.
-                x.Solution.FindProjectItem(filePath)
-                |> Option.ofNull
+            // If there is no current document or it refers to a different path,
+            // we try to find the exact document from solution by path.
+            let result = 
+                x.GetProjectItem filePath 
                 |> Option.bind (fun item -> Option.ofNull item.Document)
             match docOpt, result with
             | Some doc, None ->

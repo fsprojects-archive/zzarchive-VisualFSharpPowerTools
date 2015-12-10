@@ -30,7 +30,7 @@ type HighlightUsageTag(vsVersion, isDef)=
 
 /// This tagger will provide tags for every word in the buffer that
 /// matches the word currently under the cursor.
-type HighlightUsageTagger(textDocument: ITextDocument,
+type HighlightUsageTagger(doc: ITextDocument,
                           view: ITextView, 
                           vsLanguageService: VSLanguageService, 
                           serviceProvider: IServiceProvider,
@@ -101,17 +101,17 @@ type HighlightUsageTagger(textDocument: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument buffer doc
+                let! item = dte.GetProjectItem doc.FilePath
+                let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
                 return!
-                    match vsLanguageService.GetSymbol(currentRequest, doc.FullName, project) with
+                    match vsLanguageService.GetSymbol(currentRequest, doc.FilePath, project) with
                     | Some (newWord, symbol) ->
                         // If this is the same word we currently have, we're done (e.g. caret moved within a word).
                         match currentWord with
                         | Some cw when cw = newWord -> async.Return None
                         | _ ->
                             // If we are still up-to-date (another change hasn't happened yet), do a real update
-                            doUpdate (currentRequest, symbol, newWord, doc.FullName, project, ciuc) |> liftAsync
+                            doUpdate (currentRequest, symbol, newWord, doc.FilePath, project, ciuc) |> liftAsync
                     | None ->
                         callInUIContext <| fun _ -> 
                             synchronousUpdate (currentRequest, [], None)
