@@ -10,10 +10,6 @@ open EnvDTE
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
     inherit ProjectFactory(serviceProvider, openDocTracker, vsLanguageService)
     override __.CreateForProject p = dte.GetProject p.FullName
-    override __.CreateForProjectItem _buffer _filePath (projectItem: ProjectItem) =
-        projectItem.ContainingProject
-        |> Option.ofNull
-        |> Option.map (fun p -> dte.GetProject p.FullName)
 
 /// A base class for initializing necessary VS services
 type VsTestBase() =

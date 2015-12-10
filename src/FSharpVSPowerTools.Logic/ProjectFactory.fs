@@ -122,9 +122,7 @@ type ProjectFactory
     member x.CreateForDocument buffer (doc: Document) =
         x.CreateForProjectItem buffer doc.FullName doc.ProjectItem
     
-    abstract CreateForProjectItem : buffer: ITextBuffer -> filePath: string -> projectItem: ProjectItem -> IProjectProvider option
-
-    default x.CreateForProjectItem buffer filePath (projectItem: ProjectItem) =
+    member x.CreateForProjectItem buffer filePath (projectItem: ProjectItem) =
         Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
         let project = projectItem.ContainingProject
         

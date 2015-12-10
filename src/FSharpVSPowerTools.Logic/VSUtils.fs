@@ -95,16 +95,12 @@ type ITextSnapshot with
     member inline x.LineText num =  x.GetLineFromLineNumber(num).GetText()
 
 type SnapshotSpan with
-
-    member inline x.StartLine  = x.Snapshot.GetLineFromPosition (x.Start.Position)
-    member inline x.StartLineNum  = x.Snapshot.GetLineNumberFromPosition x.Start.Position
-    member inline x.StartColumn  = 
-        x.Start.Position - x.StartLine.Start.Position 
-    
+    member inline x.StartLine = x.Snapshot.GetLineFromPosition (x.Start.Position)
+    member inline x.StartLineNum = x.Snapshot.GetLineNumberFromPosition x.Start.Position
+    member inline x.StartColumn = x.Start.Position - x.StartLine.Start.Position 
     member inline x.EndLine = x.Snapshot.GetLineFromPosition (x.End.Position)
     member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
-    member inline x.EndColumn = 
-        x.End.Position - x.EndLine.Start.Position
+    member inline x.EndColumn = x.End.Position - x.EndLine.Start.Position
 
     member x.ModStart (num) =
         SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
@@ -113,22 +109,20 @@ type SnapshotSpan with
         SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
 
     member x.ModBoth m1 m2 =
-        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1)
-                    ,SnapshotPoint (x.Snapshot, x.End.Position + m2))
+        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1),
+                     SnapshotPoint (x.Snapshot, x.End.Position + m2))
 
     /// get the position of the token found at (line,.col) if token was not found then -1,-1
     member x.PositionOf (token:string) =
         let firstLine = x.StartLineNum
         let lastLine = x.EndLineNum
-        let lines =  [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
+        let lines = [| for idx in firstLine .. lastLine -> x.Snapshot.LineText idx |]
 
         let withinBounds (line, col) =
             match line, col with
             | -1,-1 -> -1,-1 // fast terminate if token wasn't found
-            |  l, c when c < x.StartColumn
-                     &&  l = firstLine -> -1,-1
-            |  l, c when c > x.EndColumn
-                     &&  l = lastLine -> -1,-1
+            |  l, c when c < x.StartColumn &&  l = firstLine -> -1,-1
+            |  l, c when c > x.EndColumn &&  l = lastLine -> -1,-1
             | _ -> line,col
 
         let rec loop idx =
@@ -255,7 +249,7 @@ type DTE with
     member x.GetProjectItem filePath =
          x.Solution.FindProjectItem filePath |> Option.ofNull
          
-    member x.GetCurrentDocument(filePath) =
+    member x.GetCurrentDocument filePath =
         match x.GetActiveDocument() with
         | Some doc when doc.FullName = filePath -> 
             Some doc

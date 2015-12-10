@@ -84,7 +84,7 @@ type MockDTE() =
                 MockDocument(filePath, x) :> _
 
         member __.Events = MockEvents() :> _
-        member x.Solution =  MockSolution(projects, x) :> _
+        member x.Solution = MockSolution(projects, x) :> _
         member __.Version = "12.0"
  
 and MockDocument(filePath, dte: DTE) =
@@ -122,14 +122,9 @@ and MockDocument(filePath, dte: DTE) =
         member __.Type = notimpl
         member __.Undo() = notimpl
         member __.Windows = notimpl
-        
         member __.DTE = dte
-        
-        member __.FullName = 
-            filePath
-
-        member __.ProjectItem = 
-            dte.Solution.FindProjectItem filePath
+        member __.FullName = filePath
+        member __.ProjectItem = dte.Solution.FindProjectItem filePath
 
 and MockEvents() =
     interface Events with
