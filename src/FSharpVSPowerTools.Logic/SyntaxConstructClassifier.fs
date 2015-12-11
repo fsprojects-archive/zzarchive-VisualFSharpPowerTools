@@ -118,11 +118,12 @@ type SyntaxConstructClassifier
             token.Cancel()
             token.Dispose())
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     let getCurrentProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull doc
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! item = dte.GetProjectItem doc.FilePath
             return! projectFactory.CreateForProjectItem buffer doc.FilePath item }
 
@@ -468,7 +469,6 @@ type SyntaxConstructClassifier
             } |> Async.Ignore
         else async.Return ()
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {

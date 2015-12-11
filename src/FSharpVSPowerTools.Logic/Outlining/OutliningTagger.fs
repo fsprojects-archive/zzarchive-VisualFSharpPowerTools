@@ -159,10 +159,11 @@ type OutliningTagger
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE> ()
             let snapshot = buffer.CurrentSnapshot
             let! doc = dte.GetCurrentDocument textDocument.FilePath
             let! project = projectFactory.CreateForDocument buffer doc

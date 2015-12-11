@@ -63,13 +63,14 @@ type PrintfSpecifiersUsageTagger
     let onCaretMoveListener = 
         lazy (new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! item = dte.GetProjectItem doc.FilePath
             let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
             try
-                let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FilePath, project)
+                let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FilePath, project, AllowStaleResults.MatchingSource)
                 return! PrintfSpecifiersUsageGetter.getAll checkResults (fun e -> Logging.logError (fun _ -> e))
             with e ->
                 Logging.logExceptionWithContext(e, "Failed to update printf specifier usages.")

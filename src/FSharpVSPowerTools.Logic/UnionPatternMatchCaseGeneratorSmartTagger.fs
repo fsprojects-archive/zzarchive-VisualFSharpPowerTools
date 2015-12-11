@@ -57,6 +57,8 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
             match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -64,7 +66,6 @@ type UnionPatternMatchCaseGenerator
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 

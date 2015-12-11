@@ -101,6 +101,8 @@ type UnopenedNamespaceResolver
         | [], [] -> []
         | _ -> [ openNamespaceActions; qualifySymbolActions ]
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
             match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -108,7 +110,6 @@ type UnopenedNamespaceResolver
             | _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let newWordAndSym = vsLanguageService.GetSymbol (point, doc.FullName, project)

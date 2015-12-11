@@ -57,10 +57,11 @@ type PeekableItemSource
         vsLanguageService: VSLanguageService
     ) =
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     let getCurrentFilePathProjectAndDoc () =
         maybe {
             let filepath = doc.FilePath
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(filepath)
             let! project = projectFactory.CreateForDocument buffer doc
             return filepath, project, doc

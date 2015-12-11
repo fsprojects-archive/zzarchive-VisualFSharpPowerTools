@@ -12,7 +12,6 @@ open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open System.Threading
 
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
@@ -62,6 +61,8 @@ type RecordStubGenerator(textDocument: ITextDocument,
                   member __.Text = Resource.recordGenerationCommandName }
         ]
 
+    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
     // Try to:
     // - Identify record expression binding
     // - Identify the '{' in 'let x: MyRecord = { }'
@@ -72,7 +73,6 @@ type RecordStubGenerator(textDocument: ITextDocument,
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 
