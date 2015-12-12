@@ -288,7 +288,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
-      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
       <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
