@@ -4,10 +4,8 @@ open System
 open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.StringBuilder
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
@@ -39,7 +37,6 @@ type QuickInfoMargin (textDocument: ITextDocument,
 
     let buffer = view.TextBuffer
     let mutable currentWord: SnapshotSpan option = None
-
 
     let updateQuickInfo (tooltip: string option, errors: ((FSharpErrorSeverity * string list) []) option,
                          newWord: SnapshotSpan option) = lock updateLock <| fun () -> 
@@ -91,6 +88,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | Some '.' -> flatstr
         | Some _ -> flatstr + "."
 
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -100,7 +98,6 @@ type QuickInfoMargin (textDocument: ITextDocument,
             | Some point, _ ->
                 let projectAndDoc =
                     maybe {
-                        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                         let! doc = dte.GetCurrentDocument(textDocument.FilePath)
                         let! project = projectFactory.CreateForDocument buffer doc
                         return project, doc }
@@ -125,7 +122,8 @@ type QuickInfoMargin (textDocument: ITextDocument,
                                         | _ -> None)
                                 return Some tooltip, newWord
                             }
-                        let! checkResults = vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project)
+                        let! checkResults = 
+                            vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project, AllowStaleResults.MatchingSource)
                         let! errors =
                             asyncMaybe {
                                 let! errors = checkResults.CheckErrors

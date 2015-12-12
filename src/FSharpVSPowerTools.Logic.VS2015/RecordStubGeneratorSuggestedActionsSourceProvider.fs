@@ -24,12 +24,10 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
-    editorOptionsFactory: IEditorOptionsFactoryService,
     openDocumentsTracker: IOpenDocumentsTracker ) =
 
-
     interface ISuggestedActionsSourceProvider with
-        member x.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
+        member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
                 let generalOptions = Setting.getGeneralOptions serviceProvider

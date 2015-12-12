@@ -2,10 +2,8 @@
 
 open System
 open System.IO
-open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application
@@ -37,7 +35,7 @@ type LintTagger(textDocument: ITextDocument,
             | None -> false
         config, shouldFileBeIgnored)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =

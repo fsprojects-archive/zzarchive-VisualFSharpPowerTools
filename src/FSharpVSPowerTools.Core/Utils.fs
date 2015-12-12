@@ -918,4 +918,6 @@ type Profiler() =
                  acc.AppendLine (sprintf "%s, %O" msg t)) (StringBuilder())
              |> string)
 
+    member __.Elapsed = total.Elapsed        
+
     

@@ -1,15 +1,8 @@
 ﻿namespace FSharpVSPowerTools.Outlining
 
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.OLE.Interop
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text.Outlining
-open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio
-open System.Windows.Forms
 
 type OutliningFilter() =
     member val IsAdded = false with get, set

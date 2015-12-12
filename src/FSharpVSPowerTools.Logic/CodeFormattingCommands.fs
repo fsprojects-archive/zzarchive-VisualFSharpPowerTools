@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.CodeFormatting
 
 open System
-open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Formatting

@@ -77,7 +77,7 @@ exception AssemblyMissingException of string
 [<Export>]
 type FSharpLanguageService [<ImportingConstructor>] 
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) = 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let assemblyInfo = 
         let version = VisualStudioVersion.fromDTEVersion dte.Version

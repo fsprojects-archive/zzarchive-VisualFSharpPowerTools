@@ -5,11 +5,9 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
-open Fantomas.CodeFormatter
 open FSharpVSPowerTools.ProjectSystem
 open Fantomas
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Shell.Interop
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
@@ -30,7 +28,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
 
     override x.AdjustProject(_, source) =
         maybe {
-            let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = x.Services.ServiceProvider.GetDte()
             let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
             // We have to use a temporary name for formatting selection due to hard-code information in the AST
             let filePath = "/tmp.fsx"

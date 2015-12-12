@@ -14,20 +14,25 @@ open System.Diagnostics
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 
-type FindReferencesFilter(textDocument: ITextDocument, 
-                          view: IWpfTextView, 
-                          vsLanguageService: VSLanguageService, 
-                          serviceProvider: System.IServiceProvider,
-                          projectFactory: ProjectFactory,
-                          showProgress: bool,
-                          fileSystem: IFileSystem) =    
+type FindReferencesFilter
+     (
+        textDocument: ITextDocument, 
+        view: IWpfTextView, 
+        vsLanguageService: VSLanguageService, 
+        serviceProvider: System.IServiceProvider,
+        projectFactory: ProjectFactory,
+        showProgress: bool,
+        fileSystem: IFileSystem
+     ) =    
+
+    let dte = serviceProvider.GetDte()
+
     let getDocumentState (progress: ShowProgress) =
         async {
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
+                let! doc = dte.GetCurrentDocument textDocument.FilePath
                 let! project = projectFactory.CreateForDocument view.TextBuffer doc
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FullName, project)
                 return doc.FullName, project, span, symbol }

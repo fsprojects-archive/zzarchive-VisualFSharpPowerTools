@@ -147,6 +147,8 @@ type ImplementInterface
                   createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
+    let dte = serviceProvider.GetDte()
+
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
             match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
@@ -154,7 +156,6 @@ type ImplementInterface
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                     let! doc = dte.GetCurrentDocument textDocument.FilePath
                     let! project = projectFactory.CreateForDocument buffer doc
                     let! word, symbol = vsLanguageService.GetSymbol (point, doc.FullName, project) 

@@ -17,7 +17,6 @@ open Microsoft.VisualStudio.TextManager.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Shell.Interop
 
 type XmlDocFilter 
      (
@@ -38,6 +37,8 @@ type XmlDocFilter
     let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
+    let dte = serviceProvider.GetDte()
+
     interface IOleCommandTarget with
         member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if pguidCmdGroup = VSConstants.VSStd2K && nCmdID = uint32 VSConstants.VSStd2KCmdID.TYPECHAR then
@@ -54,7 +55,6 @@ type XmlDocFilter
                         asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
                             let! document = dte.GetCurrentDocument fileName
                             let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
                             let! parseResults = languageService.ParseFileInProject (fileName, project)

@@ -44,11 +44,11 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                           fireNavigationEvent: bool) =
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
+    let dte = serviceProvider.GetDte()
 
     let getCurrentFilePathProjectAndDoc () =
         maybe {
             let filepath = textDocument.FilePath
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! doc = dte.GetCurrentDocument(filepath)
             let! project = projectFactory.CreateForDocument view.TextBuffer doc
             return (filepath, project, doc)
@@ -315,7 +315,6 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let replace (b:string) c (a:string) = a.Replace(b, c)
 
     let getSymbolCacheDir() = 
-        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
         let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
                                     dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toString)
         use key = Registry.CurrentUser.OpenSubKey(keyName)

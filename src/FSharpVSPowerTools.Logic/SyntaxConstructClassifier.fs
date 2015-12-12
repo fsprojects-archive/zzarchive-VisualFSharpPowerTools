@@ -5,7 +5,6 @@ open System.IO
 open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
@@ -15,6 +14,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
+open System.Diagnostics
 
 [<NoComparison>]
 type private CheckingProject =
@@ -30,7 +30,7 @@ type private SnapshotSpanWithLine =
 type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSnapshot>, originalSnapshot: ITextSnapshot) =
     let snapshotSpan: SnapshotSpanWithLine option Atom = Atom None 
     member __.ColumnSpan = columnSpan
-    member __.GetSnapshotSpan targetSnapshot =
+    member __.GetSnapshotSpan targetSnapshot = 
         snapshotSpan.Swap (fun oldSpan ->
             oldSpan
             |> Option.orTry (fun _ -> 
@@ -89,6 +89,10 @@ type SyntaxConstructClassifier
         includeUnusedOpens: bool
     ) as self =
 
+    let typeName = self.GetType().Name
+    let log (f: unit -> string) = Logging.logInfo (fun _ -> "[" + typeName + "] " + f()) 
+    let debug msg = Printf.kprintf (fun x -> Debug.WriteLine ("[" + typeName + "] " + x)) msg
+
     let getClassificationType = memoize <| fun cat ->
         match cat with
         | Category.ReferenceType -> Some Constants.fsharpReferenceType
@@ -118,11 +122,12 @@ type SyntaxConstructClassifier
             token.Cancel()
             token.Dispose())
 
+    let dte = serviceProvider.GetDte()
+
     let getCurrentProject() =
         maybe {
             // If there is no backing document, an ITextDocument instance might be null
             let! _ = Option.ofNull doc
-            let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
             let! item = dte.GetProjectItem doc.FilePath
             return! projectFactory.CreateForProjectItem buffer doc.FilePath item }
 
@@ -151,7 +156,7 @@ type SyntaxConstructClassifier
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         classificationChanged.Trigger(self, ClassificationChangedEventArgs span)
-        debug "[SyntaxConstructClassifier] ClassificationChanged event has been triggered by %s" reason
+        debug "ClassificationChanged event has been triggered by %s" reason
 
     let triggerUnusedDeclarationChanged snapshot =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
@@ -190,7 +195,7 @@ type SyntaxConstructClassifier
 
     let checkAst message (ast: ParsedInput) =
         if ast.Range.IsEmpty then
-            debug "[SyntaxConstructClassifier] %s Empty AST" message
+            debug "%s Empty AST" message
             None
         else Some()
 
@@ -241,23 +246,22 @@ type SyntaxConstructClassifier
         
         match newSpans.Errors with
         | [||] ->
-            Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] Replace spans entirely because new spans has no errors.")
+            log (fun _ -> "Replace spans entirely because new spans has no errors.")
             newSpans
         | _ ->
-            Logging.logInfo (fun _ ->  sprintf "[SyntaxConstructClassifier] FCS returns errors:\n %+A" newSpans.Errors)
+            log (fun _ -> sprintf "FCS returns errors:\n %+A" newSpans.Errors)
 
             if isNewRangeLarger then
-                Logging.logInfo (fun _ -> 
-                    sprintf "[SyntaxConstructClassifier] Replace spans entirely because new span range is wider than old one (old lines = %d..%d, new lines = %d..%d)." 
+                log (fun _ -> 
+                    sprintf "Replace spans entirely because new span range is wider than old one (old lines = %d..%d, new lines = %d..%d)." 
                             oldStartLine oldEndLine newStartLine newEndLine)
                 newSpans
             elif haveFirstAndLastSpansNotChanged() then
-                Logging.logInfo (fun _ -> "[SyntaxConstructClassifier] Replace spans entirely because first and last spans have not changed.")
+                log (fun _ -> "Replace spans entirely because first and last spans have not changed.")
                 newSpans
             else
-                Logging.logInfo (fun _ ->
-                    sprintf "[SyntaxConstructClassifier] Merging spans (new range %A <= old range %A)."
-                            (newStartLine, newEndLine) (oldStartLine, oldEndLine))
+                log (fun _ -> sprintf "Merging spans (new range %A <= old range %A)." 
+                                      (newStartLine, newEndLine) (oldStartLine, oldEndLine))
                 let spans = 
                     seq { 
                         yield! oldSpans.Spans |> Seq.takeWhile (fun x -> x.ColumnSpan.WordSpan.Line < newStartLine)
@@ -272,7 +276,7 @@ type SyntaxConstructClassifier
         let worker (project, snapshot) =
             asyncMaybe {
                 let pf = Profiler()
-                debug "[SyntaxConstructClassifier] -> UpdateUnusedDeclarations"
+                debug "UpdateUnusedDeclarations"
 
                 let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(
@@ -323,11 +327,11 @@ type SyntaxConstructClassifier
                     | state -> state)
                     |> ignore
 
-                debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: fastState swapped"
+                debug "UpdateUnusedDeclarations: fastState swapped"
                 slowState.Swap (fun _ -> SlowStage.Data { Snapshot = snapshot; UnusedSpans = notUsedSpans; IsUpdating = false }) |> ignore
-                debug "[SyntaxConstructClassifier] UpdateUnusedDeclarations: slowState swapped"
+                debug "UpdateUnusedDeclarations: slowState swapped"
                 pf.Stop()
-                Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Slow stage] %s" pf.Result)
+                log (fun _ -> sprintf "[Unused symbols and opens stage] %O" pf.Elapsed)
                 do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateUnusedDeclarations" 
                     |> liftAsync
 
@@ -387,7 +391,7 @@ type SyntaxConstructClassifier
             asyncMaybe {
                 let! currentProject = getCurrentProject()
                 let! snapshot = snapshot
-                debug "[SyntaxConstructClassifier] - Effective update"
+                debug "Effective update"
                 let pf = Profiler()
 
                 let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
@@ -464,11 +468,10 @@ type SyntaxConstructClassifier
                         vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                 pf.Stop()
-                Logging.logInfo (fun _ -> sprintf "[SyntaxConstructClassifier] [Fast stage] %s" pf.Result)
+                log (fun _ -> sprintf "[Normal stage] %O elapsed" pf.Elapsed)
             } |> Async.Ignore
         else async.Return ()
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
         maybe {
@@ -476,8 +479,7 @@ type SyntaxConstructClassifier
             let builtProjectFileName = Path.GetFileName project
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
-                debug "[SyntaxConstructClassifier] Referenced project %s has been built, updating classifiers..."
-                        builtProjectFileName
+                debug "Referenced project %s has been built, updating classifiers..." builtProjectFileName
                 let callInUIContext = CallInUIContext.FromCurrentThread()
                 updateSyntaxConstructClassifiers true callInUIContext |> Async.StartInThreadPoolSafe
         } |> ignore)
