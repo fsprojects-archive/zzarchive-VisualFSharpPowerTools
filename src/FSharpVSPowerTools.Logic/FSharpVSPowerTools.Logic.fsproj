@@ -142,6 +142,9 @@
     <Compile Include="GoToDefinitionFilter.fs">
       <Link>Navigation/GoToDefinitionFilter.fs</Link>
     </Compile>
+    <Compile Include="NoPeekDefinitionFilterProvider.fs">
+      <Link>Navigation/NoPeekDefinitionFilterProvider.fs</Link>
+    </Compile>
     <Compile Include="CodeFormattingServices.fs">
       <Link>Formatting/CodeFormattingServices.fs</Link>
     </Compile>
@@ -286,11 +289,9 @@
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
-      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
-      <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\lib\vs2013\Microsoft.VisualStudio.Language.NavigateTo.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.Shell.12.0">
