@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2013
+﻿namespace FSharpVSPowerTools.Logic
 
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.OLE.Interop

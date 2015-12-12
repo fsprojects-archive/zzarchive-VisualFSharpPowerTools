@@ -81,7 +81,6 @@
     <Reference Include="Microsoft.VisualStudio.Language.Intellisense, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\vs2012\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
-      <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Language.NavigateTo.Interfaces">
       <Private>False</Private>
@@ -248,12 +247,6 @@
     <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Name>FSharpVSPowerTools.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\FSharpVSPowerTools.Logic.VS2013\FSharpVSPowerTools.Logic.VS2013.fsproj">
-      <Project>{34d33adf-b1ec-4227-b981-13c52f28d013}</Project>
-      <Name>FSharpVSPowerTools.Logic.VS2013</Name>
-      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
-      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
     <ProjectReference Include="..\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj">
       <Project>{bb0c6f01-5e57-4575-a498-5de850d9fa6c}</Project>
