@@ -2,10 +2,8 @@
 
 open System
 open System.IO
-open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpLint.Application

@@ -4,10 +4,8 @@ open System
 open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.StringBuilder
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler

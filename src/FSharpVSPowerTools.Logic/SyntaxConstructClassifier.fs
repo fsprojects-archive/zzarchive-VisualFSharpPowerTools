@@ -5,7 +5,6 @@ open System.IO
 open System.Threading
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem
@@ -31,7 +30,7 @@ type private SnapshotSpanWithLine =
 type private CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSnapshot>, originalSnapshot: ITextSnapshot) =
     let snapshotSpan: SnapshotSpanWithLine option Atom = Atom None 
     member __.ColumnSpan = columnSpan
-    member __.GetSnapshotSpan targetSnapshot =
+    member __.GetSnapshotSpan targetSnapshot = 
         snapshotSpan.Swap (fun oldSpan ->
             oldSpan
             |> Option.orTry (fun _ -> 

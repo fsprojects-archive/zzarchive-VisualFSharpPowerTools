@@ -14,7 +14,7 @@ type DocumentNavigator [<ImportingConstructor>]
    ([<Import(typeof<SVsServiceProvider>)>]
     serviceProvider: IServiceProvider) =
 
-    member internal x.NavigateTo(position: NavigateToItemExtraData) =
+    member internal __.NavigateTo(position: NavigateToItemExtraData) =
         let mutable hierarchy = Unchecked.defaultof<_>
         let mutable itemId = Unchecked.defaultof<_>
         let mutable windowFrame = Unchecked.defaultof<_>

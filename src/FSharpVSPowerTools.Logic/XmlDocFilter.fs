@@ -17,7 +17,6 @@ open Microsoft.VisualStudio.TextManager.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Shell.Interop
 
 type XmlDocFilter 
      (

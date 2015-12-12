@@ -5,13 +5,11 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
-open Microsoft.VisualStudio.Shell.Interop
 open System
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
 open FSharpVSPowerTools.ProjectSystem
-open System.Threading
 
 type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)

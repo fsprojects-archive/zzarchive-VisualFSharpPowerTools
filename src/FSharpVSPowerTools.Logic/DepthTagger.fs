@@ -6,7 +6,6 @@ open Microsoft.VisualStudio.Text.Tagging
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open System.Diagnostics
-open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools.AsyncMaybe
 
 // The tag that carries metadata about F# color-regions.

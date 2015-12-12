@@ -7,7 +7,6 @@ open Fantomas.FormatConfig
 open Fantomas
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
-open Microsoft.VisualStudio.Shell.Interop
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)
