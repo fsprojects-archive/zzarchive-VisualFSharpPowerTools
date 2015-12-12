@@ -57,7 +57,7 @@ type PeekableItemSource
         vsLanguageService: VSLanguageService
     ) =
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let getCurrentFilePathProjectAndDoc () =
         maybe {

@@ -501,6 +501,8 @@ type IServiceProvider with
             Some (vsEditorAdapterFactoryService.GetWpfTextView vsTextView)
         else None
 
+    member serviceProvider.GetDte() = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+
 let isSourceExtension ext =
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
     || String.Equals (ext, ".fsscript", StringComparison.OrdinalIgnoreCase) 

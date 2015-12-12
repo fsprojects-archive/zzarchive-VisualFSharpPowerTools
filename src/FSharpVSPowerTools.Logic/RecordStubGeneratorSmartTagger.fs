@@ -61,7 +61,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
                   member __.Text = Resource.recordGenerationCommandName }
         ]
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     // Try to:
     // - Identify record expression binding

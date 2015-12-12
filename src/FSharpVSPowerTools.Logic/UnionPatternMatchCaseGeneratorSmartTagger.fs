@@ -57,7 +57,7 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

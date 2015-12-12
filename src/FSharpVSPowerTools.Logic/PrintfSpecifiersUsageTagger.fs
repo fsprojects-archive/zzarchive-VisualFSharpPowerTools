@@ -63,7 +63,7 @@ type PrintfSpecifiersUsageTagger
     let onCaretMoveListener = 
         lazy (new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {

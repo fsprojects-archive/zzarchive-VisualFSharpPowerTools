@@ -36,7 +36,7 @@ type DepthTagger
     // only updated on the UI thread in the GetTags method
     let mutable state = None
     let tagsChanged = Event<_,_>()
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
     
     let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 

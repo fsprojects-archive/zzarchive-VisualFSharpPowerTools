@@ -30,7 +30,7 @@ type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
 
     override x.AdjustProject(_, source) =
         maybe {
-            let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = x.Services.ServiceProvider.GetDte()
             let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
             // We have to use a temporary name for formatting selection due to hard-code information in the AST
             let filePath = "/tmp.fsx"

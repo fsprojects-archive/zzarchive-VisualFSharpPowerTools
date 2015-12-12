@@ -18,7 +18,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
 
     override x.AdjustProject(filePath, _) =
         maybe {
-            let dte = x.Services.ServiceProvider.GetService<EnvDTE.DTE, SDTE>()
+            let dte = x.Services.ServiceProvider.GetDte()
             let! document = dte.GetCurrentDocument filePath
             let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
             return (project, filePath)

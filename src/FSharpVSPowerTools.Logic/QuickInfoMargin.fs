@@ -90,7 +90,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | Some '.' -> flatstr
         | Some _ -> flatstr + "."
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

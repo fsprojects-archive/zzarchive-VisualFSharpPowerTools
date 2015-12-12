@@ -90,7 +90,7 @@ type HighlightUsageTagger(doc: ITextDocument,
                     do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
         }
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {

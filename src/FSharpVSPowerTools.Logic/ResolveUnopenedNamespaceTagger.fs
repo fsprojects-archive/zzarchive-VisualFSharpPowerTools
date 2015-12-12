@@ -101,7 +101,7 @@ type UnopenedNamespaceResolver
         | [], [] -> []
         | _ -> [ openNamespaceActions; qualifySymbolActions ]
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

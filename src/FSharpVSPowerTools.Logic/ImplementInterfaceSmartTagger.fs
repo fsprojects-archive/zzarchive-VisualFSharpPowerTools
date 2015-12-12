@@ -147,7 +147,7 @@ type ImplementInterface
                   createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

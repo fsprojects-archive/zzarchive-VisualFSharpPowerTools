@@ -164,7 +164,7 @@ type NavigateToItemProvider
                 match listFSharpProjectsInSolution() with
                 | [] -> 
                     maybe {
-                        let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+                        let dte = serviceProvider.GetDte()
                         let! doc = dte.GetActiveDocument()
                         let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
                         let buffer = openDoc.Document.TextBuffer

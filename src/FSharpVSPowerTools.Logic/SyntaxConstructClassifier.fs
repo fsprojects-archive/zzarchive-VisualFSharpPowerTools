@@ -123,7 +123,7 @@ type SyntaxConstructClassifier
             token.Cancel()
             token.Dispose())
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let getCurrentProject() =
         maybe {

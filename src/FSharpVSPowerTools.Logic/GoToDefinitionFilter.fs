@@ -44,7 +44,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                           fireNavigationEvent: bool) =
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let getCurrentFilePathProjectAndDoc () =
         maybe {

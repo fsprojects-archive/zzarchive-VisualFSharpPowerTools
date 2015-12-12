@@ -25,7 +25,7 @@ type FindReferencesFilter
         fileSystem: IFileSystem
      ) =    
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     let getDocumentState (progress: ShowProgress) =
         async {

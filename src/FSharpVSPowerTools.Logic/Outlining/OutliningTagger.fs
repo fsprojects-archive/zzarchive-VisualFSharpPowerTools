@@ -159,7 +159,7 @@ type OutliningTagger
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =

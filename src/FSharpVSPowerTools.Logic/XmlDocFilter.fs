@@ -38,7 +38,7 @@ type XmlDocFilter
     let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
-    let dte = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
+    let dte = serviceProvider.GetDte()
 
     interface IOleCommandTarget with
         member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
