@@ -66,7 +66,6 @@
   <ItemGroup>
     <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="NavigateToItemDisplay2.fs" />
     <Compile Include="NoPeekDefinitionFilterProvider.fs" />
   </ItemGroup>
   <ItemGroup>

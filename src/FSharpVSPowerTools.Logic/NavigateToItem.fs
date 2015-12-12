@@ -16,6 +16,8 @@ open System.Collections.Concurrent
 open System.IO
 open FSharpVSPowerTools.AsyncMaybe
 open System.Windows.Media.Imaging
+open Microsoft.VisualStudio
+open Microsoft.VisualStudio.TextManager.Interop
 
 module Constants = 
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])
@@ -242,29 +244,61 @@ type NavigateToItemProvider
     interface IDisposable with
         member __.Dispose() = processProjectsCTS.Cancel()
 
-type NavigateToItemDisplay(item: NavigateToItem, icon, serviceProvider: IServiceProvider) =
-    let extraData: NavigateToItemExtraData = unbox item.Tag
-    interface INavigateToItemDisplay with
-        member __.Name = item.Name
-        member __.Glyph = icon
-        member __.AdditionalInformation = extraData.FileName
-        member __.Description = extraData.Description
-        member __.DescriptionItems = Constants.EmptyReadOnlyCollection
-        member __.NavigateTo() = 
-            serviceProvider.NavigateTo(extraData.FileName, extraData.Span.Start.Row, 
-                extraData.Span.Start.Col, extraData.Span.End.Row, extraData.Span.End.Col)
+[<Export>]
+type DocumentNavigator [<ImportingConstructor>]
+   ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-[<ExportWithMinimalVisualStudioVersion(typeof<INavigateToItemDisplayFactory>, Version = VisualStudioVersion.VS2012)>]
-type VS2012NavigateToItemDisplayFactory() =
-    [<Import(typeof<SVsServiceProvider>); DefaultValue>]
-    val mutable ServiceProvider: IServiceProvider
-    [<Import; DefaultValue>]
-    val mutable IconCache: NavigationItemIconCache
-    
+    member internal __.NavigateTo(position: NavigateToItemExtraData) =
+        let mutable hierarchy = Unchecked.defaultof<_>
+        let mutable itemId = Unchecked.defaultof<_>
+        let mutable windowFrame = Unchecked.defaultof<_>
+
+        let canShow = 
+            VsShellUtilities.IsDocumentOpen(
+                serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame) ||
+                // TODO: track the project that contains document and open document in project context
+            (VsShellUtilities.TryOpenDocument(
+                serviceProvider, position.FileName, Constants.guidLogicalTextView, &hierarchy, &itemId, &windowFrame)
+             |> ErrorHandler.Succeeded)
+
+        if canShow then
+            windowFrame.Show() |> ensureSucceeded
+            let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+            let vsTextManager = serviceProvider.GetService(typeof<SVsTextManager>) :?> IVsTextManager
+            let mutable vsTextBuffer = Unchecked.defaultof<_>
+            vsTextView.GetBuffer(&vsTextBuffer) |> ensureSucceeded
+            vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, 
+                  position.Span.Start.Row, position.Span.Start.Col, position.Span.End.Row, position.Span.End.Col)
+            |> ensureSucceeded
+
+    member internal __.GetProvisionalViewingStatus(position: NavigateToItemExtraData) =
+        VsShellUtilities.GetProvisionalViewingStatus position.FileName |> int
+
+    member internal x.PreviewItem(position: NavigateToItemExtraData) = x.NavigateTo position
+
+type NavigateToItemDisplay(item: NavigateToItem, icon, navigator: DocumentNavigator) =
+        let extraData: NavigateToItemExtraData = unbox item.Tag
+        interface INavigateToItemDisplay2 with
+            member __.Name = item.Name
+            member __.Glyph = icon
+            member __.AdditionalInformation = extraData.FileName
+            member __.Description = extraData.Description
+            member __.DescriptionItems = Constants.EmptyReadOnlyCollection
+            member __.NavigateTo() = navigator.NavigateTo(extraData)
+            member __.GetProvisionalViewingStatus() = navigator.GetProvisionalViewingStatus(extraData)
+            member __.PreviewItem() = navigator.PreviewItem extraData
+
+[<Export(typeof<INavigateToItemDisplayFactory>)>]
+type NavigateToItemDisplayFactory 
+    [<ImportingConstructor>] 
+    (
+        navigator: DocumentNavigator, 
+        iconCache: NavigationItemIconCache
+    ) =
     interface INavigateToItemDisplayFactory with
-        member x.CreateItemDisplay(item) = 
-            let icon = x.IconCache.GetIconForNavigationItemKind(item.Kind)
-            NavigateToItemDisplay(item, icon, x.ServiceProvider) :> _
+        member __.CreateItemDisplay item = 
+            let icon = iconCache.GetIconForNavigationItemKind item.Kind
+            upcast NavigateToItemDisplay(item, icon, navigator)
 
 [<Package("f152487e-9a22-4cf9-bee6-a8f7c77f828d")>]
 [<Export(typeof<INavigateToItemProviderFactory>)>]
@@ -274,27 +308,11 @@ type NavigateToItemProviderFactory
         openDocumentsTracker: IOpenDocumentsTracker,
         [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider,
         languageService: VSLanguageService,
-        [<ImportMany>] itemDisplayFactories: seq<Lazy<INavigateToItemDisplayFactory, IMinimalVisualStudioVersionMetadata>>,
-        vsCompositionService: ICompositionService,
+        [<Import>] itemDisplayFactory: INavigateToItemDisplayFactory,
         projectFactory: ProjectFactory
     ) = 
     
-    let dte = serviceProvider.GetService<DTE, SDTE>()
-    let currentVersion = VisualStudioVersion.fromDTEVersion dte.Version
-    
-    let itemDisplayFactory = 
-        let candidate =
-            itemDisplayFactories
-            |> Seq.tryFind (fun f -> VisualStudioVersion.matches currentVersion f.Metadata.Version)
-
-        match candidate with
-        | Some l -> l.Value
-        | None -> 
-            let instance = VS2012NavigateToItemDisplayFactory()
-            vsCompositionService.SatisfyImportsOnce instance |> ignore
-            upcast instance
-
-    let navigableItemCache = lazy new NavigableItemCache(serviceProvider)
+    let navigableItemCache = lazy new NavigableItemCache (serviceProvider)
 
     interface INavigateToItemProviderFactory with
         member __.TryCreateNavigateToItemProvider(serviceProvider, provider) = 
@@ -305,6 +323,11 @@ type NavigateToItemProviderFactory
                 provider <- null
                 false
             else
-                provider <- new NavigateToItemProvider(openDocumentsTracker, serviceProvider, 
-                                    languageService, itemDisplayFactory, projectFactory, navigableItemCache.Value)
+                provider <- new NavigateToItemProvider(
+                                    openDocumentsTracker, 
+                                    serviceProvider, 
+                                    languageService, 
+                                    itemDisplayFactory, 
+                                    projectFactory, 
+                                    navigableItemCache.Value)
                 true
