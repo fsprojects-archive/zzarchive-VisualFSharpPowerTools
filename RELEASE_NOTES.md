@@ -1,4 +1,7 @@
 #### 2.3.0 - Unreleased
+* Implement Peek definition [#1286](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1286)
+* Add outlining menu items and keybindings [#1283](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1283)
+* Implement highlight definitions [#1272](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1272)
 
 #### 2.2.0 - November 29 2015
 * Implement outlining support ([#1147](https://github.com/fsprojects/VisualFSharpPowerTools/issues/1147))
