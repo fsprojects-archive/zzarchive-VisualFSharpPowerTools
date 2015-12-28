@@ -31,7 +31,6 @@ namespace FSharpVSPowerTools
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            IGeneralOptions generalOptions,
         
         VSLanguageService fsharpVsLanguageService)
         {
@@ -39,7 +38,7 @@ namespace FSharpVSPowerTools
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _generalOptions = generalOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag

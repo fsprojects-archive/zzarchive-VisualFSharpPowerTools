@@ -35,10 +35,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             IEditorOptionsFactoryService editorOptionsFactory,
             ITextUndoHistoryRegistry undoHistoryRegistry,
-                    IGeneralOptions generalOptions,
-                    ICodeGenerationOptions codeGenOptions,
-
-        ProjectFactory projectFactory,
+            ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
@@ -47,8 +44,8 @@ namespace FSharpVSPowerTools
             _undoHistoryRegistry = undoHistoryRegistry;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _generalOptions = generalOptions;
-                _codeGenOptions = codeGenOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
+                _codeGenOptions = SettingsContext.CodeGenerationOptions;
 
         }
 

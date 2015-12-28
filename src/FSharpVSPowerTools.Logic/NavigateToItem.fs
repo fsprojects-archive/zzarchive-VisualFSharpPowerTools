@@ -317,7 +317,7 @@ type NavigateToItemProviderFactory
     interface INavigateToItemProviderFactory with
         member __.TryCreateNavigateToItemProvider(serviceProvider, provider) =
             let navigateToEnabled =
-                generalOptions.NavigateToEnabled
+                SettingsContext.GeneralOptions.NavigateToEnabled
             if not navigateToEnabled then
                 provider <- null
                 false

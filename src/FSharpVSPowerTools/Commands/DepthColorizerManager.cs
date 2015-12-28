@@ -35,15 +35,14 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker,
-            IGeneralOptions generalOptions)
+            IOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
             _openDocumentTracker = openDocumentTracker;
-            _generalOptions = generalOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag

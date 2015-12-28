@@ -425,9 +425,7 @@ namespace FSharpVSPowerTools
             IClassificationTypeRegistryService classificationRegistry,
             ITextDocumentFactoryService textDocumentFactoryService,
             VSLanguageService fsharpVsLanguageService,
-            ProjectFactory projectFactory,
-            IGeneralOptions generalOptions
-            
+            ProjectFactory projectFactory
             )
         {
             _serviceProvider = serviceProvider;
@@ -436,7 +434,7 @@ namespace FSharpVSPowerTools
             _textDocumentFactoryService = textDocumentFactoryService;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _projectFactory = projectFactory;
-            _generalOptions = generalOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
 
             // Receive notification for Visual Studio theme change
             VSColorTheme.ThemeChanged += UpdateTheme;

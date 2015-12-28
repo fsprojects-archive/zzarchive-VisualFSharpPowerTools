@@ -42,9 +42,7 @@ namespace FSharpVSPowerTools.Outlining
             IOutliningManagerService outliningManagerService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentsTracker,
-            IGeneralOptions generalOptions,
-            IOutliningOptions outliningOptions)
+            IOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -54,8 +52,8 @@ namespace FSharpVSPowerTools.Outlining
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
             _openDocumentsTracker = openDocumentsTracker;
-            _generalOptions = generalOptions;
-            _outliningOptions = outliningOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
+            _outliningOptions = SettingsContext.OutliningOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag

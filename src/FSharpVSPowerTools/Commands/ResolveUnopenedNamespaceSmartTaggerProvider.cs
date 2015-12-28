@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ITextUndoHistoryRegistry undoHistoryRegistry,
             ProjectFactory projectFactory,
-            IGeneralOptions generalOptions,
+
         
         VSLanguageService fsharpVsLanguageService)
         {
@@ -43,7 +43,7 @@ namespace FSharpVSPowerTools
             _undoHistoryRegistry = undoHistoryRegistry;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _generalOptions = generalOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag

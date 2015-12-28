@@ -36,7 +36,6 @@ namespace FSharpVSPowerTools
             IVsEditorAdaptersFactoryService editorFactory,
             FileSystem fileSystem,
             ProjectFactory projectFactory,
-            IGeneralOptions generalOptions,
             VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
@@ -45,7 +44,7 @@ namespace FSharpVSPowerTools
             _fileSystem = fileSystem;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
-            _generalOptions = generalOptions;
+            _generalOptions = SettingsContext.GeneralOptions;
 
         }
 

@@ -123,14 +123,6 @@ type XmlSettingsStore () as self =
             settings |> Seq.iter (fun x -> sb.AppendLine(sprintf "%s | %s" x.Key x.Value) |> ignore)
             string sb
 
-        member __.Get name       = settings.TryFind name
-        member __.Set name value = settings.AddOrUpdate(name, value) |> ignore
-
-        member __.GetContents () =
-            let sb = StringBuilder()
-            settings |> Seq.iter (fun x -> sb.AppendLine(sprintf "%s | %s" x.Key x.Value) |> ignore)
-            string sb
-
 
 [<AutoOpen>]
 module SettingsConverters =
@@ -196,6 +188,7 @@ module SettingsStrings =
     let QUICK_INFO_PANEL_ENABLED                    = "QuickInfoPanelEnabled"
     let LINTER_ENABLED                              = "LinterEnabled"
     let OUTLINING_ENABLED                           = "OutliningEnabled"
+    let PEEK_DEFINITION_ENABLED                     = "PeekDefinitionEnabled"
 
 
     // FORMATTING OPTIONS
@@ -289,6 +282,7 @@ type IGeneralOptions =
     abstract QuickInfoPanelEnabled                  : bool with get, set
     abstract LinterEnabled                          : bool with get, set
     abstract OutliningEnabled                       : bool with get, set
+    abstract PeekDefinitionEnabled                  : bool with get, set
     abstract Load : unit -> unit
     abstract Save : unit -> unit
     abstract member GetContents : unit -> string
@@ -399,6 +393,10 @@ type GeneralOptions () as self =
         member __.OutliningEnabled
             with get () = getBool  OUTLINING_ENABLED true
             and  set v  = setValue OUTLINING_ENABLED v
+
+        member __.PeekDefinitionEnabled
+            with get () = getBool  PEEK_DEFINITION_ENABLED true
+            and  set v  = setValue PEEK_DEFINITION_ENABLED v
 
         member __.GetContents() = settingsStore.GetContents()
 
@@ -770,3 +768,6 @@ module SettingsContext =
 
     let getInterfaceMemberIdentifier () =
         IdentifierUtils.encapsulateIdentifier SymbolKind.Ident CodeGenerationOptions.InterfaceMemberIdentifier
+
+    let getLintOptions (serviceProvider: IServiceProvider) =
+        serviceProvider.GetService<ILintOptions>()
