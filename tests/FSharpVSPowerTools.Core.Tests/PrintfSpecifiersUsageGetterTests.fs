@@ -119,3 +119,24 @@ let ``argument forward piped``() =
 "foo" |> failwithf "Not an object: %s"
 """
     => [2, [(35, 37), (0, 5)]]
+
+[<Test>]
+let ``class property initialiazer``() =
+    """
+System.Exception(message = sprintf "%d" 1) |> ignore
+"""
+    => [2, [(36, 38), (40, 41)]]
+
+[<Test>]
+let ``equality to forward piped``() =
+    """
+1 = 1 |> printf "%b"
+"""
+    => [2, [(17, 19), (0, 5)]]
+
+[<Test>]
+let ``constructor parameter with piped equality``() =
+    """
+System.Exception(1 = 1 |> sprintf "%b") |> ignore
+"""
+    => [2, [(35, 37), (17, 22)]]
