@@ -128,6 +128,13 @@ System.Exception(message = sprintf "%d" 1) |> ignore
     => [2, [(36, 38), (40, 41)]]
 
 [<Test>]
+let ``class property initialiazer with infix to forward pipe``() =
+    """
+System.Exception(message = (1 * 1 |> sprintf "%d")) |> ignore
+"""
+    => [2, [(46, 48), (28, 33)]]
+
+[<Test>]
 let ``equality to forward piped``() =
     """
 1 = 1 |> printf "%b"
@@ -140,3 +147,31 @@ let ``constructor parameter with piped equality``() =
 System.Exception(1 = 1 |> sprintf "%b") |> ignore
 """
     => [2, [(35, 37), (17, 22)]]
+
+[<Test>]
+let ``constructor argument with greater than``() =
+    """
+System.Exception(("" > sprintf "%d" 1).ToString())
+"""
+    => [2, [(32, 34), (36, 37)]]
+
+[<Test>]
+let ``constructor argument with addition than``() =
+    """
+System.Exception(("" + sprintf "%d" 1).ToString())
+"""
+    => [2, [(32, 34), (36, 37)]]
+
+[<Test>]
+let ``division to forward piped``() =
+    """
+1 / 1 |> printf "%d"
+"""
+    => [2, [(17, 19), (0, 5)]]
+
+[<Test>]
+let ``multiply and division to forward piped``() =
+    """
+1 * 1 / 1 |> printf "%d"
+"""
+    => [2, [(21, 23), (0, 9)]]

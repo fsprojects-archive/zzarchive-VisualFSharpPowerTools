@@ -1326,7 +1326,9 @@ module Printf =
                 appStack := []
             | SynExpr.App (_, _, SynExpr.App(_, true, SynExpr.Ident op, e1, _), e2, _) ->
                 addAppWithArg { Range = e.Range; Arg = e2.Range }
-                if op.idText <> Microsoft.FSharp.Compiler.PrettyNaming.opNameEquals then
+                if op.idText = (PrettyNaming.CompileOpName "|>")
+                        || op.idText = (PrettyNaming.CompileOpName "||>")
+                        || op.idText = (PrettyNaming.CompileOpName "|||>") then
                     addAppWithArg { Range = e.Range; Arg = e1.Range }
                 walkExpr e2
                 walkExpr e1
