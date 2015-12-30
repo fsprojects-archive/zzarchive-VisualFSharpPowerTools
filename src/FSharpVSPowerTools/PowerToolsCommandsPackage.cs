@@ -27,14 +27,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(Linting.LintOptionsPage), Resource.vsPackageTitle, "Lint", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(OutliningOptionsPage), Resource.vsPackageTitle, "Outlining", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
-    [ProvideService(typeof(IGeneralOptions))]   
-    [ProvideService(typeof(IFormattingOptions))]
-    [ProvideService(typeof(ICodeGenerationOptions))]
-    [ProvideService(typeof(IGlobalOptions))]
-    [ProvideService(typeof(ILintOptions))]
     [Guid("f152487e-9a22-4cf9-bee6-a8f7c77f828d")]
-    [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
-    [ProvideAutoLoad(VSConstants.UICONTEXT.FSharpProject_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     public class PowerToolsCommandsPackage : Package, IDisposable
     {
@@ -44,7 +37,7 @@ namespace FSharpVSPowerTools
 
         private uint pctCookie;
         private uint objectManagerCookie;
-        
+
         internal static Lazy<DTE2> DTE
             = new Lazy<DTE2>(() => ServiceProvider.GlobalProvider.GetService(typeof(DTE)) as DTE2);
 
@@ -55,27 +48,7 @@ namespace FSharpVSPowerTools
             base.Initialize();
             VSUtils.ForegroundThreadGuard.BindThread();
 
-            IServiceContainer serviceContainer = this;
-            serviceContainer.AddService(typeof(IGeneralOptions),
-                delegate { return GetDialogPage(typeof(GeneralOptionsPage)); }, promote: true);
-
-            serviceContainer.AddService(typeof(IFormattingOptions),
-                delegate { return GetDialogPage(typeof(FantomasOptionsPage)); }, promote: true);
-
-            serviceContainer.AddService(typeof(ICodeGenerationOptions),
-                delegate { return GetDialogPage(typeof(CodeGenerationOptionsPage)); }, promote: true);
-
-            serviceContainer.AddService(typeof(IGlobalOptions),
-                delegate { return GetDialogPage(typeof(GlobalOptionsPage)); }, promote: true);
-
-            serviceContainer.AddService(typeof(ILintOptions),
-                delegate { return GetDialogPage(typeof(Linting.LintOptionsPage)); }, promote: true);
-
-            serviceContainer.AddService(typeof(IOutliningOptions),
-                delegate { return GetDialogPage(typeof(OutliningOptionsPage)); }, promote: true);
-
-            var generalOptions = GetService(typeof(IGeneralOptions)) as IGeneralOptions;
-            PerformRegistrations(generalOptions);
+            PerformRegistrations(SettingsContext.GeneralOptions);
 
             library = new FSharpLibrary(Constants.guidSymbolLibrary);
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
@@ -115,7 +88,7 @@ namespace FSharpVSPowerTools
         private void SetupReferenceMenu()
         {
             var mcs = GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            
+
             if (mcs != null)
             {
                 fsiReferenceMenu = new FsiReferenceCommand(DTE.Value, mcs);
@@ -152,7 +125,7 @@ namespace FSharpVSPowerTools
                     pctCookie = 0;
                 }
             }
-        }    
+        }
 
         private void RegisterLibrary()
         {
@@ -173,6 +146,7 @@ namespace FSharpVSPowerTools
                     objManager.UnregisterLibrary(objectManagerCookie);
             }
         }
+
 
         public void Dispose()
         {

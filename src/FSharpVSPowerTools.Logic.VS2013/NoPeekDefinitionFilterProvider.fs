@@ -1,12 +1,19 @@
-﻿namespace FSharpVSPowerTools.Logic
+﻿namespace FSharpVSPowerTools.Logic.VS2013
 
+open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.OLE.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
+open Microsoft.VisualStudio.Text.Tagging
+open Microsoft.VisualStudio.Text.Outlining
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio
+open System.Windows.Forms
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Editor
+open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell
