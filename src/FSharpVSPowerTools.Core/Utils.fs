@@ -731,6 +731,24 @@ module Pervasive =
     /// Path.Combine
     let (</>) path1 path2 = Path.Combine (path1, path2)
 
+
+    open System.Xml.Linq
+    
+    let inline xelem  name (content:'a)  = new XElement(XName.Get name, content)
+
+    type XContainer with
+        member this.Element     name            = this.Element(XName.Get name)
+        member this.HasElement (name:string)    = isNotNull (this.Element name)
+        member this.AddElement  name            = this.Add (xelem name []); this.Element name
+
+        member this.GetOrCreateElement name =
+            if this.HasElement name then this.Element name else this.AddElement name
+
+        member this.SetOrCreateElement name value =
+            if this.HasElement name then (this.Element name).Value <- value
+            else (this.AddElement name).Value <- value
+
+
 [<RequireQualifiedAccess>]
 module Dict = 
     open System.Collections.Generic
@@ -744,9 +762,15 @@ module Dict =
         dict
 
     let tryFind key (dict: Dictionary<'k, 'v>) = 
-        let mutable value = Unchecked.defaultof<_>
-        if dict.TryGetValue (key, &value) then Some value
-        else None
+        match dict.ContainsKey key with
+        | true  -> Some dict.[key]
+        | false -> None
+
+    let addOrUpdate (key:'k) (value:'v) (dict:Dictionary<'k,'v>) =
+        match dict.ContainsKey key with
+        | true  -> dict.[key] <- value
+        | false -> dict.Add (key,value)
+
 
     let ofSeq (xs: ('k * 'v) seq) = 
         let dict = Dictionary()

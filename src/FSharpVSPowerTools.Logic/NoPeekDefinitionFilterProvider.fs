@@ -87,7 +87,7 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
             match textView with
             | null -> ()
             | _ ->
-                if Setting.getGeneralOptions(serviceProvider) 
+                if SettingsContext.GeneralOptions 
                    |> Option.ofNull 
                    |> Option.map (fun x -> x.PeekDefinitionEnabled) 
                    |> Option.getOrElse false then

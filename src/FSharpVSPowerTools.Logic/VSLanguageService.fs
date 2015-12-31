@@ -60,7 +60,7 @@ type VSLanguageService
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
      [<Import(typeof<SVsServiceProvider>)>] serviceProvider: IServiceProvider) =
 
-    let globalOptions = Setting.getGlobalOptions serviceProvider
+    let globalOptions = SettingsContext.GlobalOptions
     let instance = LanguageService (globalOptions.BackgroundCompilation, globalOptions.ProjectCacheSize, fileSystem)
 
     /// Log exceptions to 'ActivityLog' if users run 'devenv.exe /Log'.

@@ -30,8 +30,8 @@ type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
+                let generalOptions = SettingsContext.GeneralOptions
+                let codeGenOptions = SettingsContext.CodeGenerationOptions
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.ResolveUnopenedNamespacesEnabled then null
@@ -43,8 +43,8 @@ type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
                                   doc, textView,
                                   editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
                                   fsharpVsLanguageService, serviceProvider, projectFactory,
-                                  Setting.getInterfaceMemberIdentifier codeGenOptions,
-                                  Setting.getDefaultMemberBody codeGenOptions)
+                                  SettingsContext.getInterfaceMemberIdentifier(),
+                                  SettingsContext.getDefaultMemberBody())
 
                         new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
                     | _ -> null

@@ -23,7 +23,7 @@ type LintTagger(textDocument: ITextDocument,
     let buffer = textDocument.TextBuffer
 
     let lintData = lazy(
-        let lintOptions = Setting.getLintOptions serviceProvider
+        let lintOptions = SettingsContext.getLintOptions serviceProvider
         lintOptions.UpdateDirectories()
         let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
         let shouldFileBeIgnored =

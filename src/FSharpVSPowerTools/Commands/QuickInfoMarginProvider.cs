@@ -22,24 +22,30 @@ namespace FSharpVSPowerTools.QuickInfo
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _vsLanguageService;
+        private readonly IGeneralOptions _generalOptions;
 
         [ImportingConstructor]
         public QuickInfoMarginProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            VSLanguageService vsLanguageService)
+                    IGeneralOptions generalOptions,
+
+
+        VSLanguageService vsLanguageService)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _vsLanguageService = vsLanguageService;
+            _generalOptions = generalOptions;
+
         }
 
         public IWpfTextViewMargin CreateMargin(IWpfTextViewHost textViewHost, IWpfTextViewMargin marginContainer)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.QuickInfoPanelEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.QuickInfoPanelEnabled) return null;
 
             var textView = textViewHost.TextView;
             var buffer = textView.TextBuffer;
