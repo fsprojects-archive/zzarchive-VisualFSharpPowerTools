@@ -415,6 +415,8 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly ProjectFactory _projectFactory;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IGeneralOptions _generalOptions;
+        
 
         [ImportingConstructor]
         public SyntaxConstructClassifierProvider(
@@ -423,7 +425,8 @@ namespace FSharpVSPowerTools
             IClassificationTypeRegistryService classificationRegistry,
             ITextDocumentFactoryService textDocumentFactoryService,
             VSLanguageService fsharpVsLanguageService,
-            ProjectFactory projectFactory)
+            ProjectFactory projectFactory
+            )
         {
             _serviceProvider = serviceProvider;
             _classificationColorManager = classificationColorManager;
@@ -431,6 +434,7 @@ namespace FSharpVSPowerTools
             _textDocumentFactoryService = textDocumentFactoryService;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _projectFactory = projectFactory;
+            _generalOptions = SettingsContext.GeneralOptions;
 
             // Receive notification for Visual Studio theme change
             VSColorTheme.ThemeChanged += UpdateTheme;
@@ -443,11 +447,11 @@ namespace FSharpVSPowerTools
 
         public IClassifier GetClassifier(ITextBuffer buffer)
         {
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.SyntaxColoringEnabled) return null;
 
-            bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
-            bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
+            bool includeUnusedReferences = _generalOptions.UnusedReferencesEnabled;
+            bool includeUnusedOpens = _generalOptions.UnusedOpensEnabled;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))

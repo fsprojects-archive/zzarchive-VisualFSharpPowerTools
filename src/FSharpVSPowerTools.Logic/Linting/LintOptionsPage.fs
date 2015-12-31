@@ -51,6 +51,10 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
         member __.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
 
+        // TODO - placeholders
+        member __.Save () = ()
+        member __.Load () = ()
+
     member private this.Dte =
         match dte with
         | Some dte -> dte

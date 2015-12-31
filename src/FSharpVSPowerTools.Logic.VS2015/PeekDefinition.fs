@@ -123,7 +123,7 @@ type PeekableItemSourceProvider
 
     interface IPeekableItemSourceProvider with
         member __.TryCreatePeekableItemSource(buffer: ITextBuffer) =
-            let generalOptions = Setting.getGeneralOptions serviceProvider
+            let generalOptions = SettingsContext.GeneralOptions
             if generalOptions == null || not generalOptions.PeekDefinitionEnabled then null
             else
                 match vsVersion.Value with
