@@ -108,7 +108,7 @@ namespace FSharpVSPowerTools
             set { chbUnusedReferences.Checked = value; }
         }
 
-        public bool UnusedOpensEnabled 
+        public bool UnusedOpensEnabled
         {
             get { return chbUnusedOpens.Checked; }
             set { chbUnusedOpens.Checked = value; }
