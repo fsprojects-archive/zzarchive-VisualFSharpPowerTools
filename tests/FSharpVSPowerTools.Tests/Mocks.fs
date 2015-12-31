@@ -16,30 +16,39 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.OLE.Interop
 
-let createGeneralOptionsPage() =
-    Mock<IGeneralOptions>.With(fun page ->
-        <@
-            page.DepthColorizerEnabled --> true
-            page.FindAllReferencesEnabled --> true
-            page.FolderOrganizationEnabled --> true
-            page.FormattingEnabled --> true
-            page.GenerateRecordStubEnabled --> true
-            page.HighlightUsageEnabled --> true
-            page.InterfaceImplementationEnabled --> true
-            page.NavBarEnabled --> true
-            page.NavigateToEnabled --> true
-            page.RenameRefactoringEnabled --> true
-            page.ResolveUnopenedNamespacesEnabled --> true
-            page.SyntaxColoringEnabled --> true
-            page.UnionPatternMatchCaseGenerationEnabled --> true
-            page.UnusedReferencesEnabled --> true
-            page.UnusedOpensEnabled --> true
-            page.XmlDocEnabled --> true
-            page.GoToSymbolSourceEnabled --> true
-            page.LinterEnabled --> true
-            page.OutliningEnabled --> true
-            page.HighlightPrintfUsageEnabled --> true
-        @>)
+
+let setupGeneralOptions() =
+    let generalOptions = SettingsContext.GeneralOptions
+    generalOptions.DepthColorizerEnabled <- true
+    generalOptions.FindAllReferencesEnabled <- true
+    generalOptions.FolderOrganizationEnabled <- true
+    generalOptions.FormattingEnabled <- true
+    generalOptions.GenerateRecordStubEnabled <- true
+    generalOptions.GenerateReferencesEnabled <- true
+    generalOptions.HighlightUsageEnabled <- true
+    generalOptions.HighlightPrintfUsageEnabled <- true
+    generalOptions.InterfaceImplementationEnabled <- true
+    generalOptions.NavBarEnabled <- true
+    generalOptions.NavigateToEnabled <- true
+    generalOptions.RenameRefactoringEnabled <- true
+    generalOptions.ResolveUnopenedNamespacesEnabled <- true
+    generalOptions.SyntaxColoringEnabled  <- true
+    generalOptions.UnionPatternMatchCaseGenerationEnabled <- true
+    generalOptions.UnusedReferencesEnabled <- true
+    generalOptions.UnusedOpensEnabled <- true
+    generalOptions.XmlDocEnabled <- true
+    generalOptions.GoToSymbolSourceEnabled <- true
+    generalOptions.GoToMetadataEnabled <- true
+    generalOptions.LinterEnabled <- true
+    generalOptions.OutliningEnabled <- true
+    generalOptions.QuickInfoPanelEnabled <- true
+    generalOptions.NavigateToEnabled <- true
+
+let setupGlobalOptions() =
+    let globalOptions = SettingsContext.GlobalOptions
+    globalOptions.DiagnosticMode <- false
+    globalOptions.BackgroundCompilation <- true
+    globalOptions.ProjectCacheSize <- 50
 
 let createClassificationTypeRegistryService() =
     Mock<IClassificationTypeRegistryService>()
