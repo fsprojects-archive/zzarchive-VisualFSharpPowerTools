@@ -258,13 +258,10 @@ type IGeneralOptions =
 
 
 [<Sealed>]
-[<Export(typeof<IGeneralOptions>)>]
 type GeneralOptions () as self =
-
     do
         settingsStore.Load()
         settingsEvents.Add (fun _ -> (self :> IGeneralOptions).Load ())
-
 
     interface IGeneralOptions with
         member __.XmlDocEnabled
@@ -389,9 +386,7 @@ type IFormattingOptions =
     abstract Save : unit -> unit
 
 [<Sealed>]
-[<Export(typeof<IFormattingOptions>)>]
 type FormattingOptions () as self  =
-
     do
         settingsStore.Load()
         settingsEvents.Add (fun _ -> (self :> IFormattingOptions).Load ())
@@ -456,13 +451,10 @@ type ICodeGenerationOptions =
     abstract Save : unit -> unit
 
 [<Sealed>]
-[<Export(typeof<ICodeGenerationOptions>)>]
 type CodeGenerationOptions () as self =
-
     do
         settingsStore.Load()
         settingsEvents.Add (fun _ -> (self :> ICodeGenerationOptions).Load ())
-
 
     interface ICodeGenerationOptions with
 
@@ -475,7 +467,7 @@ type CodeGenerationOptions () as self =
             and  set v  = setValue  DEFAULT_BODY v
 
         member val CodeGenerationOptions =
-            CodeGenerationKinds.DefaultValue with get, set
+            CodeGenerationKinds.Failwith with get, set
 
         member __.Load () = settingsStore.Load ()
         member self.Save () =
@@ -491,9 +483,7 @@ type IGlobalOptions =
     abstract Save : unit -> unit
 
 [<Sealed>]
-[<Export(typeof<IGlobalOptions>)>]
 type GlobalOptions  () as self =
-
     do
         settingsStore.Load()
         settingsEvents.Add (fun _ -> (self :> IGlobalOptions).Load ())
@@ -564,9 +554,7 @@ type IOutliningOptions =
 
 
 [<Sealed>]
-[<Export(typeof<IOutliningOptions>)>]
 type OutliningOptions () as self =
-
     do
         settingsStore.Load()
         settingsEvents.Add (fun _ -> (self :> IOutliningOptions).Load ())
