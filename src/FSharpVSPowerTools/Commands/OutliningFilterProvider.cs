@@ -37,6 +37,16 @@ namespace FSharpVSPowerTools.Outlining
 
         }
 
+        private static void AddCommandFilter(IVsTextView viewAdapter, OutliningFilter commandFilter)
+        {
+            if (!commandFilter.IsAdded)
+            {
+                // Get the view adapter from the editor factory
+                IOleCommandTarget next;
+                int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
+
+        }
+
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = _editorFactory.GetWpfTextView(textViewAdapter);
