@@ -26,6 +26,8 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
         private readonly FileSystem _fileSystem;
+        readonly IGeneralOptions _generalOptions;
+
 
         [ImportingConstructor]
         public FindReferencesFilterProvider(
@@ -42,6 +44,8 @@ namespace FSharpVSPowerTools
             _fileSystem = fileSystem;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _generalOptions = SettingsContext.GeneralOptions;
+
         }
 
         internal FindReferencesFilter RegisterCommandFilter(IWpfTextView textView, bool showProgress)
@@ -49,8 +53,8 @@ namespace FSharpVSPowerTools
             var textViewAdapter = _editorFactory.GetViewAdapter(textView);
             if (textViewAdapter == null) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.FindAllReferencesEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.FindAllReferencesEnabled) return null;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))

@@ -25,20 +25,25 @@ namespace FSharpVSPowerTools
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
+        private readonly IGeneralOptions _generalOptions;
         
+
         [ImportingConstructor]
         public ResolveUnopenedNamespaceSmartTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ITextUndoHistoryRegistry undoHistoryRegistry,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+
+        
+        VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _undoHistoryRegistry = undoHistoryRegistry;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _generalOptions = SettingsContext.GeneralOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -46,8 +51,8 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.ResolveUnopenedNamespacesEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.ResolveUnopenedNamespacesEnabled) return null;
 
             var dte = _serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
             var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
