@@ -105,7 +105,7 @@ type OutliningTagger
         | Some _, emptyTree when emptyTree.Range.IsEmpty -> false 
         | Some _, _ -> true
 
-    let outliningOptions = lazy(Setting.getOutliningOptions serviceProvider)
+    let outliningOptions = lazy(SettingsContext.OutliningOptions)
 
     let outliningEnabled scope =
         let options = outliningOptions.Value

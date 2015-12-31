@@ -78,7 +78,7 @@ module OutputWindowHelper =
     
     /// This global output window is initialized once for each Visual Studio session.
     let outputWindowPane = lazy(tryGetPowerToolsWindowPane(Logger.GlobalServiceProvider))
-    let globalOptions = lazy(Setting.getGlobalOptions(Logger.GlobalServiceProvider))
+    let globalOptions = lazy(SettingsContext.GlobalOptions)
 
     let diagnose logType msg =
         outputWindowPane.Value 

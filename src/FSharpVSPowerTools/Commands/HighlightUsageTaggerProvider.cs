@@ -24,17 +24,21 @@ namespace FSharpVSPowerTools
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
 
+        private readonly IGeneralOptions _generalOptions;
+        
         [ImportingConstructor]
         public HighlightUsageTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+        
+        VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
+            _generalOptions = SettingsContext.GeneralOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -42,8 +46,8 @@ namespace FSharpVSPowerTools
             // Only provide highlighting on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.HighlightUsageEnabled) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.HighlightUsageEnabled) return null;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))

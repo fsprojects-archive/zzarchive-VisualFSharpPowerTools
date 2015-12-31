@@ -30,8 +30,8 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
-                let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
+                let generalOptions = SettingsContext.GeneralOptions 
+                let codeGenOptions = SettingsContext.CodeGenerationOptions
                 if generalOptions == null 
                    || codeGenOptions == null
                    || not generalOptions.GenerateRecordStubEnabled then null
@@ -43,7 +43,7 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
                                   doc, textView,
                                   undoHistoryRegistry.RegisterHistory(buffer),
                                   fsharpVsLanguageService, serviceProvider,
-                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  projectFactory, SettingsContext.getDefaultMemberBody(),
                                   openDocumentsTracker)
 
                         new RecordStubGeneratorSuggestedActionsSource(generator) :> _

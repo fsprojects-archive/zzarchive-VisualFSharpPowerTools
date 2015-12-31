@@ -30,7 +30,7 @@ type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstruct
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
             if textView.TextBuffer <> buffer then null
             else
-                let generalOptions = Setting.getGeneralOptions serviceProvider
+                let generalOptions = SettingsContext.GeneralOptions
                 if generalOptions == null || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
