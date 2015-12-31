@@ -33,7 +33,7 @@ module StoreUtils =
         let filename, folder =
             if String.IsNullOrEmpty filepath then
                 VFPT_SETTINGS, Path.Combine
-                    (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),@".configs/.vfpt")
+                    (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),@".config/.vfpt")
             else
                 Path.GetFileName filepath, Path.GetDirectoryName filepath
         if not (Directory.Exists folder) then Directory.CreateDirectory folder |> ignore
@@ -708,7 +708,7 @@ type OutliningOptions () as self =
 
 module SettingsContext =
 
-    let triggerSettingsChanged (e) = settingsChanged.Trigger(e)
+    let triggerSettingsChanged e = settingsChanged.Trigger e
 
     let GeneralOptions = GeneralOptions() :> IGeneralOptions
     let GlobalOptions  = GlobalOptions()  :> IGlobalOptions
