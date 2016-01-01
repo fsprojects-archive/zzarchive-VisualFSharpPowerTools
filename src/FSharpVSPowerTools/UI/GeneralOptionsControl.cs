@@ -188,14 +188,14 @@ namespace FSharpVSPowerTools
             QuickInfoPanelEnabled = _optionsPage.QuickInfoPanelEnabled;
             LinterEnabled = _optionsPage.LinterEnabled;
             OutliningEnabled = _optionsPage.OutliningEnabled;
-           // PeekDefinitionEnabled = _optionsPage.PeekDefinitionEnabled;
+            PeekDefinitionEnabled = _optionsPage.PeekDefinitionEnabled;
 
-            //if (!_optionsPage.PeekDefinitionAvailable)
-            //{
-            //    chbPeekDefinition.Enabled = false;
-            //    var peekDefinitionText = chbPeekDefinition.Text;
-            //    chbPeekDefinition.Text = peekDefinitionText.Contains(vs2015Suffix) ? peekDefinitionText : peekDefinitionText + vs2015Suffix;
-            //}
+            if ( !_optionsPage.PeekDefinitionAvailable )
+            {
+                chbPeekDefinition.Enabled = false;
+                var peekDefinitionText = chbPeekDefinition.Text;
+                chbPeekDefinition.Text = peekDefinitionText.Contains ( vs2015Suffix ) ? peekDefinitionText : peekDefinitionText + vs2015Suffix;
+            }
         }
     }
 }
