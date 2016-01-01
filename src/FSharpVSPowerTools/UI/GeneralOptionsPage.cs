@@ -24,6 +24,15 @@ namespace FSharpVSPowerTools
         public GeneralOptionsPage()
         {
             settings = new GeneralOptions();
+
+            var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
+            var visualStudioVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+
+            PeekDefinitionAvailable =
+                visualStudioVersion != VisualStudioVersion.Unknown
+                && visualStudioVersion != VisualStudioVersion.VS2012
+                && visualStudioVersion != VisualStudioVersion.VS2013;
+
         }
 
         public override void LoadSettingsFromStorage()
@@ -55,6 +64,7 @@ namespace FSharpVSPowerTools
             QuickInfoPanelEnabled = settings.QuickInfoPanelEnabled;
             LinterEnabled = settings.LinterEnabled;
             OutliningEnabled = settings.OutliningEnabled;
+            PeekDefinitionEnabled = settings.PeekDefinitionEnabled;
         }
 
         public override void SaveSettingsToStorage()
@@ -84,6 +94,7 @@ namespace FSharpVSPowerTools
             settings.QuickInfoPanelEnabled = QuickInfoPanelEnabled;
             settings.LinterEnabled = LinterEnabled;
             settings.OutliningEnabled = OutliningEnabled;
+            settings.PeekDefinitionEnabled = PeekDefinitionEnabled;
 
             System.Diagnostics.Debug.WriteLine("Saving Settings to Storage");
             System.Diagnostics.Debug.WriteLine(settings.GetContents());
@@ -179,6 +190,8 @@ namespace FSharpVSPowerTools
         public bool QuickInfoPanelEnabled { get; set; }
         public bool LinterEnabled { get; set; }
         public bool OutliningEnabled { get; set; }
+        public bool PeekDefinitionEnabled { get; set; }
+        public bool PeekDefinitionAvailable {  get; private set; }
 
         protected override IWin32Window Window
         {
@@ -234,6 +247,7 @@ namespace FSharpVSPowerTools
                 QuickInfoPanelEnabled = _optionsControl.QuickInfoPanelEnabled;
                 LinterEnabled = _optionsControl.LinterEnabled;
                 OutliningEnabled = _optionsControl.OutliningEnabled;
+                PeekDefinitionEnabled = _optionsControl.PeekDefinitionEnabled;
 
 
                 System.Diagnostics.Debug.WriteLine("Saving Settings based on apply");
