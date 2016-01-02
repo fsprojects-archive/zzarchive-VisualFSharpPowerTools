@@ -192,3 +192,39 @@ let ``forward pipe 3 deconstructs tuple``() =
     => [2, [(24, 26), (1, 2)
             (27, 29), (4, 5)
             (30, 32), (7, 8)]]
+
+[<Test>]
+let ``forward pipe with right hand argument``() =
+    """
+2 |> sprintf "%d %d" 1
+"""
+    => [2, [(14, 16), (21, 22)
+            (17, 19), (0, 1)]]
+
+[<Test>]
+let ``forward pipe with multiple right hand arguments``() =
+    """
+3 |> sprintf "%d %d %d" 1 2
+"""
+    => [2, [(14, 16), (24, 25)
+            (17, 19), (26, 27)
+            (20, 22), (0, 1)]]
+
+[<Test>]
+let ``forward pipe 2 deconstructs tuple with right hand argument``() =
+    """
+(2, 3) ||> sprintf "%d %d %d" 1
+"""
+    => [2, [(20, 22), (30, 31)
+            (23, 25), (1, 2)
+            (26, 28), (4, 5)]]
+
+[<Test>]
+let ``forward pipe 3 deconstructs tuple with right hand argument``() =
+    """
+(2, 3, 4) |||> sprintf "%d %d %d %d" 1
+"""
+    => [2, [(24, 26), (37, 38)
+            (27, 29), (1, 2)
+            (30, 32), (4, 5)
+            (33, 35), (7, 8)]]

@@ -34,9 +34,15 @@ let getAll (input: ParseAndCheckResults) (onError: string -> unit): PrintfSpecif
                         onError (sprintf "Too many Printf arguments for %+A (%d > %d)" 
                                          func func.Args.Length ownSpecifiers.Length)
                     
+                    let prioritizeArgPos pos = 
+                        Array.partition (fun a -> Range.rangeBeforePos a pos)
+                        >> function (l, r) -> [| r |> Array.sortBy startPos
+                                                 l |> Array.sortBy startPos |]
+                                              |> Array.concat
+
                     let uses = 
                         func.Args
-                        |> Array.sortBy startPos
+                        |> prioritizeArgPos ownSpecifiers.[0].Start
                         |> Array.zip (ownSpecifiers.[0..func.Args.Length - 1] |> Array.sortBy startPos)
                         |> Array.map (fun (specifier, arg) -> { SpecifierRange = specifier; ArgumentRange = arg })
                     restSpecifiers, uses :: acc
