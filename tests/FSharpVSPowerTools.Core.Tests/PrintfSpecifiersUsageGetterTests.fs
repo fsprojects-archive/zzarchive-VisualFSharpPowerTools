@@ -175,3 +175,20 @@ let ``multiply and division to forward piped``() =
 1 * 1 / 1 |> printf "%d"
 """
     => [2, [(21, 23), (0, 9)]]
+
+[<Test>]
+let ``forward pipe 2 deconstructs tuple``() =
+    """
+(1, 2) ||> sprintf "%d %d"
+"""
+    => [2, [(20, 22), (1, 2)
+            (23, 25), (4, 5)]]
+
+[<Test>]
+let ``forward pipe 3 deconstructs tuple``() =
+    """
+(1, 2, 3) |||> sprintf "%d %d %d"
+"""
+    => [2, [(24, 26), (1, 2)
+            (27, 29), (4, 5)
+            (30, 32), (7, 8)]]

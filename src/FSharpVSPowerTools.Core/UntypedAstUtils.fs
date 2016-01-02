@@ -1325,13 +1325,23 @@ module Printf =
                 | _ -> ()
                 appStack := []
             | SynExpr.App (_, _, SynExpr.App(_, true, SynExpr.Ident op, e1, _), e2, _) ->
+                let rec deconstruct = function
+                    | SynExpr.Paren (exp, _, _, _) -> deconstruct exp
+                    | SynExpr.Tuple (exps, _, _) -> 
+                        exps |> List.iter (fun exp -> addAppWithArg { Range = e.Range; Arg = exp.Range})
+                        ()
+                    | _ -> ()
+
                 addAppWithArg { Range = e.Range; Arg = e2.Range }
-                if op.idText = (PrettyNaming.CompileOpName "|>")
-                        || op.idText = (PrettyNaming.CompileOpName "||>")
+                if op.idText = (PrettyNaming.CompileOpName "||>") 
                         || op.idText = (PrettyNaming.CompileOpName "|||>") then
-                    addAppWithArg { Range = e.Range; Arg = e1.Range }
-                walkExpr e2
-                walkExpr e1
+                    deconstruct e1
+                    walkExpr e2
+                else
+                    if op.idText = (PrettyNaming.CompileOpName "|>") then
+                        addAppWithArg { Range = e.Range; Arg = e1.Range }
+                    walkExpr e2
+                    walkExpr e1
             | SynExpr.App (_, _, SynExpr.App(_, true, _, e1, _), e2, _) ->
                 addAppWithArg { Range = e.Range; Arg = e2.Range }
                 addAppWithArg { Range = e.Range; Arg = e1.Range }
