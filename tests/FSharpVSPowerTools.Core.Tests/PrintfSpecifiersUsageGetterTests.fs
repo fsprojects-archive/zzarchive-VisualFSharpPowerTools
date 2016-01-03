@@ -250,3 +250,17 @@ let ``too many args with forward-pipe 2 should ignore extra args``() =
 """
     => [2, [(19, 21), (26, 27)
             (22, 24), (1, 2)]]
+
+[<Test>]
+let ``backwards pipe with equal specifiers and args``() =
+    """
+ignore <| sprintf "%d" 1
+"""
+    => [2, [(19, 21), (23, 24)]]
+
+[<Test>]
+let ``backwards pipe with too many args``() =
+    """
+ignore <| sprintf "%d" 1 2
+"""
+    => [2, [(19, 21), (23, 24)]]
