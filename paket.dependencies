@@ -8,14 +8,14 @@ nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 nuget FSharpLint.Core prerelease
 nuget VSSDK.IDE.Deploy.14
-nuget FSharp.Management
+nuget FSharp.Management 0.3.0
 nuget FsPickler
 
 group Test
 source http://nuget.org/api/v2
 
-nuget NUnit.Runners
-nuget NUnit
+nuget NUnit.Runners ~> 2
+nuget NUnit ~> 2
 nuget Foq
 nuget FsCheck
 nuget FSharp.Core 3.1.2.5 redirects:on
