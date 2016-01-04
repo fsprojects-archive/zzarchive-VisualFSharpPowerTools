@@ -47,6 +47,7 @@ Alternatively, one can build [vs2012 branch](https://github.com/fsprojects/Visua
  - Quick info panel
  - FSharpLint integration
  - Outlining
+ - Peek Definition (VS 2015+)
 
 You can suggest new features at our [user voice system](http://vfpt.uservoice.com/). 
 Please vote for your favourite features so that they have higher chances to be implemented. 
