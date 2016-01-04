@@ -228,3 +228,39 @@ let ``forward pipe 3 deconstructs tuple with right hand argument``() =
             (27, 29), (1, 2)
             (30, 32), (4, 5)
             (33, 35), (7, 8)]]
+
+[<Test>]
+let ``too many args should ignore extra args``() =
+    """
+printf "%d" 1 2
+"""
+    => [2, [(8, 10), (12, 13)]]
+
+[<Test>]
+let ``too many args with forward-pipe should ignore extra args``() =
+    """
+3 |> printf "%d" 1 2
+"""
+    => [2, [(13, 15), (17, 18)]]
+
+[<Test>]
+let ``too many args with forward-pipe 2 should ignore extra args``() =
+    """
+(2, 3) ||> printf "%d %d" 1
+"""
+    => [2, [(19, 21), (26, 27)
+            (22, 24), (1, 2)]]
+
+[<Test>]
+let ``backwards pipe with equal specifiers and args``() =
+    """
+ignore <| sprintf "%d" 1
+"""
+    => [2, [(19, 21), (23, 24)]]
+
+[<Test>]
+let ``backwards pipe with too many args``() =
+    """
+ignore <| sprintf "%d" 1 2
+"""
+    => [2, [(19, 21), (23, 24)]]

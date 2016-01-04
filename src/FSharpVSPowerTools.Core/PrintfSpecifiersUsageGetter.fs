@@ -40,10 +40,13 @@ let getAll (input: ParseAndCheckResults) (onError: string -> unit): PrintfSpecif
                                                  l |> Array.sortBy startPos |]
                                               |> Array.concat
 
+                    let m = min func.Args.Length ownSpecifiers.Length
+
                     let uses = 
                         func.Args
                         |> prioritizeArgPos ownSpecifiers.[0].Start
-                        |> Array.zip (ownSpecifiers.[0..func.Args.Length - 1] |> Array.sortBy startPos)
+                        |> function args -> args.[0..m - 1]
+                        |> Array.zip (ownSpecifiers.[0..m - 1] |> Array.sortBy startPos)
                         |> Array.map (fun (specifier, arg) -> { SpecifierRange = specifier; ArgumentRange = arg })
                     restSpecifiers, uses :: acc
                ) (specifierRanges, [])
