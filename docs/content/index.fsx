@@ -44,6 +44,7 @@ Here are currently supported features:
  * [Quick info panel](quickinfopanel.html)
  * [Lint](lint.html)
  * [Outlining](outlining.html)
+ * [Peek Definition](peekdefinition.html)
   
 Default Keymap
 --------------
