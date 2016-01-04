@@ -14,8 +14,8 @@ nuget FsPickler
 group Test
 source http://nuget.org/api/v2
 
-nuget NUnit.Runners ~> 2
-nuget NUnit ~> 2
+nuget NUnit.Runners
+nuget NUnit
 nuget Foq
 nuget FsCheck
 nuget FSharp.Core 3.1.2.5 redirects:on
