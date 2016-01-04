@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>FAQ - Frequently Asked Questions
+</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A collection of additional commands for F# in Visual Studio">
+    <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
+
+    <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+    <link type="text/css" rel="stylesheet" href="./content/style.css" />
+    <script type="text/javascript" src="./content/tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="http://fsharp.org">fsharp.org</a></li>
+          <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">github page</a></li>
+        </ul>
+        <h3 class="muted"><a href="./index.html">Visual F# Power Tools</a></h3>
+      </div>
+      <hr />
+      <div class="row">
+        <div class="span9" id="main">
+          
+<h1><a name="FAQ-Frequently-Asked-Questions" class="anchor" href="#FAQ-Frequently-Asked-Questions">FAQ - Frequently Asked Questions</a></h1>
+
+<h2><a name="VFPT-is-slow-what-can-I-do-to-speed-it-up" class="anchor" href="#VFPT-is-slow-what-can-I-do-to-speed-it-up">VFPT is slow, what can I do to speed it up?</a></h2>
+
+<p>Our suggestion is to disable automatic features including</p>
+
+<ul>
+<li>Highlight references</li>
+<li>Indent guides/Depth colorizer</li>
+<li>Syntax coloring</li>
+<li>Gray out unused declarations</li>
+<li>Gray out unused opens</li>
+<li>Implement interface</li>
+<li>Record stub generation</li>
+<li>Union pattern match case generation</li>
+<li>Resolve unopened namespaces</li>
+<li>Task List comments</li>
+<li>Quick info panel</li>
+<li>FSharpLint integration</li>
+<li>Outlining</li>
+</ul>
+
+<p>and enable them one by one to identify the features causing slowness. 
+If you found a scenario that is slow, please let us know on <a href="https://github.com/fsprojects/VisualFSharpPowerTools/issues">the issue tracker</a>.</p>
+
+<h2><a name="Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0" class="anchor" href="#Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0">Why is unused declaration option divided into two separate options in v1.6.0?</a></h2>
+
+<p>There are some performance penalties on checking unused declarations. 
+Until the performance issue is sorted out, we divide the option into two settings to provide more granularity to users.
+The new options are disabled by default.</p>
+
+<h2><a name="What-is-Diagnostic-mode-When-should-I-use-it" class="anchor" href="#What-is-Diagnostic-mode-When-should-I-use-it">What is Diagnostic mode? When should I use it?</a></h2>
+
+<p>If Diagnostic mode is on, logging information will be dumped into Visual Studio Output window (particularly on F# Power Tools tab).
+This information is valuable for bug fixing purpose.
+If you encounter any bug, please take some time to record diagnostics information and include it for bug reports.</p>
+
+<p><img src="img/configuration_dialog.png" alt="Configuration dialog" /></p>
+
+<h2><a name="Why-are-object-identifiers-in-members-marked-as-unused" class="anchor" href="#Why-are-object-identifiers-in-members-marked-as-unused">Why are object identifiers in members marked as unused?</a></h2>
+
+<p>If object identifiers (<code>x</code> in <code>x.Member</code>) aren't referred anywhere in the member bodies, they are understood as unused values.
+In order to fix it, we recommend to use <code>__</code> or any identifier with <code>_</code> prefix (<code>_x</code> for example).</p>
+
+<h2><a name="Why-are-my-VFPT-key-bindings-overridden-by-ReSharper" class="anchor" href="#Why-are-my-VFPT-key-bindings-overridden-by-ReSharper">Why are my VFPT key bindings overridden by ReSharper?</a></h2>
+
+<p>If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a <a href="http://youtrack.jetbrains.com/issue/RSRP-409199">known issue</a> where some F# commands are hidden by ReSharper. 
+You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -&gt; Options -&gt; Keyboard &amp; Menus).</p>
+
+
+        </div>
+        <div class="span3">
+            <a href="./index.html">
+                <img src="./img/logo.png" alt="F# Project" style="width:150px;margin:10px" />
+            </a>
+            <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
+                <li class="nav-header">Visual F# Power Tools</li>
+                <li><a href="./index.html">Home page</a></li>
+                <li><a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Download</a></li>
+                <li class="divider"></li>
+                <!-- <li><a href="http://nuget.com/packages/VisualFSharpPowerTools.Core">Get Library via NuGet</a></li> -->
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="./faq.html">FAQ</a></li>
+
+                <li class="nav-header">Supported Features</li>
+                <li><a href="./xmldoc.html">Auto-generating XmlDoc</a></li>
+                <li><a href="./codeformatting.html">Source code formatting</a></li>
+                <li><a href="./navbar.html">Navigation bar</a></li>
+                <li><a href="./highlightusage.html">Highlight references</a></li>
+                <li><a href="./rename.html">Rename refactoring</a></li>
+                <li><a href="./depthcolorizer.html">Depth colorizer</a></li>
+                <li><a href="./navigateto.html">NavigateTo</a></li>
+                <li><a href="./syntaxcoloring.html">Syntax coloring</a></li>
+                <li><a href="./folderorganization.html">Folder organization</a></li>
+                <li><a href="./findallreferences.html">Find all references</a></li>
+                <li><a href="./implementinterface.html">Implement interface</a></li>
+                <li><a href="./recordstubgeneration.html">Record stub generation</a></li>
+                <li><a href="./unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
+                <li><a href="./resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
+                <li><a href="./gotometadata.html">Go to metadata</a></li>
+                <li><a href="./tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./generatereferences.html">Generate references for F# Interactive</a></li>
+                <li><a href="./navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./quickinfopanel.html">Quick info panel</a></li>
+				<li><a href="./lint.html">Lint</a></li>
+				<li><a href="./outlining.html">Outlining</a></li>
+				<li><a href="./peekdefinition.html">Peek Definition</a></li>
+
+                <li class="nav-header">API Documentation</li>
+                <li><a href="./reference/index.html">API Reference</a></li>
+            </ul>
+        </div>
+      </div>
+    </div>
+    <a href="http://github.com/fsprojects/VisualFSharpPowerTools"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  </body>
+  </html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>lint</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A collection of additional commands for F# in Visual Studio">
+    <meta name="author" content="Anh-Dung Phan, Vasily Kirichenko, Denis Ok">
+
+    <script src="https://code.jquery.com/jquery-1.8.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.8.23/jquery-ui.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/js/bootstrap.min.js"></script>
+    <link href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet">
+
+    <link type="text/css" rel="stylesheet" href="./content/style.css" />
+    <script type="text/javascript" src="./content/tips.js"></script>
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="https://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container">
+      <div class="masthead">
+        <ul class="nav nav-pills pull-right">
+          <li><a href="http://fsharp.org">fsharp.org</a></li>
+          <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">github page</a></li>
+        </ul>
+        <h3 class="muted"><a href="./index.html">Visual F# Power Tools</a></h3>
+      </div>
+      <hr />
+      <div class="row">
+        <div class="span9" id="main">
+          
+<h2><a name="Lint" class="anchor" href="#Lint">Lint</a></h2>
+
+<p>An <a href="http://fsprojects.github.io/FSharpLint/">F# linter</a> runs as you modify your source code to try to highlight code that could possibly be improved. The linter can be turned off from the F# Power Tools general settings where it is listed as <code>FSharpLint Integration</code>.</p>
+
+<h3><a name="Rules" class="anchor" href="#Rules">Rules</a></h3>
+
+<p>When a broken lint rule is discovered the first two characters of the code in question are underlined in orange, a mouse-over of these characters will show the lint's suggestion in a tooltip:</p>
+
+<p><img src="img/lint_rule_warning.gif" alt="Example of a broken lint rule" /></p>
+
+<p>Each rule can be turned off in the F# Power Tools lint settings under the <code>Rules</code> tab, the checkboxes indicate whether a rule is enabled/disabled. Some rules are grouped in a collection under an analyser, disabling the analyser will disable all of its rules, to enable/disable specific rules expand the analyser to view its rules:</p>
+
+<p><img src="img/lint_disable_rule.gif" alt="Example of disabling a lint rule" /></p>
+
+<p>Some rules and analysers have additional settings, these can be viewed and updated by selecting the rule/analyser:</p>
+
+<p><img src="img/lint_change_rule_setting.gif" alt="Example of changing a rule's settings" /></p>
+
+<h3><a name="Hints" class="anchor" href="#Hints">Hints</a></h3>
+
+<p>Hints in the linter provide a way for new rules to easily be added by modifying the configuration alone. They are written in a DSL that appears as a subset of F#, in the format of <code>match expression ===&gt; suggest expression or suggest message</code>. <a href="http://fsprojects.github.io/FSharpLint/Hints.html">Further documentation on writing hints</a>.</p>
+
+<p>Under the <code>Hints</code> tab in the F# Power Tools lint settings existing hints can be viewed, and new hints can be added. When adding a new hints it will be parsed to check for any errors before adding it to the configuration, if the hint could not be parsed the textbox will be highlighted red and a mouse-over will show the parse error.</p>
+
+<p><img src="img/lint_add_hint.gif" alt="Example of adding a hint" /></p>
+
+<h3><a name="Configuration-Files" class="anchor" href="#Configuration-Files">Configuration Files</a></h3>
+
+<p>Lint settings are all stored on disk on a per directory basis, lint setting changes from within F# Power Tools will be written out to a lint configuration file titled <code>Settings.FSharpLint</code>. The directory the settings are written to will attempt to default to a directory common to all open projects; under the <code>Files</code> tab you can choose to view/modify the settings for another directory - when you change directory any outstanding changes will be saved.</p>
+
+<p>When the lint runs it picks up the settings from the directory the source file is in and its ancestors, the settings in subdirectories taking precedence over any settings found in ancestor directories - this enables solution wide settings which can be overridden with project specific settings.</p>
+
+
+        </div>
+        <div class="span3">
+            <a href="./index.html">
+                <img src="./img/logo.png" alt="F# Project" style="width:150px;margin:10px" />
+            </a>
+            <ul class="nav nav-list" id="menu" style="margin-top: 20px;">
+                <li class="nav-header">Visual F# Power Tools</li>
+                <li><a href="./index.html">Home page</a></li>
+                <li><a href="http://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff">Download</a></li>
+                <li class="divider"></li>
+                <!-- <li><a href="http://nuget.com/packages/VisualFSharpPowerTools.Core">Get Library via NuGet</a></li> -->
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="./faq.html">FAQ</a></li>
+
+                <li class="nav-header">Supported Features</li>
+                <li><a href="./xmldoc.html">Auto-generating XmlDoc</a></li>
+                <li><a href="./codeformatting.html">Source code formatting</a></li>
+                <li><a href="./navbar.html">Navigation bar</a></li>
+                <li><a href="./highlightusage.html">Highlight references</a></li>
+                <li><a href="./rename.html">Rename refactoring</a></li>
+                <li><a href="./depthcolorizer.html">Depth colorizer</a></li>
+                <li><a href="./navigateto.html">NavigateTo</a></li>
+                <li><a href="./syntaxcoloring.html">Syntax coloring</a></li>
+                <li><a href="./folderorganization.html">Folder organization</a></li>
+                <li><a href="./findallreferences.html">Find all references</a></li>
+                <li><a href="./implementinterface.html">Implement interface</a></li>
+                <li><a href="./recordstubgeneration.html">Record stub generation</a></li>
+                <li><a href="./unionpatternmatchcasegeneration.html">Union pattern match case generation</a></li>
+                <li><a href="./resolveunopenednamespaces.html">Resolve unopened namespaces and modules</a></li>
+                <li><a href="./gotometadata.html">Go to metadata</a></li>
+                <li><a href="./tasklistcomments.html">Task List comments</a></li>
+                <li><a href="./generatereferences.html">Generate references for F# Interactive</a></li>
+                <li><a href="./navigatetosource.html">Navigate to source</a></li>
+				<li><a href="./quickinfopanel.html">Quick info panel</a></li>
+				<li><a href="./lint.html">Lint</a></li>
+				<li><a href="./outlining.html">Outlining</a></li>
+				<li><a href="./peekdefinition.html">Peek Definition</a></li>
+
+                <li class="nav-header">API Documentation</li>
+                <li><a href="./reference/index.html">API Reference</a></li>
+            </ul>
+        </div>
+      </div>
+    </div>
+    <a href="http://github.com/fsprojects/VisualFSharpPowerTools"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  </body>
+  </html>
