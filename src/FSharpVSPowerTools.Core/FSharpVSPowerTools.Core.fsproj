@@ -70,18 +70,20 @@
   <ItemGroup>
     <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Utils.fs" />
-    <Compile Include="Logging.fs" />
-    <Compile Include="CompilerLocationUtils.fs" />
-    <Compile Include="UntypedAstUtils.fs" />
-    <Compile Include="TypedAstUtils.fs" />
-    <Compile Include="Lexer.fs" />
-    <Compile Include="AssemblyContentProvider.fs" />
-    <Compile Include="LanguageService.fs" />
-    <Compile Include="XmlDocParser.fs" />
-    <Compile Include="DepthParser.fs" />
-    <Compile Include="NavigableItemsCollector.fs" />
-    <Compile Include="NavigateToIndex.fs" />
+    <Compile Include="Domain\Constants.fs" />
+    <Compile Include="Domain\Utils.fs" />
+    <Compile Include="Domain\Logging.fs" />
+    <Compile Include="Domain\CompilerLocationUtils.fs" />
+    <Compile Include="AST\UntypedAstUtils.fs" />
+    <Compile Include="AST\TypedAstUtils.fs" />
+    <Compile Include="AST\Lexer.fs" />
+    <Compile Include="AST\AssemblyContentProvider.fs" />
+    <Compile Include="AST\LanguageService.fs" />
+    <Compile Include="AST\XmlDocParser.fs" />
+    <Compile Include="AST\DepthParser.fs" />
+    <Compile Include="Navigation\NavigableItemsCollector.fs" />
+    <Compile Include="Navigation\NavigateToIndex.fs" />
+    <Compile Include="Navigation\NavigibleItemCache.fs" />
     <Compile Include="IdentifierUtils.fs" />
     <Compile Include="OpenDeclarationsGetter.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
@@ -93,7 +95,6 @@
     <Compile Include="SignatureGenerator.fs" />
     <Compile Include="TaskListCommentExtractor.fs" />
     <Compile Include="PrintfSpecifiersUsageGetter.fs" />
-    <Compile Include="NavigibleItemCache.fs" />
     <None Include="Scratchpad.fsx" />
   </ItemGroup>
   <ItemGroup>

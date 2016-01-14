@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.Constants
+﻿module FSharpVSPowerTools.SyntaxConstants
 
 let [<Literal>] fsharpUnusedDeclarationMargin = "FSharpUnusedDeclarationMargin"
 
