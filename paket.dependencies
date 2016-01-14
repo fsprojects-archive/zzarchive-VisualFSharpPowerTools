@@ -14,6 +14,7 @@ nuget FsPickler
 group Test
 source http://nuget.org/api/v2
 
+nuget FSharp.Compiler.Service.ProjectCracker
 nuget NUnit.Runners
 nuget NUnit
 nuget Foq

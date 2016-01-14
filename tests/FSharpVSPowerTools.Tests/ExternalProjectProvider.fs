@@ -1,9 +1,8 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open FSharpVSPowerTools.ProjectSystem
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
-open Microsoft.Build
+open Microsoft.FSharp.Compiler.SourceCodeServices.ProjectCrackerTool.Program
 
 type ExternalProjectProvider(projectFileName) =    
     // We use Debug mode since test assemblies are created in Debug mode in BuildTests target
