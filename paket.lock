@@ -65,6 +65,7 @@ NUGET
     Foq (1.7.1)
     FsCheck (2.1.0)
       FSharp.Core (>= 3.1.2.5)
+    FSharp.Compiler.Service.ProjectCracker (2.0.0.2)
     FSharp.Core (3.1.2.5) - redirects: on
     NUnit (2.6.4)
     NUnit.Runners (2.6.4)
