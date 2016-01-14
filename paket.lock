@@ -1,5 +1,5 @@
 NUGET
-  remote: http://nuget.org/api/v2
+  remote: http://www.nuget.org/api/v2
   specs:
     Expression.Blend.Sdk (1.0.2)
     Fantomas (2.0.2)
@@ -19,7 +19,7 @@ NUGET
 
 GROUP Build
 NUGET
-  remote: http://nuget.org/api/v2
+  remote: http://www.nuget.org/api/v2
   specs:
     canopy (0.9.36)
       FSharp.Core (>= 3.0.2)
@@ -59,7 +59,7 @@ GITHUB
       Octokit
 GROUP Test
 NUGET
-  remote: http://nuget.org/api/v2
+  remote: http://www.nuget.org/api/v2
   specs:
     FAKE (4.9.5)
     Foq (1.7.1)
