@@ -68,31 +68,35 @@
   -->
   <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <ItemGroup>
+    <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Utils.fs" />
-    <Compile Include="CompilerLocationUtils.fs" />
-    <Compile Include="UntypedAstUtils.fs" />
-    <Compile Include="TypedAstUtils.fs" />
-    <Compile Include="Lexer.fs" />
-    <Compile Include="AssemblyContentProvider.fs" />
-    <Compile Include="LanguageService.fs" />
-    <Compile Include="XmlDocParser.fs" />
-    <Compile Include="DepthParser.fs" />
-    <Compile Include="NavigableItemsCollector.fs" />
-    <Compile Include="NavigateToIndex.fs" />
-    <Compile Include="IdentifierUtils.fs" />
-    <Compile Include="OpenDeclarationsGetter.fs" />
-    <Compile Include="SourceCodeClassifier.fs" />
-    <Compile Include="CodeGeneration.fs" />
-    <Compile Include="InterfaceStubGenerator.fs" />
-    <Compile Include="RecordStubGenerator.fs" />
-    <Compile Include="UnionPatternMatchCaseGenerator.fs" />
-    <Compile Include="UnopenedNamespacesResolver.fs" />
-    <Compile Include="SignatureGenerator.fs" />
+    <Compile Include="Domain\Constants.fs" />
+    <Compile Include="Domain\Utils.fs" />
+    <Compile Include="Domain\Logging.fs" />
+    <Compile Include="Domain\CompilerLocationUtils.fs" />
+    <Compile Include="AST\UntypedAstUtils.fs" />
+    <Compile Include="AST\TypedAstUtils.fs" />
+    <Compile Include="AST\Lexer.fs" />
+    <Compile Include="AST\AssemblyContentProvider.fs" />
+    <Compile Include="AST\LanguageService.fs" />
+    <Compile Include="AST\XmlDocParser.fs" />
+    <Compile Include="AST\DepthParser.fs" />
+    <Compile Include="Navigation\NavigableItemsCollector.fs" />
+    <Compile Include="Navigation\NavigateToIndex.fs" />
+    <Compile Include="Navigation\NavigibleItemCache.fs" />
+    <Compile Include="Symbol\IdentifierUtils.fs" />
+    <Compile Include="Symbol\OpenDeclarationsGetter.fs" />
+    <Compile Include="Symbol\SourceCodeClassifier.fs" />
+    <Compile Include="Symbol\UnopenedNamespacesResolver.fs" />
+    <Compile Include="Symbol\SyntaxConstructClassifier.fs" />
+    <Compile Include="CodeGen\CodeGeneration.fs" />
+    <Compile Include="CodeGen\InterfaceStubGenerator.fs" />
+    <Compile Include="CodeGen\RecordStubGenerator.fs" />
+    <Compile Include="CodeGen\UnionPatternMatchCaseGenerator.fs" />
+    <Compile Include="CodeGen\SignatureGenerator.fs" />
     <Compile Include="TaskListCommentExtractor.fs" />
     <Compile Include="PrintfSpecifiersUsageGetter.fs" />
     <None Include="Scratchpad.fsx" />
-    <Content Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
@@ -118,6 +122,53 @@
         <Reference Include="FSharp.Compiler.Service">
           <HintPath>..\..\packages\FSharp.Compiler.Service\lib\net45\FSharp.Compiler.Service.dll</HintPath>
           <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net35\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0')">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net40\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net45\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>
