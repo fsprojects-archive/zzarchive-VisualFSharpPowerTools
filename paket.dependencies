@@ -4,6 +4,7 @@ nuget FSharp.Compiler.Service 1.4.2.2
 nuget Fantomas
 nuget Expression.Blend.Sdk
 nuget FSharp.ViewModule.Core
+nuget FsPickler.Json
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 nuget FSharpLint.Core prerelease

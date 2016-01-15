@@ -10,8 +10,12 @@ NUGET
     FSharpLint.Core (0.0.13)
       FSharp.Compiler.Service (>= 1.4.2.1)
     FsPickler (1.5.2)
+    FsPickler.Json (1.5.2)
+      FsPickler (1.5.2)
+      Newtonsoft.Json (>= 6.0.5)
     FsXaml.Wpf (0.9.9)
       Expression.Blend.Sdk (>= 1.0.2) - framework: >= net45
+    Newtonsoft.Json (8.0.2)
     SourceLink.SymbolStore (0.5.0)
     VSSDK.IDE.14 (14.0.4-preview)
     VSSDK.IDE.Deploy.14 (14.0.4-preview)
