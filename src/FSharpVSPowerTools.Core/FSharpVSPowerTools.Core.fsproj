@@ -88,6 +88,7 @@
     <Compile Include="Symbol\OpenDeclarationsGetter.fs" />
     <Compile Include="Symbol\SourceCodeClassifier.fs" />
     <Compile Include="Symbol\UnopenedNamespacesResolver.fs" />
+    <Compile Include="Symbol\SyntaxConstructClassifier.fs" />
     <Compile Include="CodeGen\CodeGeneration.fs" />
     <Compile Include="CodeGen\InterfaceStubGenerator.fs" />
     <Compile Include="CodeGen\RecordStubGenerator.fs" />
