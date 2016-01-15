@@ -374,6 +374,13 @@ member x.Serialize(arg1) = raise (System.NotImplementedException())
 member x.ToXml() = raise (System.NotImplementedException())
 """
 
+[<Test>]
+let ``curried functions are handled correctly with lightweight syntax``() =
+    checkInterfaceStubFull false 173 15 "type OKeyword =
+    interface IKeyword with" ["IKeyword"] """
+member x.Method ``member`` member1 member2 = raise (System.NotImplementedException())
+"""
+
 open System
 open FsCheck
 open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
