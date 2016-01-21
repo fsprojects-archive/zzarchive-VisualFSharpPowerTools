@@ -70,11 +70,12 @@ The maintainers don't have much experience with Visual Studio Extensibility; any
 ### License
 The extension is available under Apache 2.0 license. For more information see the [License file](LICENSE.txt).
 
-### Maintainer(s)
+### Maintainers
 
 - [@dungpa](https://github.com/dungpa)
 - [@vasily-kirichenko](https://github.com/vasily-kirichenko)
 - [@OkayX6](https://github.com/OkayX6)
 - [@forki](https://github.com/forki)
+- [@cloudRoutine](https://github.com/cloudRoutine)
 
 The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
