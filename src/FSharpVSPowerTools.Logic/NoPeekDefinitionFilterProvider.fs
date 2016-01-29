@@ -12,11 +12,16 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 
-type NoPeekDefinitionFilter() =
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
+type IMenuCommand =
+    inherit IOleCommandTarget
+    abstract IsAdded: bool with get, set
+    abstract NextTarget: IOleCommandTarget with get, set
 
-    interface IOleCommandTarget with
+type NoPeekDefinitionFilter() =
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
+
         member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
             if pguidCmdGroup = VSConstants.VsStd12 && 
                 (nCmdId = uint32 VSConstants.VSStd12CmdID.PeekDefinition
@@ -24,6 +29,7 @@ type NoPeekDefinitionFilter() =
                  || nCmdId = uint32 VSConstants.VSStd12CmdID.PeekNavigateForward) then
                 int Constants.OLECMDERR_E_NOTSUPPORTED
             else
+                let x = x :> IMenuCommand
                 x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
@@ -35,6 +41,28 @@ type NoPeekDefinitionFilter() =
                 prgCmds.[0].cmdf <- uint32 (OLECMDF.OLECMDF_SUPPORTED ||| OLECMDF.OLECMDF_INVISIBLE)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
+                x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
+
+type AlwaysPeekDefinitionFilter() =
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
+
+        member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
+            let x = x :> IMenuCommand
+            x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
+
+        member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
+            if pguidCmdGroup = VSConstants.VsStd12 && 
+                prgCmds |> Seq.exists (fun x -> 
+                               x.cmdID = uint32 VSConstants.VSStd12CmdID.PeekDefinition
+                            || x.cmdID = uint32 VSConstants.VSStd12CmdID.PeekNavigateBackward
+                            || x.cmdID = uint32 VSConstants.VSStd12CmdID.PeekNavigateForward) then
+                prgCmds.[0].cmdf <- uint32 (OLECMDF.OLECMDF_SUPPORTED ||| OLECMDF.OLECMDF_ENABLED)
+                VSConstants.S_OK
+            else
+                let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
 
 [<Export(typeof<IVsTextViewCreationListener>)>]
@@ -44,7 +72,7 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
     ([<Import(typeof<SVsServiceProvider>)>] serviceProvider: System.IServiceProvider,
      editorFactory: IVsEditorAdaptersFactoryService) =
   
-    let addCommandFilter (viewAdapter: IVsTextView) (commandFilter: NoPeekDefinitionFilter) =
+    let addCommandFilter (viewAdapter: IVsTextView) (commandFilter: IMenuCommand) =
         if not commandFilter.IsAdded then
             match viewAdapter.AddCommandFilter(commandFilter) with
             | VSConstants.S_OK, next ->
@@ -74,5 +102,6 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
                    | VisualStudioVersion.VS2013 -> 
                         // Make sure that Peek Definition menu items are disabled on VS2013
                         addCommandFilter textViewAdapter (new NoPeekDefinitionFilter())
-                   | _ -> ()
+                   | _ -> 
+                        addCommandFilter textViewAdapter (new AlwaysPeekDefinitionFilter())
         
