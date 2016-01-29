@@ -1,5 +1,5 @@
 ﻿[<AutoOpen>]
-module FSharpVSPowerTools.Refactoring.Utils
+module FSharpVSPowerTools.Refactoring.CodeGenerationUtils
 
 type ISuggestion =
     abstract Text: string

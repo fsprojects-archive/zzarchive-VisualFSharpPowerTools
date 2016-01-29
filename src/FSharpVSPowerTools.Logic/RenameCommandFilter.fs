@@ -145,13 +145,14 @@ type RenameCommandFilter(textDocument: ITextDocument,
         finally
             vsShell.EnableModeless(1) |> ignore
 
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
 
-    interface IOleCommandTarget with
         member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
             if (pguidCmdGroup = Constants.guidStandardCmdSet && nCmdId = Constants.cmdidStandardRenameCommand) && canRename() then
                 x.HandleRename() |> ignore
+            let x = x :> IMenuCommand
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
@@ -160,4 +161,5 @@ type RenameCommandFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)

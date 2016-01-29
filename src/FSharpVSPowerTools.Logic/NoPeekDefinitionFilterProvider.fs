@@ -12,11 +12,6 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 
-type IMenuCommand =
-    inherit IOleCommandTarget
-    abstract IsAdded: bool with get, set
-    abstract NextTarget: IOleCommandTarget with get, set
-
 type NoPeekDefinitionFilter() =
     interface IMenuCommand with
         member val IsAdded = false with get, set
@@ -101,7 +96,7 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
                    | VisualStudioVersion.VS2012
                    | VisualStudioVersion.VS2013 -> 
                         // Make sure that Peek Definition menu items are disabled on VS2013
-                        addCommandFilter textViewAdapter (new NoPeekDefinitionFilter())
+                        addCommandFilter textViewAdapter (NoPeekDefinitionFilter())
                    | _ -> 
-                        addCommandFilter textViewAdapter (new AlwaysPeekDefinitionFilter())
+                        addCommandFilter textViewAdapter (AlwaysPeekDefinitionFilter())
         

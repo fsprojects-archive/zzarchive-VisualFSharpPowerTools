@@ -137,6 +137,7 @@
     <Compile Include="Commands\OutliningFilterProvider.cs" />
     <Compile Include="Commands\PrintfSpecifiersUsageTaggerProvider.cs" />
     <Compile Include="Commands\OutliningTaggerProvider.cs" />
+    <Compile Include="Commands\Utils.cs" />
     <Compile Include="Resources\FSharpVSPowerTools.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

@@ -208,8 +208,8 @@
     <Compile Include="FolderMenuCommands.fs">
       <Link>FolderCommand/FolderMenuCommands.fs</Link>
     </Compile>
-    <Compile Include="Utils.fs">
-      <Link>CodeGeneration/Utils.fs</Link>
+    <Compile Include="CodeGenerationUtils.fs">
+      <Link>CodeGeneration/CodeGenerationUtils.fs</Link>
     </Compile>
     <Compile Include="CodeGenerationService.fs">
       <Link>CodeGeneration/CodeGenerationService.fs</Link>

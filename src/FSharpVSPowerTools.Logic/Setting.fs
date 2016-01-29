@@ -96,7 +96,7 @@ type IOutliningOptions =
     abstract TooltipZoomLevel: int with get, set
 
 [<AutoOpen>]
-module Utils =
+module ServiceProviderUtils =
     type System.IServiceProvider with
         member x.GetService<'T>() = x.GetService(typeof<'T>) :?> 'T
         member x.GetService<'T, 'S>() = x.GetService(typeof<'S>) :?> 'T

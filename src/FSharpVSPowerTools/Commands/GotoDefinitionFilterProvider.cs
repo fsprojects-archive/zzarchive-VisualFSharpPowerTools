@@ -106,27 +106,10 @@ namespace FSharpVSPowerTools
                 if (!_referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
                     _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
-                AddCommandFilter(textViewAdapter, commandFilter);
+                Utils.AddCommandFilter(textViewAdapter, commandFilter);
                 return commandFilter;
             }
             return null;
-        }
-
-        private static void AddCommandFilter(IVsTextView viewAdapter, GoToDefinitionFilter commandFilter)
-        {
-            if (!commandFilter.IsAdded)
-            {
-                // Get the view adapter from the editor factory
-                IOleCommandTarget next;
-                int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
-
-                if (hr == VSConstants.S_OK)
-                {
-                    commandFilter.IsAdded = true;
-                    // You'll need the next target for Exec and QueryStatus
-                    if (next != null) commandFilter.NextTarget = next;
-                }
-            }
         }
 
         public void SubjectBuffersConnected(IWpfTextView textView, ConnectionReason reason, Collection<ITextBuffer> subjectBuffers)

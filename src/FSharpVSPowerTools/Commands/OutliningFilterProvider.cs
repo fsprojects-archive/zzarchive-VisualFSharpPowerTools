@@ -32,23 +32,6 @@ namespace FSharpVSPowerTools.Outlining
             _editorFactory = editorFactory;
         }
 
-        private static void AddCommandFilter(IVsTextView viewAdapter, OutliningFilter commandFilter)
-        {
-            if (!commandFilter.IsAdded)
-            {
-                // Get the view adapter from the editor factory
-                IOleCommandTarget next;
-                int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
-
-                if (hr == VSConstants.S_OK)
-                {
-                    commandFilter.IsAdded = true;
-                    // You'll need the next target for Exec and QueryStatus
-                    if (next != null) commandFilter.NextTarget = next;
-                }
-            }
-        }
-
         public void VsTextViewCreated(IVsTextView textViewAdapter)
         {
             var textView = _editorFactory.GetWpfTextView(textViewAdapter);
@@ -57,7 +40,7 @@ namespace FSharpVSPowerTools.Outlining
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.OutliningEnabled) return;
 
-            AddCommandFilter(textViewAdapter, new OutliningFilter());
+            Utils.AddCommandFilter(textViewAdapter, new OutliningFilter());
         }
     }
 }

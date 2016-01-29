@@ -5,12 +5,13 @@ open FSharpVSPowerTools
 open Microsoft.VisualStudio
 
 type OutliningFilter() =
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
 
-    interface IOleCommandTarget with
         member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
             // We don't have to do anything here since most of the things are handled by VS.
+            let x = x :> IMenuCommand
             x.NextTarget.Exec (&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
@@ -26,4 +27,5 @@ type OutliningFilter() =
                 prgCmds.[0].cmdf <- uint32 (OLECMDF.OLECMDF_SUPPORTED ||| OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
