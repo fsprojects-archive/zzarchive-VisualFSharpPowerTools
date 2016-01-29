@@ -25,7 +25,7 @@ type FileNavigableItems =
       Items: NavigableItem[] }
 
 type NavigableItemCache (serviceProvider: System.IServiceProvider) =
-    let cache = ConcurrentDictionary<FilePath, FileNavigableItems>()
+    let cache = ConcurrentDictionary<FilePath, FileNavigableItems>(StringComparer.Ordinal)
     let dirty = ref false
     let pickler = FsPickler.CreateBinarySerializer()
 
