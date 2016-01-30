@@ -167,7 +167,7 @@ do printfn "Hello world!"
                 |> Seq.isEmpty
                 |> assertTrue)
 
-    [<Test; Ignore "Disable due to project cracking issues.">]
+    [<Test>]
     let ``should generate highlight usage tags for type-provided symbols``() = 
         let content = """
 module TypeProviderTests
@@ -189,7 +189,7 @@ let _ = Project.GetSample()
                 |> assertEqual
                     (set [ (4, 6) => (4, 12), true; (5, 9) => (5, 15), false ]))
 
-    [<Test; Ignore "Disable due to project cracking issues.">]
+    [<Test>]
     let ``should generate highlight usage tags for multi-project symbols``() = 
         let content = """
 namespace Project2

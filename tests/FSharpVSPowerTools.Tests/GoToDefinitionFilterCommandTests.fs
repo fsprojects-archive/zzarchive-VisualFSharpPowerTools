@@ -39,7 +39,7 @@ module GoToDefinitionCommandTests =
         let filter = command :> IOleCommandTarget
         textView, command, filter, urlChanged
 
-    [<Test; Ignore "Disable due to project cracking issues.">]
+    [<Test>]
     let ``should be able to go to definition to an external class``() = 
         let content = """
 module NavigateToSourceTests
@@ -60,7 +60,7 @@ let g x = File.Exists(x)
                 command.CurrentUrl
                 |> assertEqual (Some "http://referencesource.microsoft.com/mscorlib/a.html#090eca8621a248ee"))
 
-    [<Test; Ignore "Disable due to project cracking issues.">]
+    [<Test>]
     let ``should be able to go to definition to an external member using reference sources``() = 
         let content = """
 module NavigateToSourceTests

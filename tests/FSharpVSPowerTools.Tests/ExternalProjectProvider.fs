@@ -11,7 +11,9 @@ type ExternalProjectProvider(projectFileName) =
     let fullProjectFileName = projectOptions.ProjectFileName
     let frameworkVersion = FSharpTargetFramework.NET_4_5
     let compilerOptions = projectOptions.OtherOptions
-    let sourceFiles = projectOptions.ProjectFileNames
+    let sourceFiles = 
+        projectOptions.OtherOptions
+        |> Array.filter (fun opt -> opt.EndsWith ".fs" || opt.EndsWith ".fsx" || opt.EndsWith ".fsi") 
     let referencedProjects = Array.toList projectOptions.ReferencedProjects
     let referencedProjectFileNames = referencedProjects |> List.map fst
     let referencedProjects: IProjectProvider list = 
