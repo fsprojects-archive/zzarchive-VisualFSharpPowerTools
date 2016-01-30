@@ -1,3 +1,6 @@
+#### 2.4.0 - Unreleased
+* Enable peek definition for standalone F# files [#1329](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1329)
+
 #### 2.3.0 - January 4 2016
 * Implement Peek definition [#1286](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1286)
 * Add outlining menu items and keybindings [#1283](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1283)
