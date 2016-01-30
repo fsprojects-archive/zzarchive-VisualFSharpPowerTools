@@ -57,7 +57,7 @@ namespace FSharpVSPowerTools
             {
                 var filter = new FindReferencesFilter(doc, textView, _fsharpVsLanguageService,
                                                 _serviceProvider, _projectFactory, showProgress, _fileSystem);
-                AddCommandFilter(textViewAdapter, filter);
+                Utils.AddCommandFilter(textViewAdapter, filter);
                 return filter;
             }
             return null;
@@ -66,23 +66,6 @@ namespace FSharpVSPowerTools
         public void TextViewCreated(IWpfTextView textView)
         {
             RegisterCommandFilter(textView, showProgress: true);
-        }
-
-        private static void AddCommandFilter(IVsTextView viewAdapter, FindReferencesFilter commandFilter)
-        {
-            if (!commandFilter.IsAdded)
-            {
-                // Get the view adapter from the editor factory
-                IOleCommandTarget next;
-                int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
-
-                if (hr == VSConstants.S_OK)
-                {
-                    commandFilter.IsAdded = true;
-                    // You'll need the next target for Exec and QueryStatus
-                    if (next != null) commandFilter.NextTarget = next;
-                }
-            }
         }
     }
 }

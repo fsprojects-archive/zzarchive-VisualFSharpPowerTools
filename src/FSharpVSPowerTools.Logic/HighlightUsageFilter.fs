@@ -14,7 +14,7 @@ type private NeighbourKind =
     | Next
 
 type HighlightUsageFilter(textView: IWpfTextView, 
-                          referenceTagger: ITagAggregator<TextMarkerTag>) =
+                          referenceTagAggregator: ITagAggregator<TextMarkerTag>) =
 
     let binarySearch compare (source: _ []) =
         let rec loop start finish =
@@ -46,7 +46,7 @@ type HighlightUsageFilter(textView: IWpfTextView,
                 else -1
 
             let spans =
-                referenceTagger.GetTags(span)
+                referenceTagAggregator.GetTags(span)
                 |> Seq.collect (fun mappedSpan -> mappedSpan.Span.GetSpans(buffer))
                 |> Seq.sortBy (fun span -> span.Start.Position)
                 |> Seq.toArray
@@ -63,16 +63,17 @@ type HighlightUsageFilter(textView: IWpfTextView,
                 |> Option.iter (fun span ->
                     textView.Caret.MoveTo(span.Start) |> ignore
                     textView.ViewScroller.EnsureSpanVisible(span, EnsureSpanVisibleOptions.ShowStart)))
+    
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
 
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
-
-    interface IOleCommandTarget with
         member x.Exec (pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut) =
             if (pguidCmdGroup = Constants.guidStandardCmdSet && nCmdId = Constants.cmdidNextHighlightedReference) then
                 gotoReference NeighbourKind.Next
             elif (pguidCmdGroup = Constants.guidStandardCmdSet && nCmdId = Constants.cmdidPreviousHighlightedReference) then
                 gotoReference NeighbourKind.Previous
+            let x = x :> IMenuCommand
             x.NextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
 
         member x.QueryStatus (pguidCmdGroup, cCmds, prgCmds, pCmdText) =
@@ -82,4 +83,5 @@ type HighlightUsageFilter(textView: IWpfTextView,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            

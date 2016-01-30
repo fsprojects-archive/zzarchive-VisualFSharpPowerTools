@@ -473,14 +473,15 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     static member ClearXmlDocCache() =
         xmlDocCache.Clear()
 
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
-
     member internal __.UrlChanged = urlChanged |> Option.map (fun event -> event.Publish)
     member internal __.CurrentUrl = currentUrl
 
-    interface IOleCommandTarget with
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
+
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
+            let x = x :> IMenuCommand
             if pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidGoToDefinition then
                 let nextTarget = x.NextTarget
                 let cmdGroup = ref pguidCmdGroup
@@ -496,6 +497,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
                 
     interface IDisposable with

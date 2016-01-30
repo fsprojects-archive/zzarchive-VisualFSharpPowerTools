@@ -1,5 +1,5 @@
 ﻿[<AutoOpen>]
-module FSharpVSPowerTools.ProjectSystem.VSUtils
+module FSharpVSPowerTools.VSUtils
 
 open System
 open FSharpVSPowerTools
@@ -12,7 +12,7 @@ type String with
     /// Return substring starting at index, returns the same string if given a negative index
     /// if given an index > string.Length returns empty string
     member self.SubstringSafe index =
-        if   index < 0 then self elif index > self.Length then "" else self.Substring index
+        if index < 0 then self elif index > self.Length then "" else self.Substring index
 
 open System.Diagnostics
 open Microsoft.VisualStudio.Text
@@ -525,3 +525,10 @@ let listFSharpProjectsInSolution (dte: DTE) =
 
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]
+
+open Microsoft.VisualStudio.OLE.Interop
+
+type IMenuCommand =
+    inherit IOleCommandTarget
+    abstract IsAdded: bool with get, set
+    abstract NextTarget: IOleCommandTarget with get, set

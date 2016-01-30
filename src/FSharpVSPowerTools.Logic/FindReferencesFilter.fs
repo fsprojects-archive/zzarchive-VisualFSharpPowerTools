@@ -125,14 +125,15 @@ type FindReferencesFilter
                 let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                 statusBar.SetText(msg) |> ignore 
         } |> Async.StartImmediateSafe
-
-    member val IsAdded = false with get, set
-    member val NextTarget: IOleCommandTarget = null with get, set
-    
-    interface IOleCommandTarget with
+ 
+    interface IMenuCommand with
+        member val IsAdded = false with get, set
+        member val NextTarget = null with get, set
+   
         member x.Exec(pguidCmdGroup: byref<Guid>, nCmdId: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
             if (pguidCmdGroup = Constants.guidOldStandardCmdSet && nCmdId = Constants.cmdidFindReferences) then
                 findReferences ()
+            let x = x :> IMenuCommand
             let nextTarget = x.NextTarget
             if nextTarget <> null then
                 nextTarget.Exec(&pguidCmdGroup, nCmdId, nCmdexecopt, pvaIn, pvaOut)
@@ -145,6 +146,7 @@ type FindReferencesFilter
                 prgCmds.[0].cmdf <- (uint32 OLECMDF.OLECMDF_SUPPORTED) ||| (uint32 OLECMDF.OLECMDF_ENABLED)
                 VSConstants.S_OK
             else
+                let x = x :> IMenuCommand
                 let nextTarget = x.NextTarget
                 if nextTarget <> null then
                     nextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)            
