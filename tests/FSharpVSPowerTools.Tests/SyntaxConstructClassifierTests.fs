@@ -136,7 +136,7 @@ let internal f() = ()
                   { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
             actual |> assertEqual expected
         
-    [<Test>]
+    [<Test; Ignore "Disable due to project cracking issues.">]
     let ``should be able to get classification spans for provided types``() = 
         let content = """
 module TypeProviderTests
