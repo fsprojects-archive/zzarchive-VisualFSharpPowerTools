@@ -6,3 +6,4 @@ group Test
 Foq
 NUnit
 FSharp.Core
+FSharp.Compiler.Service.ProjectCracker
