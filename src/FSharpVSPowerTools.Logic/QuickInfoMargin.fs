@@ -74,7 +74,6 @@ type QuickInfoMargin (textDocument: ITextDocument,
 
         model.QuickInfo <- currentInfo
 
-    // helper function in the form required by mapNonEmptyLines
     let flattener (sb:StringBuilder) (str:string) : StringBuilder =
             if str.Length > 0 && Char.IsUpper str.[0] then (sb.Append ". ").Append (String.trim str)
             else (sb.Append " ").Append (String.trim str)
@@ -82,7 +81,13 @@ type QuickInfoMargin (textDocument: ITextDocument,
 
     let flattenLines (str:string) : string =
         if isNull str then "" else
-        let flatstr = String.mapNonEmptyLines flattener str
+        let flatstr =
+            str
+            |> String.getNonEmptyLines
+            |> Array.foldi (fun sb i line ->
+                if i = 0 then sb |> append (String.trim line)
+                else flattener sb line) (new StringBuilder())
+            |> string
         match flatstr |> String.toCharArray |> Array.tryLast with
         | None  -> ""
         | Some '.' -> flatstr
