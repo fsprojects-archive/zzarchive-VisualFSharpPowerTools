@@ -58,8 +58,8 @@ type QuickInfoMargin (textDocument: ITextDocument,
                     let errorls = List.map String.trim err
                     let title =
                         match errorls with
-                        | [_] -> sprintf "%s" <| string severity
-                        | _ -> sprintf "%s (%d)" (string severity) errorls.Length
+                        | [_] -> sprintf "%A" severity
+                        | _ -> sprintf "%A (%d)" severity errorls.Length
                     sb |> append title |> append ": " |> errorString errorls |> appendi " "
                 string sb
             | None, Some tt ->   // show type info if there aren't any errors
