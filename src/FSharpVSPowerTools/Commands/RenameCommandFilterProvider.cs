@@ -25,19 +25,24 @@ namespace FSharpVSPowerTools
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
-       
+        private readonly IGeneralOptions _generalOptions;
+        
+
         [ImportingConstructor]
         public RenameCommandFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
             ITextDocumentFactoryService textDocumentFactoryService,
             IVsEditorAdaptersFactoryService editorFactory,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService)
+            IGeneralOptions generalOptions,
+        
+        VSLanguageService fsharpVsLanguageService)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
             _editorFactory = editorFactory;
             _projectFactory = projectFactory;
+            _generalOptions = generalOptions;
             _fsharpVsLanguageService = fsharpVsLanguageService;
         }
 
@@ -46,13 +51,13 @@ namespace FSharpVSPowerTools
             var textView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.RenameRefactoringEnabled) return;
+           // var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.RenameRefactoringEnabled) return;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                Utils.AddCommandFilter(textViewAdapter,
+                Util.AddCommandFilter(textViewAdapter,
                     new RenameCommandFilter(doc, textView, _fsharpVsLanguageService,
                                             _serviceProvider, _projectFactory));
             }

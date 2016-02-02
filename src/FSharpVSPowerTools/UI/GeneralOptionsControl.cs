@@ -108,7 +108,7 @@ namespace FSharpVSPowerTools
             set { chbUnusedReferences.Checked = value; }
         }
 
-        public bool UnusedOpensEnabled 
+        public bool UnusedOpensEnabled
         {
             get { return chbUnusedOpens.Checked; }
             set { chbUnusedOpens.Checked = value; }
@@ -190,11 +190,11 @@ namespace FSharpVSPowerTools
             OutliningEnabled = _optionsPage.OutliningEnabled;
             PeekDefinitionEnabled = _optionsPage.PeekDefinitionEnabled;
 
-            if (!_optionsPage.PeekDefinitionAvailable)
+            if ( !_optionsPage.PeekDefinitionAvailable )
             {
                 chbPeekDefinition.Enabled = false;
                 var peekDefinitionText = chbPeekDefinition.Text;
-                chbPeekDefinition.Text = peekDefinitionText.Contains(vs2015Suffix) ? peekDefinitionText : peekDefinitionText + vs2015Suffix;
+                chbPeekDefinition.Text = peekDefinitionText.Contains ( vs2015Suffix ) ? peekDefinitionText : peekDefinitionText + vs2015Suffix;
             }
         }
     }
