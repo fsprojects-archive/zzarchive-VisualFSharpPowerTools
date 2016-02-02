@@ -57,7 +57,7 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                Utils.AddCommandFilter(textViewAdapter,
+                Util.AddCommandFilter(textViewAdapter,
                     new RenameCommandFilter(doc, textView, _fsharpVsLanguageService,
                                             _serviceProvider, _projectFactory));
             }

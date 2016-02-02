@@ -48,7 +48,7 @@ namespace FSharpVSPowerTools
             //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (_generalOptions == null || !_generalOptions.HighlightUsageEnabled) return;
             
-            Utils.AddCommandFilter(textViewAdapter,
+            Util.AddCommandFilter(textViewAdapter,
                 new HighlightUsageFilter(textView, _tagAggregator.CreateTagAggregator<TextMarkerTag>(textView)));            
         }
     }

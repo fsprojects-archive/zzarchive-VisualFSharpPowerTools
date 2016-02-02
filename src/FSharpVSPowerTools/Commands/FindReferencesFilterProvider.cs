@@ -61,7 +61,7 @@ namespace FSharpVSPowerTools
             {
                 var filter = new FindReferencesFilter(doc, textView, _fsharpVsLanguageService,
                                                 _serviceProvider, _projectFactory, showProgress, _fileSystem);
-                Utils.AddCommandFilter(textViewAdapter, filter);
+                Util.AddCommandFilter(textViewAdapter, filter);
                 return filter;
             }
             return null;

@@ -109,7 +109,7 @@ namespace FSharpVSPowerTools
                 if (!_referenceSourceProvider.IsActivated && _generalOptions.GoToSymbolSourceEnabled)
                     _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);
-                Utils.AddCommandFilter(textViewAdapter, commandFilter);
+                Util.AddCommandFilter(textViewAdapter, commandFilter);
                 return commandFilter;
             }
             return null;
