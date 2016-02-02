@@ -1,6 +1,6 @@
 source http://nuget.org/api/v2
 
-nuget FSharp.Compiler.Service 1.4.2.2
+nuget FSharp.Compiler.Service
 nuget Fantomas
 nuget Expression.Blend.Sdk
 nuget FSharp.ViewModule.Core
@@ -14,6 +14,7 @@ nuget FsPickler
 group Test
 source http://nuget.org/api/v2
 
+nuget FSharp.Compiler.Service.ProjectCracker
 nuget NUnit.Runners
 nuget NUnit
 nuget Foq
