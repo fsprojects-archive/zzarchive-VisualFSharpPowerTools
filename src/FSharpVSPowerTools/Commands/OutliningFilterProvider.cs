@@ -37,13 +37,14 @@ namespace FSharpVSPowerTools.Outlining
 
         }
 
-        private static void AddCommandFilter(IVsTextView viewAdapter, OutliningFilter commandFilter)
+        private static void AddCommandFilter(IVsTextView viewAdapter, VSUtils.IMenuCommand commandFilter )
         {
-            if (!commandFilter.IsAdded)
+            if ( !commandFilter.IsAdded )
             {
                 // Get the view adapter from the editor factory
                 IOleCommandTarget next;
                 int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
+            }
 
         }
 
@@ -55,7 +56,7 @@ namespace FSharpVSPowerTools.Outlining
             //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (_generalOptions == null || !_generalOptions.OutliningEnabled) return;
 
-            Utils.AddCommandFilter(textViewAdapter, new OutliningFilter());
+            Util.AddCommandFilter(textViewAdapter, new OutliningFilter());
         }
     }
 }

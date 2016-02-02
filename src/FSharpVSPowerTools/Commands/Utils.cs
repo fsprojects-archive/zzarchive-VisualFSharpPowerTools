@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace FSharpVSPowerTools
 {
-    public class Utils
+    public class Util
     {
         public static void AddCommandFilter(IVsTextView viewAdapter, VSUtils.IMenuCommand commandFilter)
         {
