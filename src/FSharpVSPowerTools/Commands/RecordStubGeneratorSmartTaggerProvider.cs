@@ -25,7 +25,10 @@ namespace FSharpVSPowerTools
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IOpenDocumentsTracker _openDocumentsTracker;
         private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
-        
+        private readonly IGeneralOptions _generalOptions;
+        private readonly ICodeGenerationOptions _codeGenOptions;
+
+
         [ImportingConstructor]
         public RecordStubGeneratorSmartTaggerProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
@@ -33,7 +36,9 @@ namespace FSharpVSPowerTools
             ITextUndoHistoryRegistry undoHistoryRegistry,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            IOpenDocumentsTracker openDocumentsTracker)
+            IOpenDocumentsTracker openDocumentsTracker,
+            IGeneralOptions generalOptions  ,
+            ICodeGenerationOptions codeGenOptions)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
@@ -41,6 +46,8 @@ namespace FSharpVSPowerTools
             _projectFactory = projectFactory;
             _fsharpVsLanguageService = fsharpVsLanguageService;
             _openDocumentsTracker = openDocumentsTracker;
+            _generalOptions = generalOptions;
+            _codeGenOptions = codeGenOptions;
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -48,10 +55,10 @@ namespace FSharpVSPowerTools
             // Only provide the smart tagger on the top-level buffer
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.GenerateRecordStubEnabled) return null;
-            var codeGenOptions = Setting.getCodeGenerationOptions(_serviceProvider);
-            if (codeGenOptions == null) return null;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.GenerateRecordStubEnabled) return null;
+            //var codeGenOptions = Setting.getCodeGenerationOptions(_serviceProvider);
+            if (_codeGenOptions == null) return null;
 
             var dte = _serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
             var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
@@ -63,7 +70,7 @@ namespace FSharpVSPowerTools
                 var generator = new RecordStubGenerator(doc, textView,
                                 _undoHistoryRegistry.RegisterHistory(buffer),
                                 _fsharpVsLanguageService, _serviceProvider,
-                                _projectFactory, Setting.getDefaultMemberBody(codeGenOptions),
+                                _projectFactory, _codeGenOptions.DefaultBody,
                                 _openDocumentsTracker);
                 return new RecordStubGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }

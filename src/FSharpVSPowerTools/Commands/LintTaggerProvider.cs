@@ -67,7 +67,7 @@ namespace FSharpVSPowerTools
         {
             if (textView.TextBuffer != buffer) return null;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            var generalOptions = SettingsContext.GeneralOptions;
             if (generalOptions == null || !generalOptions.LinterEnabled) return null;
 
             ITextDocument doc;

@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
+using System.ComponentModel.Composition;
 
 namespace FSharpVSPowerTools
 {
@@ -17,9 +18,17 @@ namespace FSharpVSPowerTools
         private IOleCommandTarget _commandChain;
         private readonly CommandMapping[] Commands;
 
+        [Import]
+        private static  IGeneralOptions generalOptions { get; set; }
+        [Import]
+        private static IFormattingOptions formattingOptions { get; set; }
+
+
+
+
         public static StandardCommandDispatcher Register(IVsTextView interopTextView, IWpfTextView textView, CodeFormattingServices services)
         {
-            var generalOptions = Setting.getGeneralOptions(services.ServiceProvider);
+            //var generalOptions = Setting.getGeneralOptions(services.ServiceProvider);
             if (generalOptions == null || !generalOptions.FormattingEnabled) return null;
 
             var dispatcher = new StandardCommandDispatcher();
@@ -50,7 +59,8 @@ namespace FSharpVSPowerTools
         {
             IEditorOptions editorOptions = _services.EditorOptionsFactory.GetOptions(_textView.TextBuffer);
             int indentSize = editorOptions.GetOptionValue((new IndentSize()).Key);
-            var customOptions = Setting.getFormattingOptions(_services.ServiceProvider);
+            //var customOptions = Setting.getFormattingOptions(_services.ServiceProvider);
+            var customOptions = formattingOptions;
 
             var config =
                 FormatConfig.FormatConfig.create(

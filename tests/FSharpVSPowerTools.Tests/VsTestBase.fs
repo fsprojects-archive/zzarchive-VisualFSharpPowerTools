@@ -15,16 +15,14 @@ type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte:
 type VsTestBase() =
     static let serviceProvider = MockServiceProvider()
     
+
     static do serviceProvider.Services.[nameOf<SVsActivityLog>] <- MockActivityLog()
     static do serviceProvider.Services.[nameOf<SVsShell>] <- MockVsShell()
     static do serviceProvider.Services.[nameOf<SVsStatusbar>] <- Mocks.createSVsStatusbar()
     static do serviceProvider.Services.[nameOf<SVsSolutionBuildManager>] <- Mocks.createVsSolutionBuildManager2()
-    
-    static do serviceProvider.Services.[nameOf<IGeneralOptions>] <- Mocks.createGeneralOptionsPage()
-    static do serviceProvider.Services.[nameOf<IFormattingOptions>] <- new FantomasOptionsPage()
-    static do serviceProvider.Services.[nameOf<ICodeGenerationOptions>] <- new CodeGenerationOptionsPage()
-    static do serviceProvider.Services.[nameOf<IGlobalOptions>] <- new GlobalOptionsPage()
-    static do serviceProvider.Services.[nameOf<IOutliningOptions>] <- new OutliningOptionsPage()
+
+    static do Mocks.setupGlobalOptions()
+    static do Mocks.setupGeneralOptions()
 
     static let dte = MockDTE()
     static do serviceProvider.Services.[nameOf<EnvDTE.DTE>] <- dte

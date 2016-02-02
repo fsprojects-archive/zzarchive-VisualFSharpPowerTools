@@ -22,14 +22,30 @@ namespace FSharpVSPowerTools.Outlining
     {
         private readonly System.IServiceProvider _serviceProvider;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
-        
+        private readonly IGeneralOptions _generalOptions;
+
         [ImportingConstructor]
         public OutliningFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
-            IVsEditorAdaptersFactoryService editorFactory)
+                    IGeneralOptions generalOptions,
+
+        IVsEditorAdaptersFactoryService editorFactory)
         {
             _serviceProvider = serviceProvider;
             _editorFactory = editorFactory;
+            _generalOptions = generalOptions;
+
+        }
+
+        private static void AddCommandFilter(IVsTextView viewAdapter, VSUtils.IMenuCommand commandFilter )
+        {
+            if ( !commandFilter.IsAdded )
+            {
+                // Get the view adapter from the editor factory
+                IOleCommandTarget next;
+                int hr = viewAdapter.AddCommandFilter(commandFilter, out next);
+            }
+
         }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
@@ -37,10 +53,10 @@ namespace FSharpVSPowerTools.Outlining
             var textView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
 
-            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
-            if (generalOptions == null || !generalOptions.OutliningEnabled) return;
+            //var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (_generalOptions == null || !_generalOptions.OutliningEnabled) return;
 
-            Utils.AddCommandFilter(textViewAdapter, new OutliningFilter());
+            Util.AddCommandFilter(textViewAdapter, new OutliningFilter());
         }
     }
 }
