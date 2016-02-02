@@ -829,20 +829,6 @@ module String =
             line := reader.ReadLine()
         |]
 
-    open System.Text
-    /// Use an accumulation function to create a new string applying a transformation
-    /// to every non-empty line in the string
-    let mapNonEmptyLines (folder: StringBuilder -> string -> StringBuilder) (str: string) =
-        let f = OptimizedClosures.FSharpFunc<_,_,_>.Adapt folder
-        use reader = new StringReader (str)
-        let sb = StringBuilder ()
-        let mutable line = reader.ReadLine ()
-        while isNotNull line do
-            if line.Length > 0 then
-                f.Invoke (sb,line) |> ignore
-            line <- reader.ReadLine()
-        string sb
-
     /// Parse a string to find the first nonempty line
     /// Return null if the string was null or only contained empty lines
     let firstNonEmptyLine (str: string) =
