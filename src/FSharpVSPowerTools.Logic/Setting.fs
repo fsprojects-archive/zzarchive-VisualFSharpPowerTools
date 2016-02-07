@@ -40,11 +40,15 @@ module StoreUtils =
 
         Path.Combine (folder, filename)
 
+    let getUserSettingsDirectory () =
+        let dir = Path.Combine(Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), @".config/.vfpt")
+        if not (Directory.Exists dir) then Directory.CreateDirectory dir |> ignore
+        dir        
+
     let defaultSettingsPath = configurePath ""
 
     let writerSettings =
         XmlWriterSettings (Indent=true, NewLineOnAttributes=true, Async=true, WriteEndDocumentOnClose=true)
-
 
 type ISettingsStore =
     abstract member Get : name:string -> string option
