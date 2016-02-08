@@ -513,9 +513,6 @@ type GlobalOptions  () as self =
 type ILintOptions =
     abstract UpdateDirectories: unit -> unit
     abstract GetConfigurationForDirectory: string -> FSharpLint.Framework.Configuration.Configuration
-    abstract Load : unit -> unit
-    abstract Save : unit -> unit
-
 
 type IOutliningOptions =
     abstract OpensEnabled                           :   bool with get, set
