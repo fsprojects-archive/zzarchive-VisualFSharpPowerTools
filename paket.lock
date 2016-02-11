@@ -7,7 +7,7 @@ NUGET
     FSharp.Compiler.Service (2.0.0.3)
     FSharp.Management (0.3.0)
     FSharp.ViewModule.Core (0.9.9.1)
-    FSharpLint.Core (0.0.13)
+    FSharpLint.Core (0.0.15-beta)
       FSharp.Compiler.Service (>= 1.4.2.1)
     FsPickler (1.5.2)
     FsXaml.Wpf (0.9.9)
