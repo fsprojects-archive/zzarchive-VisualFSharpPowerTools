@@ -202,8 +202,6 @@ type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) 
     let rules = SetupViewModels.ruleViewModelsFromConfig config
     
     let selectedRule = this.Factory.Backing(<@ this.SelectedRule @>, None)
-
-    let currentFilePath = this.Factory.Backing(<@ this.CurrentFilePath @>, selectedDirectory)
     
     let selectedFile = this.Factory.Backing(<@ this.SelectedFile @>, selectedFile)
 
@@ -211,7 +209,11 @@ type OptionsViewModel(getConfigForDirectory, files, selectedFile:FileViewModel) 
         with get() : RuleViewModel option = selectedRule.Value
         and set (value) = selectedRule.Value <- value
 
-    member __.CurrentFilePath = currentFilePath.Value
+    member __.FullName =
+        if selectedFile.Value.IsUserWideSettings then selectedFile.Value.Name
+        else selectedDirectory
+
+    member __.CurrentFilePath = selectedDirectory
     
     member __.Files = files
 

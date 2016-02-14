@@ -53,6 +53,10 @@ namespace FSharpVSPowerTools
             var generalOptions = SettingsContext.GeneralOptions;
             PerformRegistrations(generalOptions);
 
+            IServiceContainer serviceContainer = this;
+            serviceContainer.AddService(typeof(ILintOptions),
+                delegate { return GetDialogPage(typeof(Linting.LintOptionsPage)); }, promote: true);
+
             library = new FSharpLibrary(Constants.guidSymbolLibrary);
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
 

@@ -21,7 +21,13 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
     [<Literal>]
     let MessageBoxRetryButtonClicked = 4
 
-    let mutable loadedConfigs = LoadedConfigs.Empty
+    let mutable loadedConfigs = 
+        let userConfig = 
+            { Name = "User Wide Settings"
+              Path = getUserSettingsDirectory () |> normalisePath
+              Configuration = None }
+
+        { LoadedConfigs.Empty with GlobalConfigs = [userConfig] }
 
     let lintOptionsPageControl = lazy LintOptionsControlProvider()
 
@@ -50,10 +56,6 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
 
         member __.GetConfigurationForDirectory(dir) =
             getConfigForDirectory loadedConfigs dir
-
-        // TODO - placeholders
-        member __.Save () = ()
-        member __.Load () = ()
 
     member private this.Dte =
         match dte with
@@ -94,27 +96,19 @@ type LintOptionsPage private (dte:EnvDTE.DTE option) =
             loadedConfigs <- refresh tryLoadConfig loadedConfigs
 
             let lintOptions =
-                match getInitialPath dte loadedConfigs with
-                | Some(path) ->
-                    let files = getFileHierarchy loadedConfigs
+                let files = getFileHierarchy loadedConfigs
 
-                    let rec getFileViewModel files =
-                        let getFile (file: FileViewModel) =
-                            if file.Path = path then Some file 
-                            else getFileViewModel file.Files
+                let fileSelectedByDefault = 
+                    files |> List.tryFind (fun (file:FileViewModel) -> file.IsUserWideSettings)
 
-                        Seq.tryPick getFile files
-
-                    match getFileViewModel files with
-                    | Some file ->
-                        OptionsViewModel(
-                            (getConfigForDirectory loadedConfigs),
-                            files,
-                            file) |> Some
-                    | None -> 
-                        Debug.Assert(false, "No file view model for the initial file found.")
-                        None
+                match fileSelectedByDefault with
+                | Some file ->
+                    OptionsViewModel(
+                        getConfigForDirectory loadedConfigs,
+                        files,
+                        file) |> Some
                 | None -> 
+                    Debug.Assert(false, "No file view model for the initial file found.")
                     None
 
             lintOptionsPageControl.Value.DataContext <- 

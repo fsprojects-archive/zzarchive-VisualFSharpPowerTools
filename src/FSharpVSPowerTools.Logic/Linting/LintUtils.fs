@@ -51,9 +51,6 @@ module LintUtils =
     let updateLoadedConfigs dte loadedConfigs =
         updatePaths tryLoadConfig loadedConfigs (getProjectPaths dte)
 
-    let getInitialLoadedConfigs dte =
-        updateLoadedConfigs dte LoadedConfigs.Empty
-
     let private directorySeparator = Path.DirectorySeparatorChar.ToString()
 
     let rec private listStartsWith = function
@@ -70,25 +67,21 @@ module LintUtils =
                 if List.length path = List.length currentPath + 1 && listStartsWith (path, currentPath) then
                     let lastSegment = Seq.last path + directorySeparator
                     let hasConfig = Option.isSome config
-                    yield FileViewModel(lastSegment, path, createFileViewModel path, hasConfig)]
+                    yield FileViewModel(lastSegment, path, createFileViewModel path, hasConfig, false)]
 
-        [ for (path, config) in files do
+        [ for globalConfig in loadedConfigs.GlobalConfigs do 
+            yield FileViewModel.GlobalSettings(globalConfig.Name, globalConfig.Path)
+
+          for (path, config) in files do
             match path with
             | [root] -> 
                 let hasConfig = Option.isSome config
                 yield FileViewModel(root + directorySeparator, 
                                     path,
                                     createFileViewModel path, 
-                                    hasConfig)
+                                    hasConfig,
+                                    false)
             | _ -> () ]
-                    
-    let getInitialPath dte loadedConfigs =
-        getSolutionPath dte
-        |> Option.bind (fun solutionPath ->
-            commonPath loadedConfigs solutionPath
-            |> Option.orElse (Some solutionPath))
-        |> Option.orTry (fun _ ->
-            getProjectPaths dte |> List.tryHead)
 
     let getConfigForDirectory loadedConfigs directory =
         normalisePath directory

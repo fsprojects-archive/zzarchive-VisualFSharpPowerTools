@@ -22,8 +22,10 @@ type LintTagger(textDocument: ITextDocument,
     let mutable wordSpans = []
     let buffer = textDocument.TextBuffer
 
-    let lintData = lazy(
-        let lintOptions = SettingsContext.getLintOptions serviceProvider
+    let lintOptions = lazy(SettingsContext.getLintOptions serviceProvider)
+
+    let getLintData () =
+        let lintOptions = lintOptions.Value
         lintOptions.UpdateDirectories()
         let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
         let shouldFileBeIgnored =
@@ -33,7 +35,7 @@ type LintTagger(textDocument: ITextDocument,
                     ignoreFiles.Files
                     textDocument.FilePath
             | None -> false
-        config, shouldFileBeIgnored)
+        config, shouldFileBeIgnored
 
     let dte = serviceProvider.GetDte()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
@@ -44,7 +46,7 @@ type LintTagger(textDocument: ITextDocument,
             let! project = projectFactory.CreateForDocument buffer doc 
             let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
             let! ast = parseFileResults.ParseTree
-            let config, shouldFileBeIgnored = lintData.Value
+            let config, shouldFileBeIgnored = getLintData()
             let! source = openDocumentsTracker.TryGetDocumentText doc.FullName
 
             if not shouldFileBeIgnored then
