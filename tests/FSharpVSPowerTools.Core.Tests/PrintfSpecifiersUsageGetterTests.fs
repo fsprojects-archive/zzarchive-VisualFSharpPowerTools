@@ -264,3 +264,75 @@ let ``backwards pipe with too many args``() =
 ignore <| sprintf "%d" 1 2
 """
     => [2, [(19, 21), (23, 24)]]
+
+[<Test>]
+let ``zero-arity specifiers mixed with normal``() =
+    """
+printf "%% %d %% %% %f %% %s %% %A" 1 2.5 "x"
+"""
+    => [2, [(11, 13), (36, 37)
+            (20, 22), (38, 41)
+            (26, 28), (42, 45)]]
+
+[<Test>]
+let ``two-arity specifiers mixed with normal``() =
+    """
+printf "%*% %d %*f %.*f %f %*s %s %*d" 1 2 3 3.3 4 4.4 5.5 6 "6"
+"""
+    => [2, [(8, 11), (39, 40)
+            (12, 14), (41, 42)
+            (15, 18), (43, 48)
+            (19, 23), (49, 54)
+            (24, 26), (55, 58)
+            (27, 30), (59, 64)]]
+
+[<Test>]
+let ``three-arity specifiers mixed with normal``() =
+    """
+printf "%d %*.*f %*.*f %f %*.*f %s" 1 2 2 2.2 3 3 3.3 4.4 5 5 5.5 "6"
+"""
+    => [2, [(8, 10), (36, 37)
+            (11, 16), (38, 45)
+            (17, 22), (46, 53)
+            (23, 25), (54, 57)
+            (26, 31), (58, 65)
+            (32, 34), (66, 69)]]
+
+[<Test>]
+let ``zero- one- two- and three- arity specifiers together increasing``() =
+    """
+printf "%% %d %a %*.*f" 1 (fun _ _ -> ()) "2" 3 3 3.3
+"""
+    => [2, [(11, 13), (24, 25)
+            (14, 16), (26, 45)
+            (17, 22), (46, 53)]]
+
+[<Test>]
+let ``zero- one- two- and three- arity specifiers together decreasing``() =
+    """
+printf "%*.*f %a %d %%" 1 1 1.1 (fun _ _ -> ()) "2" 3
+"""
+    => [2, [(8, 13), (24, 31)
+            (14, 16), (32, 51)
+            (17, 19), (52, 53)]]
+
+[<Test>]
+let ``two-arity specifier missing one arg``() =
+    """
+printf "%*d" 1
+"""
+    => [2, [(8, 11), (13, 14)]]
+
+[<Test>]
+let ``three-arity specifier missing one arg``() =
+    """
+printf "%*.*f" 1 1
+"""
+    => [2, [(8, 13), (15, 18)]]
+
+[<Test>]
+let ``three-arity specifier missing two args``() =
+    """
+printf "%*.*f" 1
+"""
+    => [2, [(8, 13), (15, 16)]]
