@@ -346,9 +346,9 @@ module SourceCodeClassifier =
                                EndCol = decl.DeclarationRange.EndColumn }})
     
         let printfSpecifiersRanges =
-            checkResults.GetFormatSpecifierLocations()
+            checkResults.GetFormatSpecifierLocationsAndArity()
             |> Option.map (fun ranges ->
-                 ranges |> Array.map (fun r -> 
+                 ranges |> Array.map (fun (r, _) -> 
                     { Category = Category.Printf
                       WordSpan = 
                         { SymbolKind = SymbolKind.Other

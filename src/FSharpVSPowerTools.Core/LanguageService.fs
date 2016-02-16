@@ -48,8 +48,8 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         |> Option.getOrElse [||]
         |> Array.append (x.CheckErrors |> Option.getOrElse [||])
 
-    member __.GetFormatSpecifierLocations() =
-        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocations())
+    member __.GetFormatSpecifierLocationsAndArity() =
+        infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocationsAndArity())
 
     member __.GetNavigationItems() =
         match infoOpt with 
