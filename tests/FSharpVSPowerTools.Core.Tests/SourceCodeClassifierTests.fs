@@ -1607,7 +1607,7 @@ do printfn "%6d %%  % 06d" 1 2
 """
     => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]
          3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 19; Cat.Printf, 20, 22 ]
-         4, [ Cat.Function, 3, 10; Cat.Printf, 12, 15; Cat.Printf, 20, 25 ]]
+         4, [ Cat.Function, 3, 10; Cat.Printf, 12, 15; Cat.Printf, 16, 18; Cat.Printf, 20, 25 ]]
 
 [<Test>]
 let ``printf formatters in try / with / finally``() =

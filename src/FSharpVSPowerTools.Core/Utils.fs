@@ -132,16 +132,13 @@ module Array =
             else false
         loop 0 index
 
-
     /// Returns true if one array has another as its subset from index 0.
     let startsWith (prefix: _ []) (whole: _ []) =
         isSubArray prefix whole 0
-            
 
     /// Returns true if one array has trailing elements equal to another's.
     let endsWith (suffix: _ []) (whole: _ []) =
         isSubArray suffix whole (whole.Length-suffix.Length)
-            
 
     /// Returns a new array with an element replaced with a given value.
     let replace index value (array: _ []) =
@@ -151,12 +148,10 @@ module Array =
         res.[index] <- value
         res
 
-    
     let head (array: 'T []) =
          checkNonNull "array" array
          if array.Length = 0 then invalidArg "array" "cannot get the head of an empty array"
          array.[0]
-
 
     /// Returns all heads of a given array.
     /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
@@ -166,7 +161,6 @@ module Array =
         for i = array.Length - 1 downto 0 do
             res.[i] <- array.[0..i]
         res
-
 
     /// Fold over the array passing the index and element at that index to a folding function
     let foldi (folder: 'State -> int -> 'T -> 'State) (state: 'State) (array: 'T []) =
@@ -179,20 +173,17 @@ module Array =
             state <- folder.Invoke (state, i, array.[i])
         state
 
-
     /// Get the first element of the array or None if the Array is null or empty
     let tryHead array =
         match array with
         | null | [||] -> None
         | arr  -> Some arr.[0]
 
-
     /// Get the last element of the array or None if the Array is null or empty
     let tryLast array =
         match array with
         | null | [||] -> None
         | arr  -> Some arr.[arr.Length-1]
-
 
     /// Returns an array that contains no duplicate entries according to generic hash and
     /// equality comparisons on the entries.
@@ -233,7 +224,6 @@ module Array =
             array.[idx] <- t2
             array.[arrlen-idx] <- t1
 
-
     /// Return an array of elements that preceded the first element that failed
     /// to satisfy the predicate
     let takeWhile predicate (array: 'T []) =
@@ -244,7 +234,6 @@ module Array =
             count <- count + 1
         array.[0..count-1]
 
-
     /// Return an array of elements that begin at the first element that failed
     /// to satisfy the predicate
     let skipWhile predicate (array: 'T []) =
@@ -254,7 +243,6 @@ module Array =
         while count < array.Length-1 && predicate array.[count] do
             count <- count + 1
         array.[count..array.Length-1]
-
 
     /// Map all elements of the array that satisfy the predicate
     let filterMap predicate mapfn (array: 'T [])  =
@@ -268,7 +256,6 @@ module Array =
                count <- count + 1
         if count = 0 then [||] else
         result.[0..count-1]
-
 
     let groupBy (keyfn:'T->'Key) (array: 'T []) =
         checkNonNull "array" array
@@ -327,6 +314,19 @@ module Array =
             // Convert the ResizeArrays to arrays and return them.
             resultList1.ToArray (),
             resultList2.ToArray ()
+
+    let splitByChunks (chunkSizes : int[]) (arr : 'T[]) =
+        let rec loop (chunks : int[]) (arr : 'T[]) acc =
+            match chunks, arr with
+            | [||], _ 
+            | _, [||] -> acc
+            | _ ->
+                let chunk = min chunks.[0] arr.Length
+                loop chunks.[1 .. ] arr.[chunk .. ] (arr.[0..(chunk-1)] :: acc)
+
+        loop chunkSizes arr []
+        |> Array.ofList
+        |> Array.rev
 
     let toShortHexString (bytes: byte[]) =
         let length = bytes.Length

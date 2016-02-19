@@ -9,47 +9,72 @@ type PrintfSpecifierUse =
       ArgumentRange: Range.range }
 
 let private startPos (r: Range.range) = r.StartLine, r.StartColumn
+let private endPos (r: Range.range) = r.EndLine, r.EndColumn
+let private mergeRanges (ranges : Range.range[]) =
+    let startRange = ranges |> Array.minBy startPos
+    let endRange = ranges |> Array.maxBy endPos
+    Range.mkRange startRange.FileName startRange.Start endRange.End
 
 let getAll (input: ParseAndCheckResults) (onError: string -> unit): PrintfSpecifierUse[] option Async =
     asyncMaybe {
-        let! specifierRanges = input.GetFormatSpecifierLocations()
-        let specifierRanges = 
-            specifierRanges 
-            |> Array.map (fun x -> 
-                Range.mkRange x.FileName x.Start (Range.mkPos x.EndLine (x.EndColumn + 1)))
+        let! specRangesAndArities = input.GetFormatSpecifierLocationsAndArity()
+        let specRangesAndArities = 
+            specRangesAndArities 
+            |> Array.map (fun (x, ar) -> 
+                (Range.mkRange x.FileName x.Start (Range.mkPos x.EndLine (x.EndColumn + 1))), ar)
 
         let printfFunctions = Printf.getAll input.ParseTree
 
         return 
             printfFunctions
-            |> Array.fold (fun (specifierRanges, acc) func ->
+            |> Array.fold (fun (specRangesAndArities, acc) func ->
                 let ownSpecifiers, restSpecifiers = 
-                    specifierRanges 
-                    |> Array.partition (Range.rangeContainsRange func.FormatString)
-                
+                    specRangesAndArities
+                    |> Array.partition (fst >> (Range.rangeContainsRange func.FormatString))
+
                 match ownSpecifiers with
                 | [||] -> restSpecifiers, acc
                 | _ ->
-                    if func.Args.Length > ownSpecifiers.Length then
+                    let numSpecifierArgs = ownSpecifiers |> Array.sumBy snd
+                    if func.Args.Length > numSpecifierArgs then
                         onError (sprintf "Too many Printf arguments for %+A (%d > %d)" 
-                                         func func.Args.Length ownSpecifiers.Length)
-                    
+                                         func func.Args.Length numSpecifierArgs)
+
                     let prioritizeArgPos pos = 
                         Array.partition (fun a -> Range.rangeBeforePos a pos)
                         >> function (l, r) -> [| r |> Array.sortBy startPos
                                                  l |> Array.sortBy startPos |]
                                               |> Array.concat
 
-                    let m = min func.Args.Length ownSpecifiers.Length
+                    let uses =
+                        let numUsedArgs = min func.Args.Length numSpecifierArgs
+                        let sortedOwnSpecifiers =
+                            ownSpecifiers |> Array.sortBy (fst>>startPos)
 
-                    let uses = 
-                        func.Args
-                        |> prioritizeArgPos ownSpecifiers.[0].Start
-                        |> function args -> args.[0..m - 1]
-                        |> Array.zip (ownSpecifiers.[0..m - 1] |> Array.sortBy startPos)
-                        |> Array.map (fun (specifier, arg) -> { SpecifierRange = specifier; ArgumentRange = arg })
+                        let usedArgs = 
+                            func.Args
+                            |> prioritizeArgPos (fst ownSpecifiers.[0]).Start
+                            |> function args -> args.[0..(numUsedArgs - 1)]
+
+                        let argChunks =
+                            usedArgs
+                            |> Array.splitByChunks (sortedOwnSpecifiers |> Array.map snd)
+
+                        let argChunkRanges =
+                            argChunks
+                            |> Array.filter (fun chunk -> chunk.Length > 0)
+                            |> Array.map mergeRanges
+
+                        let argAcceptingSpecifiers =
+                            sortedOwnSpecifiers
+                            |> Array.filter (fun (_, ar) -> ar > 0)
+                            |> function arr -> arr.[0..(argChunkRanges.Length - 1)]
+
+                        argChunkRanges
+                        |> Array.zip argAcceptingSpecifiers
+                        |> Array.map (fun ((spec, _), arg) -> { SpecifierRange = spec; ArgumentRange = arg })
                     restSpecifiers, uses :: acc
-               ) (specifierRanges, [])
+               ) (specRangesAndArities, [])
             |> snd
             |> List.toArray
             |> Array.concat
