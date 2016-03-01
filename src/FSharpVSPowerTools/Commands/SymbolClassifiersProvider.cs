@@ -446,16 +446,12 @@ namespace FSharpVSPowerTools
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
 
-            bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
-            bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
-
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
-                    () => new SymbolClassifier(
-                        doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
-                        _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
+                    () => new SymbolClassifier(doc, buffer, _classificationRegistry, _fsharpVsLanguageService, 
+                                               _serviceProvider, _projectFactory));
             }
 
             return null;
@@ -518,13 +514,16 @@ namespace FSharpVSPowerTools
             bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
             bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
 
-            ITextDocument doc;
-            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            if (includeUnusedOpens || includeUnusedReferences)
             {
-                return buffer.Properties.GetOrCreateSingletonProperty(
-                    () => new UnusedSymbolClassifier(
-                        doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
-                        _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
+                ITextDocument doc;
+                if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+                {
+                    return buffer.Properties.GetOrCreateSingletonProperty(
+                        () => new UnusedSymbolClassifier(
+                            doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
+                            _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
+                }
             }
 
             return null;
