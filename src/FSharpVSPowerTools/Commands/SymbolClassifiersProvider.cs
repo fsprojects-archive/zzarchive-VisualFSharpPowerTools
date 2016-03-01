@@ -407,7 +407,7 @@ namespace FSharpVSPowerTools
     [Export(typeof(IClassifierProvider))]
     [ContentType("F#")]
     [TextViewRole(PredefinedTextViewRoles.Interactive)]
-    public class SyntaxConstructClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
+    public class SymbolClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
     { 
         private readonly ClassificationColorManager _classificationColorManager;
         private readonly IClassificationTypeRegistryService _classificationRegistry;
@@ -417,7 +417,7 @@ namespace FSharpVSPowerTools
         private readonly IServiceProvider _serviceProvider;
 
         [ImportingConstructor]
-        public SyntaxConstructClassifierProvider(
+        public SymbolClassifierProvider(
             [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
             ClassificationColorManager classificationColorManager,
             IClassificationTypeRegistryService classificationRegistry,
@@ -454,6 +454,75 @@ namespace FSharpVSPowerTools
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
                     () => new SymbolClassifier(
+                        doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
+                        _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
+            }
+
+            return null;
+        }
+
+        public ITagger<T> CreateTagger<T>(ITextBuffer buffer) where T : ITag
+        {
+            return GetClassifier(buffer) as ITagger<T>;
+        }
+
+        public void Dispose()
+        {
+            VSColorTheme.ThemeChanged -= UpdateTheme;
+        }
+    }
+    [Export(typeof(ITaggerProvider))]
+    [TagType(typeof(UnusedDeclarationTag))]
+    [Export(typeof(IClassifierProvider))]
+    [ContentType("F#")]
+    [TextViewRole(PredefinedTextViewRoles.Interactive)]
+    public class UnusedSymbolClassifierProvider : ITaggerProvider, IClassifierProvider, IDisposable
+    { 
+        private readonly ClassificationColorManager _classificationColorManager;
+        private readonly IClassificationTypeRegistryService _classificationRegistry;
+        private readonly ITextDocumentFactoryService _textDocumentFactoryService;
+        private readonly VSLanguageService _fsharpVsLanguageService;
+        private readonly ProjectFactory _projectFactory;
+        private readonly IServiceProvider _serviceProvider;
+
+        [ImportingConstructor]
+        public UnusedSymbolClassifierProvider(
+            [Import(typeof(SVsServiceProvider))] IServiceProvider serviceProvider,
+            ClassificationColorManager classificationColorManager,
+            IClassificationTypeRegistryService classificationRegistry,
+            ITextDocumentFactoryService textDocumentFactoryService,
+            VSLanguageService fsharpVsLanguageService,
+            ProjectFactory projectFactory)
+        {
+            _serviceProvider = serviceProvider;
+            _classificationColorManager = classificationColorManager;
+            _classificationRegistry = classificationRegistry;
+            _textDocumentFactoryService = textDocumentFactoryService;
+            _fsharpVsLanguageService = fsharpVsLanguageService;
+            _projectFactory = projectFactory;
+
+            // Receive notification for Visual Studio theme change
+            VSColorTheme.ThemeChanged += UpdateTheme;
+        }
+
+        private void UpdateTheme(EventArgs e)
+        {
+            _classificationColorManager.UpdateColors();
+        }
+
+        public IClassifier GetClassifier(ITextBuffer buffer)
+        {
+            var generalOptions = Setting.getGeneralOptions(_serviceProvider);
+            if (generalOptions == null || !generalOptions.SyntaxColoringEnabled) return null;
+
+            bool includeUnusedReferences = generalOptions.UnusedReferencesEnabled;
+            bool includeUnusedOpens = generalOptions.UnusedOpensEnabled;
+
+            ITextDocument doc;
+            if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
+            {
+                return buffer.Properties.GetOrCreateSingletonProperty(
+                    () => new UnusedSymbolClassifier(
                         doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
                         _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
             }
