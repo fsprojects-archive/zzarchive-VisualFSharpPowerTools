@@ -453,8 +453,9 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
-                    () => new SyntaxConstructClassifier(doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
-                                    _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
+                    () => new SymbolClassifier(
+                        doc, buffer, _classificationRegistry, _fsharpVsLanguageService,
+                        _serviceProvider, _projectFactory, includeUnusedReferences, includeUnusedOpens));
             }
 
             return null;

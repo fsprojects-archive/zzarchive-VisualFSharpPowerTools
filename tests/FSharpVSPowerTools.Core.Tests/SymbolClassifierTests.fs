@@ -13,7 +13,7 @@
       "../../src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs"
       "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.SourceCodeClassifierTests
+module FSharpVSPowerTools.Core.Tests.SymbolClassifierTests
 #endif
 
 open System.IO

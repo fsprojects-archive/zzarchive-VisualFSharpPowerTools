@@ -77,7 +77,7 @@ type private SlowStage =
 type UnusedDeclarationTag() =
     interface ITag
 
-type SyntaxConstructClassifier
+type SymbolClassifier
     (
         doc: ITextDocument,
         buffer: ITextBuffer,

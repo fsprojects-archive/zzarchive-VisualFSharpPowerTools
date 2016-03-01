@@ -163,8 +163,8 @@
     <Compile Include="DepthAdornmentManager.fs">
       <Link>Coloring/DepthAdornmentManager.fs</Link>
     </Compile>
-    <Compile Include="SyntaxConstructClassifier.fs">
-      <Link>Coloring/SyntaxConstructClassifier.fs</Link>
+    <Compile Include="SymbolClassifier.fs">
+      <Link>Coloring/SymbolClassifier.fs</Link>
     </Compile>
     <Compile Include="UnusedDeclarationMargin.fs">
       <Link>Coloring/UnusedDeclarationMargin.fs</Link>
