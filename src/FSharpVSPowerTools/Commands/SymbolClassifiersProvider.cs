@@ -1,5 +1,6 @@
 ﻿using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.SyntaxColoring;
+using FSharpVSPowerTools.SyntaxColoring.Symbols;
+using FSharpVSPowerTools.SyntaxColoring.UnusedSymbols;
 using Microsoft.VisualStudio.Language.StandardClassification;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;

@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.SyntaxColoring
+﻿namespace FSharpVSPowerTools.SyntaxColoring.Symbols
 
 open System
 open System.IO
@@ -12,6 +12,7 @@ open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
 open System.Diagnostics
+open FSharpVSPowerTools.SyntaxColoring
 
 [<NoComparison>]
 type private Data =
@@ -19,7 +20,7 @@ type private Data =
       Spans: CategorizedSnapshotSpans } 
 
 [<NoComparison>]
-type private Stage =
+type private State =
     | NoData
     | Updating of oldData: Data option * currentSnapshot: ITextSnapshot
     | Data of Data
@@ -38,7 +39,7 @@ type SymbolClassifier
     let log (f: unit -> string) = Logging.logInfo (fun _ -> "[" + typeName + "] " + f()) 
     let debug msg = Printf.kprintf (fun x -> Debug.WriteLine ("[" + typeName + "] " + x)) msg
     let classificationChanged = Event<_,_>()
-    let state = Atom Stage.NoData
+    let state = Atom State.NoData
     let dte = serviceProvider.GetDte()
 
     let getCurrentProject() =
@@ -71,16 +72,16 @@ type SymbolClassifier
             match snapshot, force, state.Value with
             | None, _, _ -> false
             | _, true, _ -> true
-            | _, _, Stage.NoData -> true
-            | Some snapshot, _, Stage.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
-            | Some snapshot, _, Stage.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
+            | _, _, State.NoData -> true
+            | Some snapshot, _, State.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
+            | Some snapshot, _, State.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
 
         snapshot |> Option.iter (fun snapshot ->
             state.Swap (fun oldState ->
                 let oldData =
                     match oldState with
-                    | Stage.Data data -> Some data
-                    | Stage.Updating (data, _) -> data
+                    | State.Data data -> Some data
+                    | State.Updating (data, _) -> data
                     | _ -> None
                 Updating (oldData, snapshot)) |> ignore)
                  
@@ -114,11 +115,11 @@ type SymbolClassifier
                 state.Swap (fun oldState ->
                     let spans =
                         match oldState with
-                        | Stage.Data oldData
-                        | Stage.Updating (Some oldData, _) -> mergeSpans oldData.Spans spans
+                        | State.Data oldData
+                        | State.Updating (Some oldData, _) -> mergeSpans oldData.Spans spans
                         | _ -> spans
 
-                    Stage.Data
+                    State.Data
                         { Snapshot = snapshot
                           Spans = spans }) |> ignore
 
@@ -149,8 +150,8 @@ type SymbolClassifier
 
     let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match state.Value with
-        | Stage.Data { Data.Spans = spans }
-        | Stage.Updating (Some { Data.Spans = spans }, _) ->
+        | State.Data { Data.Spans = spans }
+        | State.Updating (Some { Data.Spans = spans }, _) ->
             let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber
             let widenSpanStartLine = max 0 (spanStartLine - 10)
             let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber
@@ -170,14 +171,14 @@ type SymbolClassifier
             |> Seq.filter (fun (_, span) -> targetSnapshotSpan.Contains span.Span)
             |> Seq.map (fun (clType, span) -> ClassificationSpan (span.Span, clType))
             |> Seq.toArray
-        | Stage.NoData ->
+        | State.NoData ->
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(doc.FilePath)) then
                 // If not yet schedule an action, do it now.
                 let callInUIContext = CallInUIContext.FromCurrentThread()
                 updateSyntaxConstructClassifiers false callInUIContext |> Async.StartInThreadPoolSafe
             [||]
-        | Stage.Updating _ -> [||]
+        | State.Updating _ -> [||]
 
     interface IClassifier with
         // It's called for each visible line of code

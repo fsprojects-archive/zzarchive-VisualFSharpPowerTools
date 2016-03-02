@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.SyntaxColoring
+﻿namespace FSharpVSPowerTools.SyntaxColoring.UnusedSymbols
 
 open System
 open System.IO
@@ -15,6 +15,7 @@ open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
 open System.Diagnostics
+open FSharpVSPowerTools.SyntaxColoring
 
 [<NoComparison>]
 type private CheckingProject =
@@ -27,13 +28,12 @@ type private Data =
       Spans: CategorizedSnapshotSpans }
 
 [<NoComparison>]
-type private Stage =
+type private State =
     | NoData
     | Updating of oldData: Data option * currentSnapshot: ITextSnapshot
     | Data of Data
 
-type UnusedDeclarationTag() =
-    interface ITag
+type UnusedDeclarationTag() = interface ITag
 
 type UnusedSymbolClassifier
     (
@@ -51,11 +51,10 @@ type UnusedSymbolClassifier
     let log (f: unit -> string) = Logging.logInfo (fun _ -> "[" + typeName + "] " + f()) 
     let debug msg = Printf.kprintf (fun x -> Debug.WriteLine ("[" + typeName + "] " + x)) msg
     let classificationChanged = Event<_,_>()
-    let state = Atom Stage.NoData
+    let state = Atom State.NoData
     let stageCancellationToken = Atom None
     let singleSymbolsProjects: Atom<CheckingProject list> = Atom []
-    let unusedDeclarationChanged = Event<_,_>()
-    let unusedDeclarationState = Atom None
+    let unusedTasgChanged = Event<_,_>()
     let dte = serviceProvider.GetDte()
 
     let disposeCancellationToken (currentToken: Atom<CancellationTokenSource option>) =
@@ -99,7 +98,7 @@ type UnusedSymbolClassifier
 
     let triggerUnusedDeclarationChanged snapshot =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
-        unusedDeclarationChanged.Trigger(self, SnapshotSpanEventArgs span)
+        unusedTasgChanged.Trigger(self, SnapshotSpanEventArgs span)
 
     let getOpenDeclarations filePath project ast getTextLineOneBased (pf: Profiler) = 
         async {
@@ -180,7 +179,7 @@ type UnusedSymbolClassifier
                 let spans = { Spans = spans; Errors = checkResults.Errors }
 
                 state.Swap (fun _ ->
-                    Stage.Data 
+                    State.Data 
                         { Snapshot = snapshot
                           Spans = spans })
                 |> ignore
@@ -198,14 +197,14 @@ type UnusedSymbolClassifier
         match getCurrentProject(), getCurrentSnapshot() with
         | Some project, Some snapshot ->
             match state.Value with
-            | Stage.Updating _ -> async.Return()
-            | Stage.Data data ->
+            | State.Updating _ -> async.Return()
+            | State.Data data ->
                 match data with
                 | { Snapshot = oldSnapshot } when oldSnapshot = snapshot -> async.Return()
                 | _ ->
                     state.Swap (function
-                        | Stage.Data oldData -> Stage.Updating (Some oldData, snapshot)
-                        | Stage.NoData -> Stage.Updating (None, snapshot)
+                        | State.Data oldData -> State.Updating (Some oldData, snapshot)
+                        | State.NoData -> State.Updating (None, snapshot)
                         | x -> x) |> ignore
                     async {
                         try do! worker (project, snapshot)
@@ -214,15 +213,15 @@ type UnusedSymbolClassifier
                             // in order to prevent Slow stage to stop working as it would think that a previous 
                             // `worker` is still running.
                             state.Swap (function
-                               | Stage.NoData -> Stage.NoData
-                               | Stage.Updating _ -> Stage.Data data
+                               | State.NoData -> State.NoData
+                               | State.Updating _ -> State.Data data
                                | x -> x)
                             |> ignore
                     }
-            | Stage.NoData -> 
+            | State.NoData -> 
                 state.Swap (function
-                    | Stage.Data oldData -> Stage.Updating (Some oldData, snapshot)
-                    | Stage.NoData -> Stage.Updating (None, snapshot)
+                    | State.Data oldData -> State.Updating (Some oldData, snapshot)
+                    | State.NoData -> State.Updating (None, snapshot)
                     | x -> x) |> ignore
                 async {
                     try do! worker (project, snapshot)
@@ -231,8 +230,8 @@ type UnusedSymbolClassifier
                         // in order to prevent Slow stage to stop working as it would think that a previous 
                         // `worker` is still running.
                         state.Swap (function
-                           | Stage.NoData -> Stage.NoData
-                           | Stage.Updating _ -> Stage.NoData
+                           | State.NoData -> State.NoData
+                           | State.Updating _ -> State.NoData
                            | x -> x)
                         |> ignore
                 }
@@ -244,16 +243,16 @@ type UnusedSymbolClassifier
             match snapshot, force, state.Value with
             | None, _, _ -> false
             | _, true, _ -> true
-            | _, _, Stage.NoData -> true
-            | Some snapshot, _, Stage.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
-            | Some snapshot, _, Stage.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
+            | _, _, State.NoData -> true
+            | Some snapshot, _, State.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
+            | Some snapshot, _, State.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
 
         snapshot |> Option.iter (fun snapshot ->
             state.Swap (fun oldState ->
                 let oldData =
                     match oldState with
-                    | Stage.Data data -> Some data
-                    | Stage.Updating (data, _) -> data
+                    | State.Data data -> Some data
+                    | State.Updating (data, _) -> data
                     | _ -> None
                 Updating (oldData, snapshot)) |> ignore)
 
@@ -347,8 +346,8 @@ type UnusedSymbolClassifier
 
     let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match state.Value with
-        | Stage.Data { Data.Spans = spans }
-        | Stage.Updating (Some { Data.Spans = spans }, _) ->
+        | State.Data { Data.Spans = spans }
+        | State.Updating (Some { Data.Spans = spans }, _) ->
             let spanStartLine = targetSnapshotSpan.Start.GetContainingLine().LineNumber
             let widenSpanStartLine = max 0 (spanStartLine - 10)
             let spanEndLine = targetSnapshotSpan.End.GetContainingLine().LineNumber
@@ -368,14 +367,14 @@ type UnusedSymbolClassifier
             |> Seq.filter (fun (_, span) -> targetSnapshotSpan.Contains span.Span)
             |> Seq.map (fun (clType, span) -> ClassificationSpan (span.Span, clType))
             |> Seq.toArray
-        | Stage.NoData ->
+        | State.NoData ->
             // Only schedule an update on signature files
             if isSignatureExtension(Path.GetExtension(doc.FilePath)) then
                 // If not yet schedule an action, do it now.
                 let callInUIContext = CallInUIContext.FromCurrentThread()
                 onBufferChanged false callInUIContext |> Async.StartInThreadPoolSafe
             [||]
-        | Stage.Updating _ -> [||]
+        | State.Updating _ -> [||]
 
     interface IClassifier with
         // It's called for each visible line of code
@@ -388,17 +387,24 @@ type UnusedSymbolClassifier
     interface ITagger<UnusedDeclarationTag> with
         member __.GetTags spans =
             let getTags (_spans: NormalizedSnapshotSpanCollection) =
-                unusedDeclarationState.Value
-                |> Option.map (fun (snapshot, data) ->
-                    data
+                let data = 
+                    match state.Value with
+                    | Data data -> Some data
+                    | Updating (data, _) -> data
+                    | NoData -> None
+
+                data
+                |> Option.map (fun data ->
+                    data.Spans.Spans
                     |> Array.choose (fun wordSpan ->
-                        fromRange snapshot (wordSpan.ToRange())
+                        fromRange data.Snapshot (wordSpan.ColumnSpan.WordSpan.ToRange())
                         |> Option.map (fun span -> TagSpan(span, UnusedDeclarationTag()) :> ITagSpan<_>)))
                 |> Option.getOrElse [||]
+
             protectOrDefault (fun _ -> getTags spans :> _) Seq.empty
 
         [<CLIEvent>]
-        member __.TagsChanged = unusedDeclarationChanged.Publish
+        member __.TagsChanged = unusedTasgChanged.Publish
 
     interface IDisposable with
         member __.Dispose() =

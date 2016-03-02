@@ -1,15 +1,10 @@
 ﻿using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FSharpVSPowerTools.SyntaxColoring;
+using FSharpVSPowerTools.SyntaxColoring.UnusedSymbols;
 
 namespace FSharpVSPowerTools
 {

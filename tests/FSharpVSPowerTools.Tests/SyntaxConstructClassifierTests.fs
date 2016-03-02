@@ -15,7 +15,7 @@ type ClassificationSpan =
 type SyntaxConstructClassifierHelper() =
     inherit VsTestBase()
     
-    let classifierProvider = new SyntaxConstructClassifierProvider(
+    let classifierProvider = new SymbolClassifierProvider(
                                     serviceProvider = base.ServiceProvider, 
                                     classificationColorManager = null,
                                     projectFactory = base.ProjectFactory,
