@@ -3,7 +3,6 @@
 open System
 open System.IO
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
 open Microsoft.VisualStudio.Text.Classification
@@ -12,7 +11,7 @@ type ClassificationSpan =
     { Classification: string
       Span: int * int * int * int }
 
-type SyntaxConstructClassifierHelper() =
+type SymbolClassifierHelper() =
     inherit VsTestBase()
     
     let classifierProvider = new SymbolClassifierProvider(
@@ -45,9 +44,9 @@ type SyntaxConstructClassifierHelper() =
         member __.Dispose() = 
             classifierProvider.Dispose()
 
-module SyntaxConstructClassifierTests =
+module SymbolClassifierTests =
     
-    let helper = new SyntaxConstructClassifierHelper()
+    let helper = new SymbolClassifierHelper()
     let mutable fileName = null 
     let mutable dummyFileName = null
 
@@ -104,39 +103,6 @@ module Module1 =
         actual |> assertEqual expected
 
     [<Test>]
-    let ``should be able to get classification spans for unused items``() = 
-        let content = """
-open System
-open System.Collections.Generic
-let internal f() = ()
-"""
-        let buffer = createMockTextBuffer content fileName
-        // IsSymbolUsedForProject seems to require a file to exist on disks
-        // If not, type checking fails with some weird errors
-        dummyFileName <- fileName
-        File.WriteAllText(dummyFileName, "")
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
-        let classifier = helper.GetClassifier(buffer)
-
-        // first event is raised when "fast computable" spans (without Unused declarations and opens) are ready
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual
-                [ { Classification = "FSharp.Function"; Span = (4, 14) => (4, 14) }
-                  { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
-
-        // second event is raised when all spans, including Unused are ready
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
-            let expected =
-                [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
-                  { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
-                  { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) }
-                  { Classification = "FSharp.Operator"; Span = (4, 18) => (4, 18) } ]
-            actual |> assertEqual expected
-        
-    [<Test>]
     let ``should be able to get classification spans for provided types``() = 
         let content = """
 module TypeProviderTests
@@ -185,6 +151,7 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
 
     [<TestFixtureTearDown>]
     let tearDownAll() =
-        if File.Exists(dummyFileName) then
-            File.Delete(dummyFileName)
+        if File.Exists dummyFileName then
+            File.Delete dummyFileName
+        dispose helper
         
