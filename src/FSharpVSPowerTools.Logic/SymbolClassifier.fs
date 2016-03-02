@@ -127,7 +127,7 @@ type SymbolClassifier
                     |> liftAsync
 
                 pf.Stop()
-                log (fun _ -> sprintf "[Normal stage] %O elapsed" pf.Elapsed)
+                log (fun _ -> sprintf "[UpdateSyntaxConstructClassifiers] %O elapsed" pf.Elapsed)
             } |> Async.Ignore
         else async.Return ()
 

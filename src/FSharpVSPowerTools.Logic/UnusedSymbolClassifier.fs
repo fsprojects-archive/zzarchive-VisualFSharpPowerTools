@@ -239,6 +239,7 @@ type UnusedSymbolClassifier
 
     let onBufferChanged force ((CallInUIContext callInUIContext) as ciuc) = 
         let snapshot = getCurrentSnapshot()
+        
         let needUpdate =
             match snapshot, force, state.Value with
             | None, _, _ -> false
@@ -246,15 +247,6 @@ type UnusedSymbolClassifier
             | _, _, State.NoData -> true
             | Some snapshot, _, State.Updating (_, oldSnapshot) -> oldSnapshot <> snapshot
             | Some snapshot, _, State.Data { Snapshot = oldSnapshot } -> oldSnapshot <> snapshot
-
-        snapshot |> Option.iter (fun snapshot ->
-            state.Swap (fun oldState ->
-                let oldData =
-                    match oldState with
-                    | State.Data data -> Some data
-                    | State.Updating (data, _) -> data
-                    | _ -> None
-                Updating (oldData, snapshot)) |> ignore)
 
         if needUpdate then
             asyncMaybe {
@@ -264,8 +256,7 @@ type UnusedSymbolClassifier
                 let pf = Profiler()
 
                 let! allSymbolsUses =
-                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false, pf)
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false, pf)
 
                 let! singleSymbolsProjs =
                     async {
@@ -273,8 +264,7 @@ type UnusedSymbolClassifier
                         let singleDefs = UnusedDeclarations.getSingleDeclarations allSymbolsUses
                         return!
                             singleDefs
-                            |> Async.Array.map (fun symbol ->
-                                 vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject symbol)
+                            |> Async.Array.map (vsLanguageService.GetSymbolDeclProjects getSymbolDeclLocation currentProject)
                             |> Async.map (
                                    Array.choose id
                                 >> Array.concat
@@ -299,7 +289,7 @@ type UnusedSymbolClassifier
                     vsLanguageService.CheckProjectInBackground currentProjectOpts
 
                 pf.Stop()
-                log (fun _ -> sprintf "[Normal stage] %O elapsed" pf.Elapsed)
+                log (fun _ -> sprintf "[OnBufferChanged] %O elapsed" pf.Elapsed)
             } |> Async.Ignore
         else async.Return ()
 
