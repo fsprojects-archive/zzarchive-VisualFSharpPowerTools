@@ -53,9 +53,9 @@ type SymbolClassifier
         classificationChanged.Trigger(self, ClassificationChangedEventArgs span)
         debug "ClassificationChanged event has been triggered by %s" reason
 
-    let checkAst message (ast: ParsedInput) =
+    let checkAstIsNotEmpty (ast: ParsedInput) =
         if ast.Range.IsEmpty then
-            debug "%s Empty AST" message
+            debug "Empty AST"
             None
         else Some()
 
@@ -91,7 +91,7 @@ type SymbolClassifier
                 debug "Effective update"
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, currentProject)
                 let! ast = checkResults.ParseTree
-                do! checkAst "Fast stage" ast
+                do! checkAstIsNotEmpty ast
                 let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, currentProject.CompilerOptions)
 
                 let! allSymbolsUses =

@@ -44,24 +44,6 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
         languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously
 
     let actualCategories =
-        let entities =
-            languageService.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source)
-            |> Async.RunSynchronously
-
-//        entities |> Option.iter (fun es ->
-//            using (new StreamWriter(@"L:\_entities_.txt")) <| fun w ->
-//                es |> List.iter (fun e -> w.WriteLine (sprintf "%A" e)))
-
-        let getLineStr line = sourceLines.[line - 1]
-
-        let qualifyOpenDeclarations line endColumn idents = async {
-            let! tooltip = languageService.GetIdentTooltip (line, endColumn, getLineStr line, Array.toList idents, opts, fileName, source)
-            return 
-                match tooltip with
-                | Some tooltip -> OpenDeclarationGetter.parseTooltip tooltip
-                | None -> []
-        }
-
         SourceCodeClassifier.getCategorizedSpans (symbolsUses, checkResults, lexer, fun line -> sourceLines.[line])
         |> Seq.groupBy (fun span -> span.WordSpan.Line)
 
