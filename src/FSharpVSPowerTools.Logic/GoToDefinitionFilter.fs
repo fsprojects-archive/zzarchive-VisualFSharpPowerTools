@@ -33,15 +33,19 @@ type internal UrlChangeEventArgs(url: string) =
     inherit EventArgs()
     member __.Url = url
 
-type GoToDefinitionFilter(textDocument: ITextDocument,
-                          view: IWpfTextView, 
-                          editorOptionsFactory: IEditorOptionsFactoryService, 
-                          vsLanguageService: VSLanguageService, 
-                          serviceProvider: System.IServiceProvider,                          
-                          projectFactory: ProjectFactory,
-                          referenceSourceProvider: ReferenceSourceProvider,
-                          navigationPreference: NavigationPreference,
-                          fireNavigationEvent: bool) =
+type GoToDefinitionFilter
+    (
+        textDocument: ITextDocument,
+        view: IWpfTextView, 
+        editorOptionsFactory: IEditorOptionsFactoryService, 
+        vsLanguageService: VSLanguageService, 
+        serviceProvider: System.IServiceProvider,                          
+        projectFactory: ProjectFactory,
+        referenceSourceProvider: ReferenceSourceProvider,
+        navigationPreference: NavigationPreference,
+        fireNavigationEvent: bool
+    ) =
+    
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
     let dte = serviceProvider.GetDte()
@@ -141,9 +145,7 @@ type GoToDefinitionFilter(textDocument: ITextDocument,
     let gotoExactLocation signature filePath signatureProject currentSymbol vsTextBuffer =
         async {
             let! symbolUses = 
-                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(
-                    signature, filePath, signatureProject, 
-                    AllowStaleResults.No, checkForUnusedOpens=false, profiler=Profiler())
+                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(signature, filePath, signatureProject, AllowStaleResults.No, false)
 
             /// Try to reconstruct fully qualified name for the purpose of matching symbols
             let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 

@@ -111,7 +111,12 @@ type WordSpan =
       Line: int
       StartCol: int
       EndCol: int }
-    static member FromRange kind (r: Range.range) = 
+    static member inline Create (kind, line, startCol, endCol) =
+        { SymbolKind = kind
+          Line = line
+          StartCol = startCol
+          EndCol = endCol }
+    static member inline FromRange (kind, r: Range.range) = 
         { SymbolKind = kind
           Line = r.StartLine
           StartCol = r.StartColumn 
@@ -355,8 +360,19 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
       }
 
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolInProjectAtLocationInFile(currentProjectOptions: FSharpProjectOptions, dependentProjectsOptions: FSharpProjectOptions seq, 
-                                                    fileName, source, line:int, col, lineStr, args, queryLexState, reportProgress : (string -> int -> int -> unit) option) =     
+  member x.GetUsesOfSymbolInProjectAtLocationInFile
+    (
+        currentProjectOptions: FSharpProjectOptions, 
+        dependentProjectsOptions: FSharpProjectOptions seq, 
+        fileName: string, 
+        source: string, 
+        line: int, 
+        col: int, 
+        lineStr: string, 
+        args: string[], 
+        queryLexState: string -> string list -> int -> FSharpTokenizerLexState, 
+        reportProgress: (string -> int -> int -> unit) option
+    ) =
      async { 
          match Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args queryLexState with
          | Some symbol ->
@@ -391,17 +407,13 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
-  member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, 
-                                         checkForUnusedOpens, pf: Profiler) : SymbolUse[] Async =
+  member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedOpens) : SymbolUse[] Async =
 
         async {
-            let! results = pf.TimeAsync "LS ParseAndCheckFileInProject" <| fun _ ->
-                x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
+            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
+            let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
 
-            let! fsharpSymbolsUses = pf.TimeAsync "LS GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                results.GetAllUsesOfAllSymbolsInFile()
-
-            let allSymbolsUses = pf.Time "LS allSymbolsUses" <| fun _ ->
+            let allSymbolsUses =
                 fsharpSymbolsUses
                 |> Array.map (fun symbolUse -> 
                     let fullNames = 
@@ -476,22 +488,18 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
             return allSymbolsUses }
 
     /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
-    member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq, pf: Profiler) =
+    member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq) =
         projectsOptions
         |> Seq.toArray
         |> Async.Array.exists (fun opts ->
             async {
-                let! projectResults = pf.TimeAsync "IsSymbolUsedInProjects :: ParseAndCheckProject" <| fun _ ->
-                     checkerAsync (fun x -> x.ParseAndCheckProject opts)
-                let! refs = pf.TimeAsync "IsSymbolUsedInProjects :: GetUsesOfSymbol" <| fun _ ->
-                     projectResults.GetUsesOfSymbol symbol
+                let! projectResults = checkerAsync (fun x -> x.ParseAndCheckProject opts)
+                let! refs = projectResults.GetUsesOfSymbol symbol
                 return
-                    if opts.ProjectFileName = currentProjectName then
-                        refs.Length > 1
+                    if opts.ProjectFileName = currentProjectName then refs.Length > 1
                     else refs.Length > 0 })
-    
 
-    member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects, pf: Profiler) : SymbolUse[] Async =
+    member x.GetUnusedDeclarations (symbolsUses, projectOptions, getSymbolDeclProjects) : SymbolUse[] Async =
         async {
             let singleDefs = UnusedDeclarations.getSingleDeclarations symbolsUses
             let! notUsedSymbols =
@@ -501,20 +509,23 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                         let! opts = getSymbolDeclProjects fsSymbol
                         match opts with
                         | Some projects ->
-                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects, pf) 
+                            let! isSymbolUsed = x.IsSymbolUsedInProjects (fsSymbol, projectOptions.ProjectFileName, projects) 
                             if isSymbolUsed then return None
                             else return Some fsSymbol
                         | None -> return None 
                     })
                 |> Async.map (Array.choose id)
 
-            return pf.Time "LS return" <| fun _ ->
+            return 
                 match notUsedSymbols with
                 | [||] -> symbolsUses
                 | _ ->
                     symbolsUses
                     |> Array.map (fun su -> 
-                        { su with IsUsed = notUsedSymbols |> Array.forall (fun s -> not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
+                        { su with IsUsed = 
+                                    notUsedSymbols 
+                                    |> Array.forall (fun s -> 
+                                        not (s.IsEffectivelySameAs su.SymbolUse.Symbol)) })
         }
 
     member x.GetAllEntitiesInProjectAndReferencedAssemblies (projectOptions: FSharpProjectOptions, fileName, source, ?withCache) =

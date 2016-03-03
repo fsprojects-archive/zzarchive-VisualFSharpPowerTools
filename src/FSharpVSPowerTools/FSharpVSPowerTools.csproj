@@ -185,7 +185,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\CodeFormattingHookHelper.cs" />
     <Compile Include="Commands\DepthColorizerManager.cs" />
-    <Compile Include="Commands\SyntaxConstructClassifierProvider.cs" />
+    <Compile Include="Commands\SymbolClassifiersProvider.cs" />
     <Compile Include="Commands\UnionPatternMatchCaseGeneratorSmartTaggerProvider.cs" />
     <Compile Include="Commands\XmlDocCommandFilterProvider.cs" />
     <Compile Include="UI\OutliningTooltipZoomLevelControl.cs">

@@ -243,20 +243,18 @@ type VSLanguageService
                     member __.LineCount = lineEnd + 1 }
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale,
-                                            checkForUnusedOpens: bool, profiler: Profiler) = 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) = 
         asyncMaybe {
             Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
-            return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens, profiler) |> liftAsync
+            return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens) |> liftAsync
         }
 
-    member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale,
-                                                    checkForUnusedOpens: bool, profiler: Profiler) = 
+    member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) = 
         async {
             let! opts = project.GetProjectCheckerOptions instance
-            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens, profiler)
+            let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens)
             return allSymbolsUses
         }
 
@@ -280,10 +278,10 @@ type VSLanguageService
 
     member __.GetProjectCheckerOptions (project: IProjectProvider) = project.GetProjectCheckerOptions instance
 
-    member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation, pf: Profiler) = 
+    member x.GetUnusedDeclarations (symbolUses, currentProject: IProjectProvider, getSymbolDeclLocation) =
         async {
             let! opts = currentProject.GetProjectCheckerOptions instance
-            return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject, pf)
+            return! instance.GetUnusedDeclarations(symbolUses, opts, x.GetSymbolDeclProjects getSymbolDeclLocation currentProject)
         }
 
     member __.GetAllEntities (fileName, project: IProjectProvider) =

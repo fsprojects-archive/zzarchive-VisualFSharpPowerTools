@@ -74,7 +74,8 @@
     <Compile Include="XmlDocTests.fs" />
     <Compile Include="NavigateToIndexTests.fs" />
     <Compile Include="OpenDeclarationsGetterTests.fs" />
-    <Compile Include="SourceCodeClassifierTests.fs" />
+    <Compile Include="SymbolClassifierTests.fs" />
+    <Compile Include="UnusedSymbolClassifierTests.fs" />
     <Compile Include="InterfaceStubGeneratorTests.fs" />
     <Compile Include="CodeGenerationTestInfrastructure.fs" />
     <Compile Include="RecordStubGeneratorTests.fs" />
