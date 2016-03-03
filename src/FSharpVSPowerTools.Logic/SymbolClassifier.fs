@@ -100,7 +100,7 @@ type SymbolClassifier
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
                 let spans =
-                    getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
+                    getCategorizedSpans (allSymbolsUses, checkResults, lexer, getTextLineOneBased)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
                     |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
 

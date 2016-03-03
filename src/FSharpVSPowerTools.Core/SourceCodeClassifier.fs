@@ -213,138 +213,104 @@ module SourceCodeClassifier =
             { from with StartCol = what.EndCol + 1 } // the dot between parts
         else from
 
-    let getCategoriesAndLocations (allSymbolsUses: SymbolUse[], checkResults: ParseAndCheckResults, lexer: LexerBase, 
-                                   getTextLine: int -> string, openDeclarations: OpenDeclaration list, 
-                                   allEntities: Dictionary<string, Idents list> option) =
+    let private attachWordSpans (tokensByLine: FSharpTokenInfo list []) (lexer: LexerBase) (symbolUses: SymbolUse seq) =
+        symbolUses
+        |> Seq.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
+        |> Seq.collect (fun (line, sus) ->
+            let tokens = tokensByLine.[line - 1]
+            sus 
+            |> Seq.choose (fun su ->
+                let fsSymbolUse = su.SymbolUse
+                let r = fsSymbolUse.RangeAlternate
+                match fsSymbolUse.Symbol with
+                | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
+                    // Usage of Active Patterns '(|A|_|)' has the range of '|A|_|',
+                    // so we expand the ranges in order to include parentheses into the results
+                    Some (su, WordSpan.Create (SymbolKind.Ident, r.End.Line, r.Start.Column - 1, r.End.Column + 1))
+                | _ ->
+                    lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
+                    |> Option.bind (fun sym ->
+                        match sym.Kind with
+                        | SymbolKind.Ident ->
+                            // FCS returns inaccurate ranges for multi-line method chains
+                            // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
+                            if r.StartLine < r.EndLine then
+                                Some (su, WordSpan.Create (sym.Kind, r.End.Line, r.End.Column - sym.Text.Length, r.End.Column))
+                            else 
+                                Some (su, WordSpan.Create (sym.Kind, r.End.Line, r.Start.Column, r.End.Column))
+                        | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
+                            Some (su, WordSpan.FromRange (sym.Kind, r))
+                        | _ -> None)))
+        |> Seq.toArray
+
+    let private getCategorizedColumnSpansBasedOnSymbolUse 
+        (wordSpansByLine: Map<int, WordSpan seq>)
+        (getCategory: FSharpSymbolUse -> Category)
+        (lexer: LexerBase)
+        (symbolUsesWithSpans: (SymbolUse * WordSpan) []) = 
+        
+        seq { 
+            for symbolUse, span in symbolUsesWithSpans do
+              let span = 
+                  match wordSpansByLine.TryFind span.Line with
+                  | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
+                  | _ -> span
+              
+              let span' = 
+                  if (span.EndCol - span.StartCol) - symbolUse.SymbolUse.Symbol.DisplayName.Length > 0 then
+                      // The span is wider that the symbol's display name.
+                     // This means that we have not managed to extract last part of a long ident accurately.
+                     // Particularly, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
+                     // So we get ident from the lexer.
+                      match lexer.GetSymbolAtLocation (span.Line - 1, span.EndCol - 1) with
+                      | Some s when s.Kind = Ident && span.StartCol < s.LeftColumn -> // Lexer says that our span is too wide. Adjust it's left column.
+                          { span with StartCol = s.LeftColumn }
+                      | _ -> span
+                  else span
+              
+              if span'.EndCol > span'.StartCol then
+                  yield { Category = getCategory symbolUse.SymbolUse; WordSpan = span' }
+        }
+        |> Seq.groupBy (fun span -> span.WordSpan)
+        |> Seq.map (fun (_, spans) ->
+                match List.ofSeq spans with
+                | [span] -> span
+                | spans -> 
+                    spans 
+                    |> List.minBy (fun span -> 
+                        match span.Category with
+                        | Category.Other -> 2
+                        | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
+                        | _ -> 1))
+        |> Seq.distinct
+
+    /// Index all symbol usages by LineNumber.
+    let private getWordSpansByLine (symbolUsesWithSpans: (SymbolUse * WordSpan) []) =
+        symbolUsesWithSpans
+        |> Seq.map (fun (_, span) -> span)
+        |> Seq.groupBy (fun span -> span.Line)
+        |> Map.ofSeq
+
+    /// Returns `CategorizedColumnSpan`s for all symbols, except unused ones.
+    let getCategorizedSpans
+        (
+            allSymbolsUses: SymbolUse[], 
+            checkResults: ParseAndCheckResults, 
+            lexer: LexerBase, 
+            getTextLine: int -> string
+        ) =
 
         let tokensByLine = lexer.TokenizeAll()
-
-        let allSymbolsUses2 =
-            allSymbolsUses
-            |> Array.groupBy (fun su -> su.SymbolUse.RangeAlternate.EndLine)
-            |> Array.collect (fun (line, sus) ->
-                let tokens = tokensByLine.[line - 1]
-                sus 
-                |> Array.choose (fun su ->
-                    let fsSymbolUse = su.SymbolUse
-                    let r = fsSymbolUse.RangeAlternate
-                    match fsSymbolUse.Symbol with
-                    | MemberFunctionOrValue func when func.IsActivePattern && not fsSymbolUse.IsFromDefinition ->
-                        // Usage of Active Patterns '(|A|_|)' has the range of '|A|_|',
-                        // so we expand the ranges in order to include parentheses into the results
-                        Some (su, { SymbolKind = SymbolKind.Ident
-                                    Line = r.End.Line
-                                    StartCol = r.Start.Column - 1 
-                                    EndCol = r.End.Column + 1})
-                    | _ ->
-                        lexer.GetSymbolFromTokensAtLocation (tokens, line - 1, r.End.Column - 1) 
-                        |> Option.bind (fun sym -> 
-                            //printfn "#### su = %A, range = %A, sym.Kind = %A" (su.SymbolUse.Symbol.GetType()) r sym.Kind
-                            match sym.Kind with
-                            | SymbolKind.Ident ->
-                                // FCS returns inaccurate ranges for multi-line method chains
-                                // Specifically, only the End is right. So we use the lexer to find Start for such symbols.
-                                if r.StartLine < r.EndLine then
-                                    Some (su, { SymbolKind = sym.Kind
-                                                Line = r.End.Line
-                                                StartCol = r.End.Column - sym.Text.Length
-                                                EndCol = r.End.Column })
-                                else 
-                                    Some (su, { SymbolKind = sym.Kind
-                                                Line = r.End.Line
-                                                StartCol = r.Start.Column
-                                                EndCol = r.End.Column })
-                            | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
-                                Some (su, { SymbolKind = sym.Kind
-                                            Line = r.End.Line 
-                                            StartCol = r.Start.Column
-                                            EndCol = r.End.Column })
-                            | _ -> None)))
-       
-        // index all symbol usages by LineNumber 
-        let wordSpansByLine = 
-            allSymbolsUses2
-            |> Seq.map (fun (_, span) -> span)
-            |> Seq.groupBy (fun span -> span.Line)
-            |> Map.ofSeq
-
-        let spansBasedOnSymbolsUses = 
-            allSymbolsUses2
-            |> Seq.choose (fun (symbolUse, span) ->
-                let span = 
-                    match wordSpansByLine.TryFind span.Line with
-                    | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
-                    | _ -> span
-
-                let span' = 
-                    if (span.EndCol - span.StartCol) - symbolUse.SymbolUse.Symbol.DisplayName.Length > 0 then
-                        // The span is wider that the symbol's display name.
-                        // This means that we have not managed to extract last part of a long ident accurately.
-                        // Particularly, it happens for chained method calls like Guid.NewGuid().ToString("N").Substring(1).
-                        // So we get ident from the lexer.
-                        match lexer.GetSymbolAtLocation (span.Line - 1, span.EndCol - 1) with
-                        | Some s -> 
-                            match s.Kind with
-                            | Ident -> 
-                                // Lexer says that our span is too wide. Adjust it's left column.
-                                if span.StartCol < s.LeftColumn then { span with StartCol = s.LeftColumn }
-                                else span
-                            | _ -> span
-                        | _ -> span
-                    else span
-
-                let categorizedSpan =
-                    if span'.EndCol <= span'.StartCol then None
-                    else Some { Category = 
-                                    if not symbolUse.IsUsed then Category.Unused 
-                                    else getCategory symbolUse.SymbolUse
-                                WordSpan = span' }
         
-                categorizedSpan)
-            |> Seq.groupBy (fun span -> span.WordSpan)
-            |> Seq.map (fun (_, spans) -> 
-                    match List.ofSeq spans with
-                    | [span] -> span
-                    | spans -> 
-                        spans 
-                        |> List.minBy (fun span -> 
-                            match span.Category with
-                            | Category.Other -> 3
-                            | Category.Unused -> 2
-                            | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
-                            | _ -> 1))
-            |> Seq.distinct
+        let allSymbolsUsesWithSpans = 
+            allSymbolsUses 
+            |> Seq.filter (fun x -> x.IsUsed)
+            |> attachWordSpans tokensByLine lexer
 
-//        debug "LongIdents by line:"
-//        longIdentsByEndPos 
-//        |> Seq.map (fun pair -> pair.Key.Line, pair.Key.Column, pair.Value) 
-//        |> Seq.iter (debug "%A")
-
-//        allEntities
-//        |> Option.iter (fun es ->
-//            es
-//            |> Map.toSeq
-//            |> Seq.map (fun (fullName, idents) -> sprintf "%s %A" fullName idents)
-//            |> fun lines -> System.IO.File.WriteAllLines (@"L:\temp\_entities_.txt", lines))
-
-//        let printSymbolUses msg (symbolUses: SymbolUse[]) =
-//            debug "[SourceCodeClassifier] %s SymbolUses:\n" msg
-//            for sUse in symbolUses do
-//                let r = sUse.SymbolUse.RangeAlternate
-//                debug "%A (%d, %d) -- (%d, %d)" sUse.FullNames r.StartLine r.StartColumn r.EndLine r.EndColumn
-//            symbolUses
-
+        let wordSpansByLine = getWordSpansByLine allSymbolsUsesWithSpans
+        let spansBasedOnSymbolsUses = getCategorizedColumnSpansBasedOnSymbolUse wordSpansByLine getCategory lexer allSymbolsUsesWithSpans
         let ast = checkResults.ParseTree
 
-        let unusedOpenDeclarationSpans =
-            OpenDeclarationGetter.getUnusedOpenDeclarations ast allSymbolsUses openDeclarations allEntities
-            |> Seq.map (fun decl -> 
-                { Category = Category.Unused
-                  WordSpan = { SymbolKind = SymbolKind.Other
-                               Line = decl.DeclarationRange.StartLine 
-                               StartCol = decl.DeclarationRange.StartColumn
-                               EndCol = decl.DeclarationRange.EndColumn }})
-    
         let printfSpecifiersRanges =
             checkResults.GetFormatSpecifierLocationsAndArity()
             |> Option.map (fun ranges ->
@@ -357,15 +323,41 @@ module SourceCodeClassifier =
                           EndCol = r.EndColumn + 1 }}))
             |> Option.getOrElse [||]
 
-        let allSpans = 
-            spansBasedOnSymbolsUses 
-            |> Seq.append (QuotationCategorizer.getCategories ast lexer)
-            |> Seq.append printfSpecifiersRanges
-            |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
-            |> Seq.append unusedOpenDeclarationSpans
-            |> Seq.append (OperatorCategorizer.getSpans allSymbolsUses2 wordSpansByLine tokensByLine)
-            |> Seq.toArray
+        spansBasedOnSymbolsUses
+        |> Seq.append (QuotationCategorizer.getCategories ast lexer)
+        |> Seq.append printfSpecifiersRanges
+        |> Seq.append (StringCategorizers.EscapedChars.getCategories ast getTextLine)
+        |> Seq.append (OperatorCategorizer.getSpans allSymbolsUsesWithSpans wordSpansByLine tokensByLine)
+        |> Seq.toArray
 
-    //    for span in allSpans do
-    //       debug "-=O=- %A" span
-        allSpans
+    /// Returns `CategorizedColumnSpan`s for unused declarations and unused open statements.
+    let getCategorizedSpansForUnusedSymbols
+        (
+            allSymbolsUses: SymbolUse[], 
+            checkResults: ParseAndCheckResults, 
+            lexer: LexerBase, 
+            openDeclarations: OpenDeclaration list, 
+            allEntities: Dictionary<string, Idents list> option
+        ) =
+
+        let allSymbolsUsesWithSpans =
+            allSymbolsUses
+            |> Seq.filter (fun x -> not x.IsUsed)
+            |> attachWordSpans (lexer.TokenizeAll()) lexer
+       
+        let spansBasedOnSymbolsUses = 
+            getCategorizedColumnSpansBasedOnSymbolUse (getWordSpansByLine allSymbolsUsesWithSpans) (fun _ -> Category.Unused) lexer allSymbolsUsesWithSpans
+
+        let unusedOpenDeclarationSpans =
+            OpenDeclarationGetter.getUnusedOpenDeclarations checkResults.ParseTree allSymbolsUses openDeclarations allEntities
+            |> Seq.map (fun decl -> 
+                { Category = Category.Unused
+                  WordSpan = 
+                    { SymbolKind = SymbolKind.Other
+                      Line = decl.DeclarationRange.StartLine 
+                      StartCol = decl.DeclarationRange.StartColumn
+                      EndCol = decl.DeclarationRange.EndColumn }})
+    
+        spansBasedOnSymbolsUses 
+        |> Seq.append unusedOpenDeclarationSpans
+        |> Seq.toArray

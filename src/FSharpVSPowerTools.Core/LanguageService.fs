@@ -111,7 +111,12 @@ type WordSpan =
       Line: int
       StartCol: int
       EndCol: int }
-    static member FromRange kind (r: Range.range) = 
+    static member inline Create (kind, line, startCol, endCol) =
+        { SymbolKind = kind
+          Line = line
+          StartCol = startCol
+          EndCol = endCol }
+    static member inline FromRange (kind, r: Range.range) = 
         { SymbolKind = kind
           Line = r.StartLine
           StartCol = r.StartColumn 

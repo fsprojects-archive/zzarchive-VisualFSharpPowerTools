@@ -164,10 +164,9 @@ type UnusedSymbolClassifier
                     |> liftAsync
 
                 let spans =
-                    getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
+                    getCategorizedSpansForUnusedSymbols (symbolsUses, checkResults, lexer, openDecls, entities)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
                     |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
-                    |> Array.filter (fun x -> x.ColumnSpan.Category = Category.Unused)
 
                 let spans = { Spans = spans; Errors = checkResults.Errors }
 
@@ -215,9 +214,7 @@ type UnusedSymbolClassifier
                 async {
                     try do! worker (project, snapshot)
                     finally
-                        // no matter what's happend in `worker`, we should reset `IsUpdating` flag to `false`
-                        // in order to prevent Slow stage to stop working as it would think that a previous 
-                        // `worker` is still running.
+                        // no matter what's happend in `worker`, we should reset state from `Updating` to something else
                         state.Swap (function
                            | State.NoData -> State.NoData
                            | State.Updating _ -> State.NoData
