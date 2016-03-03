@@ -48,7 +48,6 @@ type UnusedSymbolClassifier
     ) as self =
 
     let typeName = self.GetType().Name
-    let log (f: unit -> string) = Logging.logInfo (fun _ -> "[" + typeName + "] " + f()) 
     let debug msg = Printf.kprintf (fun x -> Debug.WriteLine ("[" + typeName + "] " + x)) msg
     let classificationChanged = Event<_,_>()
     let state = Atom State.NoData
@@ -100,12 +99,11 @@ type UnusedSymbolClassifier
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         unusedTasgChanged.Trigger(self, SnapshotSpanEventArgs span)
 
-    let getOpenDeclarations filePath project ast getTextLineOneBased (pf: Profiler) = 
+    let getOpenDeclarations filePath project ast getTextLineOneBased = 
         async {
-            let! entities = pf.TimeAsync "GetAllEntities" <| fun _ ->
-                vsLanguageService.GetAllEntities(filePath, project)
+            let! entities = vsLanguageService.GetAllEntities(filePath, project)
             
-            return! pf.TimeAsync "getOpenDeclarations" <| fun _ -> 
+            return!
                 async {
                   let qualifyOpenDeclarations line endCol idents = async {
                       let lineStr = getTextLineOneBased (line - 1)
@@ -140,37 +138,32 @@ type UnusedSymbolClassifier
     let updateUnusedDeclarations (CallInUIContext callInUIContext) =
         let worker (project, snapshot) =
             asyncMaybe {
-                let pf = Profiler()
                 debug "UpdateUnusedDeclarations"
 
-                let! symbolsUses = pf.TimeAsync "GetAllUsesOfAllSymbolsInFile" <| fun _ ->
-                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, doc.FilePath, project, AllowStaleResults.No, includeUnusedOpens(), pf)
+                let! symbolsUses =
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, project, AllowStaleResults.No, includeUnusedOpens())
 
                 let getSymbolDeclLocation fsSymbol = projectFactory.GetSymbolDeclarationLocation fsSymbol doc.FilePath project
 
                 let! symbolsUses =
                     if includeUnusedReferences() then
-                        vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation, pf)
+                        vsLanguageService.GetUnusedDeclarations(symbolsUses, project, getSymbolDeclLocation)
                     else async { return symbolsUses }
                     |> liftAsync
 
                 let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, project.CompilerOptions)
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
-
-                let! checkResults = pf.Time "ParseAndCheckFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, project)
-                     
+                let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, project)
                 let! ast = checkResults.ParseTree
-                do! checkAst "Slow stage" ast
+                do! checkAst "Unused" ast
 
                 let! entities, openDecls =
                     if includeUnusedOpens() then
-                        getOpenDeclarations doc.FilePath project checkResults.ParseTree getTextLineOneBased pf
+                        getOpenDeclarations doc.FilePath project checkResults.ParseTree getTextLineOneBased
                     else async { return None, [] }
                     |> liftAsync
 
-                let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
+                let spans =
                     getCategoriesAndLocations (symbolsUses, checkResults, lexer, getTextLineOneBased, openDecls, entities)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
                     |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
@@ -184,11 +177,7 @@ type UnusedSymbolClassifier
                           Spans = spans })
                 |> ignore
 
-                pf.Stop()
-                log (fun _ -> sprintf "[Unused symbols and opens stage] %O" pf.Elapsed)
-                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateUnusedDeclarations" 
-                    |> liftAsync
-
+                do! liftAsync (callInUIContext (fun _ -> triggerClassificationChanged snapshot "UpdateUnusedDeclarations"))
                 // Switch back to UI thread before firing events
                 do! Async.SwitchToContext(uiContext) |> liftAsync
                 triggerUnusedDeclarationChanged snapshot
@@ -253,10 +242,9 @@ type UnusedSymbolClassifier
                 let! currentProject = getCurrentProject()
                 let! snapshot = snapshot
                 debug "Effective update"
-                let pf = Profiler()
 
                 let! allSymbolsUses =
-                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false, pf)
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false)
 
                 let! singleSymbolsProjs =
                     async {
@@ -287,9 +275,6 @@ type UnusedSymbolClassifier
                 else
                     let! currentProjectOpts = vsLanguageService.GetProjectCheckerOptions currentProject |> liftAsync
                     vsLanguageService.CheckProjectInBackground currentProjectOpts
-
-                pf.Stop()
-                log (fun _ -> sprintf "[OnBufferChanged] %O elapsed" pf.Elapsed)
             } |> Async.Ignore
         else async.Return ()
 

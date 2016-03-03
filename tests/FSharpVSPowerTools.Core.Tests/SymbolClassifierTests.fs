@@ -52,8 +52,8 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
     let symbolsUses = 
         async {
             let! symbolUses = 
-                languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true, Profiler())
-            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }), Profiler())
+                languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true)
+            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }))
         } |> Async.RunSynchronously
 
     let checkResults = 

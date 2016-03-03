@@ -36,7 +36,6 @@ type SymbolClassifier
     ) as self =
 
     let typeName = self.GetType().Name
-    let log (f: unit -> string) = Logging.logInfo (fun _ -> "[" + typeName + "] " + f()) 
     let debug msg = Printf.kprintf (fun x -> Debug.WriteLine ("[" + typeName + "] " + x)) msg
     let classificationChanged = Event<_,_>()
     let state = Atom State.NoData
@@ -90,22 +89,17 @@ type SymbolClassifier
                 let! currentProject = getCurrentProject() 
                 let! snapshot = snapshot
                 debug "Effective update"
-                let pf = Profiler()
-
-                let! checkResults = pf.TimeAsync "ParseFileInProject" <| fun _ ->
-                    vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, currentProject)
-
+                let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, currentProject)
                 let! ast = checkResults.ParseTree
                 do! checkAst "Fast stage" ast
                 let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, currentProject.CompilerOptions)
 
                 let! allSymbolsUses =
-                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                        snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false, pf)
+                    vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false)
 
                 let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
 
-                let spans = pf.Time "getCategoriesAndLocations" <| fun _ ->
+                let spans =
                     getCategoriesAndLocations (allSymbolsUses, checkResults, lexer, getTextLineOneBased, [], None)
                     |> Array.sortBy (fun x -> x.WordSpan.Line)
                     |> Array.map (fun x -> CategorizedSnapshotSpan (x, snapshot))
@@ -118,16 +112,9 @@ type SymbolClassifier
                         | State.Data oldData
                         | State.Updating (Some oldData, _) -> mergeSpans oldData.Spans spans
                         | _ -> spans
+                    State.Data { Snapshot = snapshot; Spans = spans }) |> ignore
 
-                    State.Data
-                        { Snapshot = snapshot
-                          Spans = spans }) |> ignore
-
-                do! callInUIContext <| fun _ -> triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers" 
-                    |> liftAsync
-
-                pf.Stop()
-                log (fun _ -> sprintf "[UpdateSyntaxConstructClassifiers] %O elapsed" pf.Elapsed)
+                do! liftAsync (callInUIContext (fun _ -> triggerClassificationChanged snapshot "UpdateSyntaxConstructClassifiers"))
             } |> Async.Ignore
         else async.Return ()
 
