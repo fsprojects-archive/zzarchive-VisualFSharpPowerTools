@@ -192,7 +192,7 @@ type UnusedSymbolClassifier
                         do! updateUnusedSymbols (project, snapshot, callInUIContext)
                     finally
                         // if async updating failed, we should revert state to the previous
-                        state.Swap (fun _ -> oldState) |> ignore
+                        state.Swap (function Updating _ -> oldState | x -> x) |> ignore
                 }
         | _ -> async.Return()
 
