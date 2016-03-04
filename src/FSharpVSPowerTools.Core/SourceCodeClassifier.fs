@@ -253,7 +253,7 @@ module SourceCodeClassifier =
             for symbolUse, span in symbolUsesWithSpans do
               let span = 
                   match wordSpansByLine.TryFind span.Line with
-                  | Some spans -> spans |> Seq.fold (fun result span -> excludeWordSpan result span) span
+                  | Some spans -> spans |> Seq.fold excludeWordSpan span
                   | _ -> span
               
               let span' = 
@@ -269,7 +269,11 @@ module SourceCodeClassifier =
                   else span
               
               if span'.EndCol > span'.StartCol then
-                  yield { Category = getCategory symbolUse.SymbolUse; WordSpan = span' }
+                  yield 
+                    { Category = 
+                        if not symbolUse.IsUsed then Category.Unused 
+                        else getCategory symbolUse.SymbolUse
+                      WordSpan = span' }
         }
         |> Seq.groupBy (fun span -> span.WordSpan)
         |> Seq.map (fun (_, spans) ->
@@ -279,7 +283,8 @@ module SourceCodeClassifier =
                     spans 
                     |> List.minBy (fun span -> 
                         match span.Category with
-                        | Category.Other -> 2
+                        | Category.Other -> 3
+                        | Category.Unused -> 2
                         | Category.Function -> 0 // we prefer Function to hide ReferenceType on some methods in signature files
                         | _ -> 1))
         |> Seq.distinct
@@ -342,11 +347,19 @@ module SourceCodeClassifier =
 
         let allSymbolsUsesWithSpans =
             allSymbolsUses
-            |> Seq.filter (fun x -> not x.IsUsed)
+            //|> Seq.filter (fun x -> not x.IsUsed)
             |> attachWordSpans (lexer.TokenizeAll()) lexer
        
         let spansBasedOnSymbolsUses = 
-            getCategorizedColumnSpansBasedOnSymbolUse (getWordSpansByLine allSymbolsUsesWithSpans) (fun _ -> Category.Unused) lexer allSymbolsUsesWithSpans
+            getCategorizedColumnSpansBasedOnSymbolUse 
+                (getWordSpansByLine allSymbolsUsesWithSpans) 
+                getCategory
+                lexer 
+                allSymbolsUsesWithSpans
+            // we cannot filter unused symbols earlier because we need to get all categories for
+            // each span, then pick the most important one, otherwise some symbols would always be market
+            // as unused (record, DU, class definitions and others).
+            |> Seq.filter (fun x -> x.Category = Category.Unused)
 
         let unusedOpenDeclarationSpans =
             OpenDeclarationGetter.getUnusedOpenDeclarations checkResults.ParseTree allSymbolsUses openDeclarations allEntities

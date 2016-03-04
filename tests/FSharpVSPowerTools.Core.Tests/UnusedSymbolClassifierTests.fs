@@ -136,7 +136,7 @@ let ``unused default constructor of non public class``() =
     """
 type private PrivateClass() = class end
 """
-    => [ 2, [ Cat.Unused, 13, 25 ]]
+    => [ 2, []]
 
 [<Test>]
 let ``used default constructor of non public class``() =
