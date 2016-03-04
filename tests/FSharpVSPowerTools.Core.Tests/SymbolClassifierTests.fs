@@ -34,11 +34,8 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
             member __.LineCount = sourceLines.Length }
 
     let symbolsUses = 
-        async {
-            let! symbolUses = 
-                languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true)
-            return! languageService.GetUnusedDeclarations (symbolUses, opts, (fun _ -> async { return Some [opts] }))
-        } |> Async.RunSynchronously
+        languageService.GetAllUsesOfAllSymbolsInFile (opts, fileName, source, AllowStaleResults.No, true)
+        |> Async.RunSynchronously
 
     let checkResults = 
         languageService.ParseAndCheckFileInProject(opts, fileName, source, AllowStaleResults.No) |> Async.RunSynchronously

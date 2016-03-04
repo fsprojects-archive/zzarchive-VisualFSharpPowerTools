@@ -27,7 +27,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             match infoOpt with 
             | None -> return [||]
             | Some (checkResults, _parseResults) -> 
-                return! checkResults.GetUsesOfSymbolInFile(symbol)
+                return! checkResults.GetUsesOfSymbolInFile symbol
         }
 
     member __.GetAllUsesOfAllSymbolsInFile() =
@@ -69,7 +69,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
 
     member x.GetUsesOfSymbolInFileAtLocation (line, col, lineStr, ident) =
         asyncMaybe {
-            let! symbolUse = x.GetSymbolUseAtLocation(line+1, col, lineStr, [ident]) 
+            let! symbolUse = x.GetSymbolUseAtLocation(line + 1, col, lineStr, [ident]) 
             let! refs = x.GetUsesOfSymbolInFile(symbolUse.Symbol) |> liftAsync
             return symbolUse.Symbol, ident, refs
         }
@@ -408,84 +408,92 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.RawChecker = checkerInstance
 
   member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedOpens) : SymbolUse[] Async =
-
-        async {
-            let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
-            let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
-
-            let allSymbolsUses =
-                fsharpSymbolsUses
-                |> Array.map (fun symbolUse -> 
-                    let fullNames = 
-                        match symbolUse.Symbol with
-                        // Make sure that unsafe manipulation isn't executed if unused opens are disabled
-                        | _ when not checkForUnusedOpens -> None
-                        | MemberFunctionOrValue func when func.IsExtensionMember ->
-                            if func.IsProperty then
-                                let fullNames =
-                                    [|
-                                        if func.HasGetterMethod then
-                                            yield func.GetterMethod.EnclosingEntity.TryGetFullName()
-                                        if func.HasSetterMethod then
-                                            yield func.SetterMethod.EnclosingEntity.TryGetFullName()
-                                    |]
-                                    |> Array.choose id
-                                match fullNames with
-                                | [||] -> None 
-                                | _ -> Some fullNames
-                            else 
-                                match func.EnclosingEntity with
-                                // C# extension method
-                                | Entity Class ->
-                                    let fullName = symbolUse.Symbol.FullName.Split '.'
-                                    if fullName.Length > 2 then
-                                        (* For C# extension methods FCS returns full name including the class name, like:
-                                            Namespace.StaticClass.ExtensionMethod
-                                            So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
-                                            we remove "StaticClass" part. This makes C# extension methods looks identically 
-                                            with F# extension members.
-                                        *)
-                                        let fullNameWithoutClassName =
-                                            Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
-                                        Some [|String.Join (".", fullNameWithoutClassName)|]
-                                    else None
-                                | _ -> None
-                        // Operators
-                        | MemberFunctionOrValue func ->
-                            match func with
-                            | Constructor _ -> None
-                            | _ -> 
-                                Some [| yield func.FullName 
-                                        match func.TryGetFullCompiledOperatorNameIdents() with
-                                        | Some idents -> yield String.concat "." idents
-                                        | None -> ()
-                                     |]
-                        | Entity e ->
-                            match e with
-                            | e, TypedAstPatterns.Attribute, _ ->
-                                e.TryGetFullName()
-                                |> Option.map (fun fullName ->
-                                    [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])
-                            | e, _, _ -> 
-                                e.TryGetFullName() |> Option.map (fun fullName -> [| fullName |])
-                        | RecordField _
-                        | UnionCase _ as symbol ->
-                            Some [| let fullName = symbol.FullName
-                                    yield fullName
-                                    let idents = fullName.Split '.'
-                                    // Union cases/Record fields can be accessible without mentioning the enclosing type. 
+      async {
+          let! results = x.ParseAndCheckFileInProject (projectOptions, fileName, source, stale)
+          let! fsharpSymbolsUses = results.GetAllUsesOfAllSymbolsInFile()
+      
+          let allSymbolsUses =
+              fsharpSymbolsUses
+              |> Array.map (fun symbolUse -> 
+                  let fullNames = 
+                      match symbolUse.Symbol with
+                      // Make sure that unsafe manipulation isn't executed if unused opens are disabled
+                      | _ when not checkForUnusedOpens -> None
+                      | MemberFunctionOrValue func when func.IsExtensionMember ->
+                          if func.IsProperty then
+                              let fullNames =
+                                  [|
+                                      if func.HasGetterMethod then
+                                          yield func.GetterMethod.EnclosingEntity.TryGetFullName()
+                                      if func.HasSetterMethod then
+                                          yield func.SetterMethod.EnclosingEntity.TryGetFullName()
+                                  |]
+                                  |> Array.choose id
+                              match fullNames with
+                              | [||] -> None 
+                              | _ -> Some fullNames
+                          else 
+                              match func.EnclosingEntity with
+                              // C# extension method
+                              | Entity Class ->
+                                  let fullName = symbolUse.Symbol.FullName.Split '.'
+                                  if fullName.Length > 2 then
+                                      (* For C# extension methods FCS returns full name including the class name, like:
+                                          Namespace.StaticClass.ExtensionMethod
+                                          So, in order to properly detect that "open Namespace" actually opens ExtensionMethod,
+                                          we remove "StaticClass" part. This makes C# extension methods looks identically 
+                                          with F# extension members.
+                                      *)
+                                      let fullNameWithoutClassName =
+                                          Array.append fullName.[0..fullName.Length - 3] fullName.[fullName.Length - 1..]
+                                      Some [|String.Join (".", fullNameWithoutClassName)|]
+                                  else None
+                              | _ -> None
+                      // Operators
+                      | MemberFunctionOrValue func ->
+                          match func with
+                          | Constructor _ ->
+                              // full name of a constructor looks like "UnusedSymbolClassifierTests.PrivateClass.( .ctor )"
+                              // to make well formed full name parts we cut "( .ctor )" from the tail.
+                              let fullName = func.FullName
+                              let ctorSuffix = ".( .ctor )"
+                              let fullName =
+                                  if fullName.EndsWith ctorSuffix then 
+                                     fullName.[0..fullName.Length - ctorSuffix.Length - 1]
+                                  else fullName
+                              Some [| fullName |]
+                          | _ -> 
+                              Some [| yield func.FullName 
+                                      match func.TryGetFullCompiledOperatorNameIdents() with
+                                      | Some idents -> yield String.concat "." idents
+                                      | None -> ()
+                                   |]
+                      | Entity e ->
+                          match e with
+                          | e, TypedAstPatterns.Attribute, _ ->
+                              e.TryGetFullName()
+                              |> Option.map (fun fullName ->
+                                  [| fullName; fullName.Substring(0, fullName.Length - "Attribute".Length) |])
+                          | e, _, _ -> 
+                              e.TryGetFullName() |> Option.map (fun fullName -> [| fullName |])
+                      | RecordField _
+                      | UnionCase _ as symbol ->
+                          Some [| let fullName = symbol.FullName
+                                  yield fullName
+                                  let idents = fullName.Split '.'
+                                  // Union cases/Record fields can be accessible without mentioning the enclosing type. 
                                     // So we add a FullName without having the type part.
-                                    if idents.Length > 1 then
-                                        yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
-                                 |]
-                        |  _ -> None
-                        |> Option.getOrElse [|symbolUse.Symbol.FullName|]
-                        |> Array.map (fun fullName -> fullName.Split '.')
-                    
-                    { SymbolUse = symbolUse
-                      IsUsed = true
-                      FullNames = fullNames })
-            return allSymbolsUses }
+                                  if idents.Length > 1 then
+                                      yield String.Join (".", Array.append idents.[0..idents.Length - 3] idents.[idents.Length - 1..])
+                               |]
+                      |  _ -> None
+                      |> Option.getOrElse [|symbolUse.Symbol.FullName|]
+                      |> Array.map (fun fullName -> fullName.Split '.')
+                  
+                  { SymbolUse = symbolUse
+                    IsUsed = true
+                    FullNames = fullNames })
+          return allSymbolsUses }
 
     /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
     member __.IsSymbolUsedInProjects(symbol: FSharpSymbol, currentProjectName: string, projectsOptions: FSharpProjectOptions seq) =
