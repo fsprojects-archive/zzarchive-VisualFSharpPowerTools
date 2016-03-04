@@ -297,10 +297,22 @@ module TypedAstPatterns =
         if func.IsEvent then Some () else None
 
 module UnusedDeclarations =
+    open System.Collections.Generic
+
+    let symbolsComparer =
+        { new IEqualityComparer<FSharpSymbol> with
+              member __.Equals (x, y) = x.IsEffectivelySameAs y
+              member __.GetHashCode x = x.GetHashCode() }
+
     let getSingleDeclarations (symbolsUses: SymbolUse[]): FSharpSymbol[] =
-        symbolsUses
-        |> Seq.groupBy (fun su -> su.SymbolUse.Symbol)
-        |> Seq.choose (fun (symbol, uses) ->
+        let dic = Dictionary symbolsComparer
+        for su in symbolsUses do
+            let symbol = su.SymbolUse.Symbol
+            match dic.TryGetValue symbol with
+            | true, uses -> dic.[symbol] <- su :: uses
+            | _ -> dic.[symbol] <- [su]
+        dic
+        |> Seq.choose (fun (KeyValue (symbol, uses)) ->
             match symbol with
             | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
             // Determining that a record, DU or module is used anywhere requires
@@ -312,7 +324,7 @@ module UnusedDeclarations =
             // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
             | Parameter -> None
             | _ ->
-                match Seq.toList uses with
+                match uses with
                 | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
                     Some symbol 
                 | _ -> None)

@@ -139,6 +139,14 @@ type private PrivateClass() = class end
     => [ 2, [ Cat.Unused, 13, 25 ]]
 
 [<Test>]
+let ``used default constructor of non public class``() =
+    """
+type private PrivateClass() = class end
+let _ = PrivateClass()
+"""
+    => [ 2, []]
+
+[<Test>]
 let ``unused non public class let binding``() =
     """
 type PublicClass() =
