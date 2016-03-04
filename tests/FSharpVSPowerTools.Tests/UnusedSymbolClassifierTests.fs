@@ -65,13 +65,6 @@ let internal f() = ()
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
         let classifier = helper.GetClassifier(buffer)
         
-        // first event is raised when "fast computable" spans (without Unused declarations and opens) are ready
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            helper.ClassificationSpansOf(buffer, classifier)
-            |> Seq.toList
-            |> assertEqual []
-
-        // second event is raised when all spans, including Unused are ready
         testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
             let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
             let expected =
