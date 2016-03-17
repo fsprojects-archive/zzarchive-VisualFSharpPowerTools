@@ -40,10 +40,12 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
                     | true, doc ->
                         let generator =
                             new RecordStubGenerator(
-                                  doc, textView,
+                                  doc, 
+                                  textView,
                                   undoHistoryRegistry.RegisterHistory(buffer),
-                                  fsharpVsLanguageService, serviceProvider,
-                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  fsharpVsLanguageService,
+                                  projectFactory, 
+                                  Setting.getDefaultMemberBody codeGenOptions,
                                   openDocumentsTracker)
 
                         new RecordStubGeneratorSuggestedActionsSource(generator) :> _

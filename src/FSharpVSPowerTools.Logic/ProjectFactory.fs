@@ -121,41 +121,44 @@ type ProjectFactory
 
     member x.CreateForDocument buffer (filePath: FilePath) =
         maybe {
-          let! doc = dte.GetCurrentDocument filePath
-          let filePath = doc.FullName
-          let projectItem = doc.ProjectItem
-          Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
-          let project = projectItem.ContainingProject
-          
-          let getText (buffer: ITextBuffer) =
-              // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
-              openDocumentsTracker.TryGetDocumentText filePath
-              |> Option.getOrTry (fun _ -> buffer.CurrentSnapshot.GetText())
-          
-          if not (project === null) && not (filePath === null) && isFSharpProject project then
-              let projectProvider = x.CreateForProject project
-              // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
+            //let! doc = dte.GetCurrentDocument filePath
+            //let projectItem = doc.ProjectItem
+
+            let! projectItem = dte.GetProjectItem filePath
+            //let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
+
+            Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
+            let project = projectItem.ContainingProject
+            
+            let getText (buffer: ITextBuffer) =
+                // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
+                openDocumentsTracker.TryGetDocumentText filePath
+                |> Option.getOrTry (fun _ -> buffer.CurrentSnapshot.GetText())
+            
+            if not (project == null) && not (filePath == null) && isFSharpProject project then
+                let projectProvider = x.CreateForProject project
+                // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
             // Consequently, we should interpret it as a script.
-              if Array.exists ((=) filePath) projectProvider.SourceFiles then
-                  return projectProvider
-              else
-                  let ext = Path.GetExtension filePath
-                  if isSourceExtension ext then
-                      let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
-                      return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
-                  else
-                      return! None
-          elif not (filePath === null) then
-              let ext = Path.GetExtension filePath
-              if isSourceExtension ext then
-                  let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
-                  return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
-              elif isSignatureExtension ext then
-                  match signatureProjectData.TryGetValue(filePath) with
-                  | true, project -> return project
-                  | _ -> return! None
-              else return! None
-          else return! None
+                if Array.exists ((=) filePath) projectProvider.SourceFiles then
+                    return projectProvider
+                else
+                    let ext = Path.GetExtension filePath
+                    if isSourceExtension ext then
+                        let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
+                        return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
+                    else
+                        return! None
+            elif not (filePath === null) then
+                let ext = Path.GetExtension filePath
+                if isSourceExtension ext then
+                    let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
+                    return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
+                elif isSignatureExtension ext then
+                    match signatureProjectData.TryGetValue(filePath) with
+                    | true, project -> return project
+                    | _ -> return! None
+                else return! None
+            else return! None
         }
 
     member __.ListFSharpProjectsInSolution dte =

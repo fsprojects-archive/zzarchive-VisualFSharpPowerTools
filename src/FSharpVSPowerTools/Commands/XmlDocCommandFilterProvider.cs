@@ -56,10 +56,7 @@ namespace FSharpVSPowerTools
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(wpfTextView.TextBuffer, out doc))
-            {
-                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath,
-                                 _projectFactory, _fsharpVsLanguageService, _openDocumentTracker, _serviceProvider);
-            }
+                new XmlDocFilter(textViewAdapter, wpfTextView, doc.FilePath, _projectFactory, _fsharpVsLanguageService, _openDocumentTracker);
         }
     }
 }

@@ -15,14 +15,16 @@ type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
 type UnionPatternMatchCaseGenerator
-        (textDocument: ITextDocument,
-         view: ITextView,
-         textUndoHistory: ITextUndoHistory,
-         vsLanguageService: VSLanguageService,
-         serviceProvider: IServiceProvider,
-         projectFactory: ProjectFactory,
-         defaultBody: string,
-         openDocumentTracker: IOpenDocumentsTracker) as self =
+    (
+        textDocument: ITextDocument,
+        view: ITextView,
+        textUndoHistory: ITextUndoHistory,
+        vsLanguageService: VSLanguageService,
+        projectFactory: ProjectFactory,
+        defaultBody: string,
+        openDocumentTracker: IOpenDocumentsTracker
+    ) as self =
+
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: ISuggestion list = []
@@ -55,7 +57,7 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -64,9 +66,8 @@ type UnionPatternMatchCaseGenerator
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! doc = dte.GetCurrentDocument textDocument.FilePath
-                    let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 
+                    let! project = project.Value
+                    let! word, _ = vsLanguageService.GetSymbol (point, textDocument.FilePath, project) 
                     
                     do! match currentWord with
                         | None -> Some()
@@ -77,7 +78,7 @@ type UnionPatternMatchCaseGenerator
                     currentWord <- Some word
                     suggestions <- []
                     let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
-                    let vsDocument = VSDocument(source, doc, point.Snapshot)
+                    let vsDocument = VSDocument(source, textDocument.FilePath, point.Snapshot)
                     let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
                         tryFindUnionDefinitionFromPos codeGenService project point vsDocument
                     // Recheck cursor position to ensure it's still in new word

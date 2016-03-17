@@ -61,11 +61,16 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                var generator = new UnionPatternMatchCaseGenerator(doc, textView,
-                                    _undoHistoryRegistry.RegisterHistory(buffer),
-                                    _fsharpVsLanguageService, _serviceProvider,
-                                    _projectFactory, Setting.getDefaultMemberBody(codeGenOptions),
-                                    _openDocumentsTracker);
+                var generator = 
+                    new UnionPatternMatchCaseGenerator(
+                        doc, 
+                        textView,
+                        _undoHistoryRegistry.RegisterHistory(buffer),
+                        _fsharpVsLanguageService,
+                        _projectFactory, 
+                        Setting.getDefaultMemberBody(codeGenOptions),
+                        _openDocumentsTracker);
+
                 return new UnionPatternMatchCaseGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }
             

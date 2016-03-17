@@ -52,33 +52,24 @@ type PeekableItemSource
         buffer: ITextBuffer,
         doc: ITextDocument,
         peekResultFactory: IPeekResultFactory,
-        serviceProvider: System.IServiceProvider,
         projectFactory: ProjectFactory,
         vsLanguageService: VSLanguageService
     ) =
 
-    let dte = serviceProvider.GetDte()
-
-    let getCurrentFilePathProjectAndDoc () =
-        maybe {
-            let filepath = doc.FilePath
-            let! doc = dte.GetCurrentDocument(filepath)
-            let! project = projectFactory.CreateForDocument buffer doc
-            return filepath, project, doc
-        }
+    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
 
     let getDefinitionRange (point: SnapshotPoint) =
         async {
             let projectItems = 
                 maybe {
-                    let! _, project, doc = getCurrentFilePathProjectAndDoc()
-                    let! span, symbol = vsLanguageService.GetSymbol(point, doc.FullName, project)
-                    return doc.FullName, project, span, symbol 
+                    let! project = project.Value
+                    let! span, symbol = vsLanguageService.GetSymbol(point, doc.FilePath, project)
+                    return project, span, symbol 
                 }
                  
             match projectItems with
-            | Some (file, project, span, symbol) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
+            | Some (project, span, symbol) ->
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, doc.FilePath, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (_fsSymbolUse, fileScopedCheckResults) ->
                     let start = span.Start
@@ -134,7 +125,5 @@ type PeekableItemSourceProvider
                     match textDocumentFactoryService.TryGetTextDocument buffer with
                     | true, doc ->
                         buffer.Properties.GetOrCreateSingletonProperty(
-                            fun () -> 
-                                upcast new PeekableItemSource(buffer, doc, peekResultFactory,
-                                                              serviceProvider, projectFactory, vsLanguageService))
+                            fun () -> upcast new PeekableItemSource(buffer, doc, peekResultFactory, projectFactory, vsLanguageService))
                     | _ -> null

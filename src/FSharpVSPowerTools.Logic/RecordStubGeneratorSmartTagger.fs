@@ -15,14 +15,17 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 type RecordStubGeneratorSmartTag(actionSets) =
     inherit SmartTag(SmartTagType.Factoid, actionSets)
 
-type RecordStubGenerator(textDocument: ITextDocument,
-                         view: ITextView,
-                         textUndoHistory: ITextUndoHistory,
-                         vsLanguageService: VSLanguageService,
-                         serviceProvider: IServiceProvider,
-                         projectFactory: ProjectFactory,
-                         defaultBody: string,
-                         openDocumentTracker: IOpenDocumentsTracker) as self =
+type RecordStubGenerator
+    (
+        textDocument: ITextDocument,
+        view: ITextView,
+        textUndoHistory: ITextUndoHistory,
+        vsLanguageService: VSLanguageService,
+        projectFactory: ProjectFactory,
+        defaultBody: string,
+        openDocumentTracker: IOpenDocumentsTracker
+    ) as self =
+
     let changed = Event<_>()
     let mutable currentWord: SnapshotSpan option = None
     let mutable suggestions: ISuggestion list = []
@@ -60,7 +63,6 @@ type RecordStubGenerator(textDocument: ITextDocument,
                   member __.Text = Resource.recordGenerationCommandName }
         ]
 
-    let dte = serviceProvider.GetDte()
     let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     // Try to:

@@ -37,15 +37,15 @@ type LintTagger(textDocument: ITextDocument,
 
     let dte = serviceProvider.GetDte()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         asyncMaybe {
-            let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-            let! project = projectFactory.CreateForDocument buffer doc 
-            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
+            let! project = project.Value
+            let! parseFileResults = vsLanguageService.ParseFileInProject (textDocument.FilePath, project)
             let! ast = parseFileResults.ParseTree
             let config, shouldFileBeIgnored = lintData.Value
-            let! source = openDocumentsTracker.TryGetDocumentText doc.FullName
+            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
 
             if not shouldFileBeIgnored then
                 let res = 
@@ -55,7 +55,7 @@ type LintTagger(textDocument: ITextDocument,
                           Source = source
                           TypeCheckResults = None
                           FSharpVersion = version }
-                        doc.FullName
+                        textDocument.FilePath
 
                 return
                     match res with

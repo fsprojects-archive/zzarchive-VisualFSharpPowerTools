@@ -60,11 +60,16 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                var generator = new RecordStubGenerator(doc, textView,
-                                _undoHistoryRegistry.RegisterHistory(buffer),
-                                _fsharpVsLanguageService, _serviceProvider,
-                                _projectFactory, Setting.getDefaultMemberBody(codeGenOptions),
-                                _openDocumentsTracker);
+                var generator = 
+                    new RecordStubGenerator(
+                        doc, 
+                        textView,
+                        _undoHistoryRegistry.RegisterHistory(buffer),
+                        _fsharpVsLanguageService,
+                        _projectFactory, 
+                        Setting.getDefaultMemberBody(codeGenOptions),
+                        _openDocumentsTracker);
+
                 return new RecordStubGeneratorSmartTagger(buffer, generator) as ITagger<T>;
             }
             
