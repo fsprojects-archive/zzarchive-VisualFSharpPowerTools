@@ -39,9 +39,10 @@ let fromRange (snapshot: ITextSnapshot) (startLine, startColumn, endLine, endCol
 let fromFSharpRange (snapshot: ITextSnapshot) (r: range) = 
     fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
 
-let FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
+let [<Literal>] FSharpProjectKind = "{F2A71F9B-5D33-465A-A702-920D77279786}"
+
 let isFSharpProject (project: EnvDTE.Project) = 
-    isNotNull project  && isNotNull project.Kind && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
+    isNotNull project && isNotNull project.Kind && project.Kind.Equals(FSharpProjectKind, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFolderKind (kind: string) =
     kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFolder, StringComparison.OrdinalIgnoreCase)
@@ -50,13 +51,13 @@ let isPhysicalFileKind (kind: string) =
     kind.Equals(EnvDTE.Constants.vsProjectItemKindPhysicalFile, StringComparison.OrdinalIgnoreCase)
 
 let isPhysicalFileOrFolderKind kind =
-    isNotNull kind && (isPhysicalFolderKind kind) || (isPhysicalFileKind kind)
+    isNotNull kind && (isPhysicalFolderKind kind) || isPhysicalFileKind kind
 
 let isPhysicalFolder (item: EnvDTE.ProjectItem) =
-    isNotNull item && isNotNull item.Kind && (isPhysicalFolderKind item.Kind)
+    isNotNull item && isNotNull item.Kind && isPhysicalFolderKind item.Kind
 
 let isPhysicalFile (item: EnvDTE.ProjectItem) =
-    isNotNull item && isNotNull item.Kind && (isPhysicalFileKind item.Kind)
+    isNotNull item && isNotNull item.Kind && isPhysicalFileKind item.Kind
 
 let isPhysicalFileOrFolder (item: EnvDTE.ProjectItem) =
     isNotNull item && isPhysicalFileOrFolderKind item.Kind
@@ -102,11 +103,8 @@ type SnapshotSpan with
     member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
     member inline x.EndColumn = x.End.Position - x.EndLine.Start.Position
 
-    member x.ModStart (num) =
-        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
-
-    member x.ModEnd (num) =
-        SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
+    member x.ModStart (num) = SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
+    member x.ModEnd (num) = SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
 
     member x.ModBoth m1 m2 =
         SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1),
@@ -132,7 +130,6 @@ type SnapshotSpan with
             | toki -> (firstLine+idx,toki)
         
         loop 0 |> withinBounds
-
 
     /// Return corresponding zero-based FCS range
     /// (lineStart, colStart, lineEnd, colEnd)
@@ -164,7 +161,7 @@ type ITextView with
     member x.PosAtCaretPosition () =
         maybe {
           let! line, col = x.GetCaretPosition()
-          return Microsoft.FSharp.Compiler.Range.mkPos (line+1) (col+1)
+          return Microsoft.FSharp.Compiler.Range.mkPos (line + 1) (col + 1)
         }
 
 open System.Runtime.InteropServices
@@ -315,8 +312,7 @@ let getProject (hierarchy: IVsHierarchy) =
     if isNull hierarchy then
         None
     else
-        match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT,
-                                    int __VSHPROPID.VSHPROPID_ExtObject) with
+        match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT, int __VSHPROPID.VSHPROPID_ExtObject) with
         | VSConstants.S_OK, p ->
             tryCast<Project> p
         | _ -> 
@@ -361,10 +357,12 @@ let private UnassignedThreadId = -1
 
 type ForegroundThreadGuard private() = 
     static let mutable threadId = UnassignedThreadId
+
     static member BindThread() =
         if threadId <> UnassignedThreadId then 
             fail "Thread is already set"
         threadId <- Thread.CurrentThread.ManagedThreadId
+
     static member CheckThread() =
         if threadId = UnassignedThreadId then 
             fail "Thread not set"
@@ -521,7 +519,7 @@ let listFSharpProjectsInSolution (dte: DTE) =
         
     and handleProjectItems (items: ProjectItems) =
         [ for pi in items do
-                yield! handleProject pi.SubProject ]
+            yield! handleProject pi.SubProject ]
 
     [ for p in dte.Solution.Projects do
         yield! handleProject p ]

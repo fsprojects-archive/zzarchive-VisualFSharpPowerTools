@@ -121,12 +121,7 @@ type ProjectFactory
 
     member x.CreateForDocument buffer (filePath: FilePath) =
         maybe {
-            //let! doc = dte.GetCurrentDocument filePath
-            //let projectItem = doc.ProjectItem
-
             let! projectItem = dte.GetProjectItem filePath
-            //let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
-
             Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
             let project = projectItem.ContainingProject
             
@@ -187,7 +182,7 @@ type ProjectFactory
             let isSymbolLocalForProject = TypedAstUtils.isSymbolLocalForProject symbol 
             match Option.orElse symbol.ImplementationLocation symbol.DeclarationLocation with
             | Some loc ->
-                Logging.logInfo (fun _ -> sprintf "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile)
+                //Logging.logInfo (fun _ -> sprintf "Trying to find symbol '%O' declared at '%O' from current file '%O'..." symbol loc.FileName currentFile)
                 let filePath = Path.GetFullPathSafe loc.FileName
                 if currentProject.IsForStandaloneScript && filePath = currentFile then 
                     Some SymbolDeclarationLocation.File

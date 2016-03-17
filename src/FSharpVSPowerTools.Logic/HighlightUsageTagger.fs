@@ -94,10 +94,14 @@ type HighlightUsageTagger(doc: ITextDocument,
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
+            let caretPos = view.Caret.Position
+            Logging.logInfo <| fun _ -> sprintf "Caret pos = %O" caretPos
+
             // If the new cursor position is still within the current word (and on the same snapshot),
             // we don't need to check it.
-            match buffer.GetSnapshotPoint view.Caret.Position, currentWord with
-            | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
+            match buffer.GetSnapshotPoint caretPos, currentWord with
+            | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> 
+                ()
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
@@ -107,7 +111,8 @@ type HighlightUsageTagger(doc: ITextDocument,
                     | Some (newWord, symbol) ->
                         // If this is the same word we currently have, we're done (e.g. caret moved within a word).
                         match currentWord with
-                        | Some cw when cw = newWord -> async.Return None
+                        | Some cw when cw = newWord -> 
+                            async.Return None
                         | _ ->
                             // If we are still up-to-date (another change hasn't happened yet), do a real update
                             doUpdate (currentRequest, symbol, newWord, doc.FilePath, project, ciuc) |> liftAsync
@@ -119,8 +124,13 @@ type HighlightUsageTagger(doc: ITextDocument,
         } 
         |> Async.Ignore
 
-    let docEventListener = new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, 
-                                                      updateAtCaretPosition)
+    let docEventListener = 
+        new DocumentEventListener(
+            [ViewChange.layoutEvent view
+             ViewChange.caretEvent view
+             ViewChange.gotFocus view], 
+            200us, 
+            updateAtCaretPosition)
 
     let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
 

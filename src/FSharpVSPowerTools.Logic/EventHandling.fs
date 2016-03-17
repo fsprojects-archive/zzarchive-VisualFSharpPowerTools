@@ -14,36 +14,30 @@ module ViewChange =
     let layoutEvent (view: ITextView) = 
         view.LayoutChanged |> Event.choose (fun e -> if e.NewSnapshot <> e.OldSnapshot then Some() else None)
     
-    let viewportHeightEvent (view: ITextView) =  
-        view.ViewportHeightChanged |> Event.map (fun _ -> ())
-
-    let caretEvent (view: ITextView) = 
-        view.Caret.PositionChanged |> Event.map (fun _ -> ())
-
-    let bufferEvent (buffer: ITextBuffer) = 
-        buffer.ChangedLowPriority |> Event.map (fun _ -> ())
-
-    let tagsEvent (tagAggregator: ITagAggregator<_>) = 
-        tagAggregator.TagsChanged |> Event.map (fun _ -> ())
+    let viewportHeightEvent (view: ITextView) = view.ViewportHeightChanged |> Event.map ignore
+    let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map ignore
+    let gotFocus (view: ITextView) = view.GotAggregateFocus |> Event.map ignore
+    let bufferEvent (buffer: ITextBuffer) = buffer.ChangedLowPriority |> Event.map ignore
+    let tagsEvent (tagAggregator: ITagAggregator<_>) = tagAggregator.TagsChanged |> Event.map ignore
 
 [<NoComparison; NoEquality>]
-type CallInUIContext = CallInUIContext of ((unit -> unit) -> Async<unit>)
-    with static member FromCurrentThread() = 
-                         let uiContext = SynchronizationContext.Current
-                         CallInUIContext (fun f ->
-                             async {
-                                 let ctx = SynchronizationContext.Current
-                                 do! Async.SwitchToContext uiContext
-                                 protect f
-                                 do! Async.SwitchToContext ctx
-                             })
+type CallInUIContext = 
+    | CallInUIContext of ((unit -> unit) -> Async<unit>)
+    static member FromCurrentThread() = 
+        let uiContext = SynchronizationContext.Current
+        CallInUIContext (fun f ->
+            async {
+                let ctx = SynchronizationContext.Current
+                do! Async.SwitchToContext uiContext
+                protect f
+                do! Async.SwitchToContext ctx
+            })
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: CallInUIContext -> Async<unit>) =
     // Start an async loop on the UI thread that will execute the update action after the delay
     do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
-    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle,      
-                                Interval = TimeSpan.FromMilliseconds (float delayMillis))
+    let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
     let mutable disposed = false
 
