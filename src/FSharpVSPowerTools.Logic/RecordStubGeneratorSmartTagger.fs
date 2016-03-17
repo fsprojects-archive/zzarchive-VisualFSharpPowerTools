@@ -61,6 +61,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
         ]
 
     let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     // Try to:
     // - Identify record expression binding
@@ -72,9 +73,8 @@ type RecordStubGenerator(textDocument: ITextDocument,
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! doc = dte.GetCurrentDocument textDocument.FilePath
-                    let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FullName, project) 
+                    let! project = project.Value
+                    let! word, _ = vsLanguageService.GetSymbol (point, textDocument.FilePath, project) 
                     
                     do! match currentWord with
                         | None -> Some()
@@ -85,7 +85,7 @@ type RecordStubGenerator(textDocument: ITextDocument,
                     currentWord <- Some word
                     suggestions <- []
                     let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
-                    let vsDocument = VSDocument(source, doc, point.Snapshot)
+                    let vsDocument = VSDocument(source, textDocument.FilePath, point.Snapshot)
                     let! symbolRange, recordExpression, recordDefinition, insertionPos =
                         tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                     // Recheck cursor position to ensure it's still in new word

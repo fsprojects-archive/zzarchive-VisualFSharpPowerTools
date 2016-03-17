@@ -20,7 +20,6 @@ type PrintfSpecifiersUsageTagger
         doc: ITextDocument,
         view: ITextView, 
         vsLanguageService: VSLanguageService, 
-        serviceProvider: IServiceProvider,
         projectFactory: ProjectFactory
     ) as self =
     
@@ -62,12 +61,11 @@ type PrintfSpecifiersUsageTagger
     let onCaretMoveListener = 
         lazy (new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
 
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
-            let! item = dte.GetProjectItem doc.FilePath
-            let! project = projectFactory.CreateForProjectItem buffer doc.FilePath item
+            let! project = project.Value
             try
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject (doc.FilePath, project, AllowStaleResults.MatchingSource)
                 return! PrintfSpecifiersUsageGetter.getAll checkResults (fun e -> Logging.logError (fun _ -> e))

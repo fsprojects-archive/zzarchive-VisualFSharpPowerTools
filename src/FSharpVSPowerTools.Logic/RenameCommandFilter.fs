@@ -26,13 +26,14 @@ type RenameCommandFilter(textDocument: ITextDocument,
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
     let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath)
 
     let canRename() = 
         state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
                 let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = projectFactory.CreateForDocument view.TextBuffer doc
+                let! project = project.Value
                 return { Word = vsLanguageService.GetSymbol(caretPos, doc.FullName, project); File = doc.FullName; Project = project }
             }
         state |> Option.bind (fun s -> s.Word) |> Option.isSome

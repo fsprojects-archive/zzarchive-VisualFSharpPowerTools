@@ -5,7 +5,6 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
 open Fantomas
-open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
@@ -17,9 +16,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
 
     override x.AdjustProject(filePath, _) =
         maybe {
-            let dte = x.Services.ServiceProvider.GetDte()
-            let! document = dte.GetCurrentDocument filePath
-            let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer document
+            let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer filePath
             return (project, filePath)
         }
 
