@@ -16,7 +16,6 @@ module ViewChange =
     
     let viewportHeightEvent (view: ITextView) = view.ViewportHeightChanged |> Event.map ignore
     let caretEvent (view: ITextView) = view.Caret.PositionChanged |> Event.map ignore
-    let gotFocus (view: ITextView) = view.GotAggregateFocus |> Event.map ignore
     let bufferEvent (buffer: ITextBuffer) = buffer.ChangedLowPriority |> Event.map ignore
     let tagsEvent (tagAggregator: ITagAggregator<_>) = tagAggregator.TagsChanged |> Event.map ignore
 

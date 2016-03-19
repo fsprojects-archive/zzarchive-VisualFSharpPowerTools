@@ -15,11 +15,8 @@ type HighlightUsageTaggerHelper() =
                             projectFactory = base.ProjectFactory,
                             textDocumentFactoryService = base.DocumentFactoryService)
 
-    member __.GetView(buffer) =
-        createMockTextView buffer
-
-    member __.GetTagger(buffer, view) = 
-        taggerProvider.CreateTagger<_>(view, buffer)
+    member __.GetView(buffer) = createMockTextView buffer
+    member __.GetTagger(buffer, view) = taggerProvider.CreateTagger<_>(view, buffer)
 
     member __.TagsOf(buffer: ITextBuffer, tagger: ITagger<_>) =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)

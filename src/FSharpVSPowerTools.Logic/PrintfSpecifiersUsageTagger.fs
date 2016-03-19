@@ -84,7 +84,7 @@ type PrintfSpecifiersUsageTagger
                             onCaretMoveListener.Force() |> ignore
             })
 
-    let bufferChangedEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 200us, onBufferChanged)
+    let bufferChangedEventListener = new DocumentEventListener ([ViewChange.bufferEvent buffer], 100us, onBufferChanged)
     
     let tagSpan span = TagSpan<PrintfSpecifiersUsageTag>(span, PrintfSpecifiersUsageTag()) :> ITagSpan<_>
 

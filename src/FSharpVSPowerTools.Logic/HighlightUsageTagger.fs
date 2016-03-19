@@ -21,7 +21,7 @@ module private Utils =
         | _ ->
             "MarkerFormatDefinition/HighlightedReference"
 
-type HighlightUsageTag(vsVersion, isDef)= 
+type HighlightUsageTag(vsVersion, isDef) = 
     inherit TextMarkerTag(getMarker vsVersion isDef)
     member __.IsFromDefinition = isDef
 
@@ -125,12 +125,7 @@ type HighlightUsageTagger(doc: ITextDocument,
         |> Async.Ignore
 
     let docEventListener = 
-        new DocumentEventListener(
-            [ViewChange.layoutEvent view
-             ViewChange.caretEvent view
-             ViewChange.gotFocus view], 
-            200us, 
-            updateAtCaretPosition)
+        new DocumentEventListener([ViewChange.layoutEvent view; ViewChange.caretEvent view], 100us, updateAtCaretPosition)
 
     let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
 
