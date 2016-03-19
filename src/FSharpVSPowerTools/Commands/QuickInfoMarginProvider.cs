@@ -46,7 +46,7 @@ namespace FSharpVSPowerTools.QuickInfo
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
-                return new QuickInfoMargin(doc, textView, _vsLanguageService, _serviceProvider, _projectFactory);
+                return new QuickInfoMargin(doc, textView, _vsLanguageService, _projectFactory);
             else
                 return null;
         }

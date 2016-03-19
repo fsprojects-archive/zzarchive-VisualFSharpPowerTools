@@ -20,7 +20,6 @@ type UnopenedNamespaceResolver
           view: ITextView, 
           textUndoHistory: ITextUndoHistory,
           vsLanguageService: VSLanguageService, 
-          serviceProvider: IServiceProvider,
           projectFactory: ProjectFactory) as self =
     
     let buffer = view.TextBuffer
@@ -100,7 +99,7 @@ type UnopenedNamespaceResolver
         | [], [] -> []
         | _ -> [ openNamespaceActions; qualifySymbolActions ]
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -109,9 +108,8 @@ type UnopenedNamespaceResolver
             | _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! doc = dte.GetCurrentDocument textDocument.FilePath
-                    let! project = projectFactory.CreateForDocument buffer doc
-                    let newWordAndSym = vsLanguageService.GetSymbol (point, doc.FullName, project)
+                    let! project = project.Value
+                    let newWordAndSym = vsLanguageService.GetSymbol (point, textDocument.FilePath, project)
                     let newWord = newWordAndSym |> Option.map fst
                     let oldWord = currentWord
                     currentWord <- newWord
@@ -125,16 +123,16 @@ type UnopenedNamespaceResolver
                             if oldWord <> newWord then Some()
                             else None
                     
-                    let! res = vsLanguageService.GetFSharpSymbolUse(newWord, sym, doc.FullName, project, AllowStaleResults.No) |> liftAsync
+                    let! res = vsLanguageService.GetFSharpSymbolUse(newWord, sym, textDocument.FilePath, project, AllowStaleResults.No) |> liftAsync
                     
                     match res with
                     | Some _ -> return! None
                     | None ->
-                        let! checkResults = vsLanguageService.ParseFileInProject (doc.FullName, project)
+                        let! checkResults = vsLanguageService.ParseFileInProject (textDocument.FilePath, project)
                         let pos = codeGenService.ExtractFSharpPos point
                         let! parseTree = checkResults.ParseTree
                         let! entityKind = ParsedInput.getEntityKind parseTree pos
-                        let! entities = vsLanguageService.GetAllEntities (doc.FullName, project)
+                        let! entities = vsLanguageService.GetAllEntities (textDocument.FilePath, project)
 
                         //entities |> Seq.map string |> fun es -> System.IO.File.WriteAllLines (@"l:\entities.txt", es)
 

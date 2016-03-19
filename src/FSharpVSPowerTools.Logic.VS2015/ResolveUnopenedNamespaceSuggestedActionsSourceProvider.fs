@@ -36,8 +36,8 @@ type ResolveUnopenedNamespaceSuggestedActionsSourceProvider [<ImportingConstruct
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc -> 
                         let resolver =
-                            new UnopenedNamespaceResolver(doc, textView, undoHistoryRegistry.RegisterHistory(buffer),
-                                                          fsharpVsLanguageService, serviceProvider, projectFactory)
+                            new UnopenedNamespaceResolver(
+                                doc, textView, undoHistoryRegistry.RegisterHistory(buffer), fsharpVsLanguageService, projectFactory)
 
                         new ResolveUnopenedNamespaceSuggestedActionsSource(resolver) :> _
                     | _ -> null

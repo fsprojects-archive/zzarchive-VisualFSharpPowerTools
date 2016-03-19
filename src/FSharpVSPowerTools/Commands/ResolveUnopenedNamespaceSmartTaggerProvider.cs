@@ -56,8 +56,10 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
-                var resolver = new UnopenedNamespaceResolver(doc, textView, _undoHistoryRegistry.RegisterHistory(buffer),
-                                                             _fsharpVsLanguageService, _serviceProvider, _projectFactory);
+                var resolver = 
+                    new UnopenedNamespaceResolver(
+                        doc, textView, _undoHistoryRegistry.RegisterHistory(buffer), _fsharpVsLanguageService, _projectFactory);
+
                 return new ResolveUnopenedNamespaceSmartTagger(buffer, _serviceProvider, resolver) as ITagger<T>;
             }
             

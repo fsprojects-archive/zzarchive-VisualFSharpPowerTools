@@ -25,7 +25,6 @@ type DepthTagger
      (
          doc: ITextDocument, 
          buffer: ITextBuffer, 
-         serviceProvider: System.IServiceProvider, 
          projectFactory: ProjectFactory, 
          languageService: VSLanguageService,
          openDocumentsTracker: IOpenDocumentsTracker
@@ -35,13 +34,13 @@ type DepthTagger
     // only updated on the UI thread in the GetTags method
     let mutable state = None
     let tagsChanged = Event<_,_>()
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
     
     let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            let! document = dte.GetCurrentDocument doc.FilePath
-            let! project = projectFactory.CreateForDocument buffer document
+            
+            let! project = project.Value
             let! parseResults = languageService.ParseFileInProject (doc.FilePath, project)
             let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath
             let! ranges = DepthParser.getNonoverlappingDepthRanges (source, parseResults.ParseTree) |> liftAsync

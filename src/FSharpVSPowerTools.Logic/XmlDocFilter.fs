@@ -25,8 +25,7 @@ type XmlDocFilter
         fileName: string, 
         projectFactory: ProjectFactory,
         languageService: VSLanguageService,
-        openDocumentsTracker: IOpenDocumentsTracker,
-        serviceProvider: System.IServiceProvider
+        openDocumentsTracker: IOpenDocumentsTracker
      ) as self =
     
     let mutable passThruToEditor: IOleCommandTarget = null
@@ -37,7 +36,7 @@ type XmlDocFilter
     let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument wpfTextView.TextBuffer fileName)
 
     interface IOleCommandTarget with
         member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
@@ -55,10 +54,9 @@ type XmlDocFilter
                         asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let! document = dte.GetCurrentDocument fileName
-                            let! project = projectFactory.CreateForDocument wpfTextView.TextBuffer document
+                            let! project = project.Value
                             let! parseResults = languageService.ParseFileInProject (fileName, project)
-                            let! source = openDocumentsTracker.TryGetDocumentText document.FullName
+                            let! source = openDocumentsTracker.TryGetDocumentText fileName
                             let! xmlDocables = XmlDocParser.getXmlDocables (source, parseResults.ParseTree) |> liftAsync
                             let xmlDocablesBelowThisLine = 
                                 // +1 because looking below current line for e.g. a 'member'

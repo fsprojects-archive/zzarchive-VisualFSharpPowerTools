@@ -53,8 +53,7 @@ namespace FSharpVSPowerTools
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
             {
                 return buffer.Properties.GetOrCreateSingletonProperty(
-                        () => new DepthTagger(doc, buffer, _serviceProvider, _projectFactory,
-                                              _vsLanguageService, _openDocumentTracker) as ITagger<T>);
+                        () => new DepthTagger(doc, buffer, _projectFactory, _vsLanguageService, _openDocumentTracker) as ITagger<T>);
             }
 
             return null;

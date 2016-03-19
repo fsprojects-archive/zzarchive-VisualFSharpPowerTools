@@ -69,16 +69,10 @@ type UnusedSymbolClassifier
     let singleSymbolsProjects: Atom<CheckingProject list> = Atom []
     let unusedTasgChanged = Event<_,_>()
     let dte = serviceProvider.GetDte()
-
-    let getCurrentProject() =
-        maybe {
-            // If there is no backing document, an ITextDocument instance might be null
-            let! _ = Option.ofNull doc
-            let! item = dte.GetProjectItem doc.FilePath
-            return! projectFactory.CreateForProjectItem buffer doc.FilePath item }
-
+    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
+    
     let isCurrentProjectForStandaloneScript() =
-        getCurrentProject() |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false
+        project.Value |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false
 
     let includeUnusedOpens() =
         includeUnusedOpens
@@ -179,7 +173,7 @@ type UnusedSymbolClassifier
         } |> Async.Ignore
 
     let updateUnusedSymbolsIfNeeded (CallInUIContext callInUIContext) =
-        match getCurrentProject(), getCurrentSnapshot() with
+        match project.Value, getCurrentSnapshot() with
         | Some project, Some snapshot ->
             match state.Value with
             | State.Updating (_, oldSnapshot) when oldSnapshot = snapshot -> async.Return()
@@ -211,7 +205,7 @@ type UnusedSymbolClassifier
 
         if needUpdate then
             asyncMaybe {
-                let! currentProject = getCurrentProject()
+                let! currentProject = project.Value
                 
                 if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
                     do! updateUnusedSymbolsIfNeeded callInUIContext |> liftAsync
@@ -246,10 +240,10 @@ type UnusedSymbolClassifier
 
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     
-    let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun project _ _ _ _ ->
+    let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun p _ _ _ _ ->
         maybe {
-            let! selfProject = getCurrentProject()
-            let builtProjectFileName = Path.GetFileName project
+            let! selfProject = project.Value
+            let builtProjectFileName = Path.GetFileName p
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
                 debug "Referenced project %s has been built, updating classifiers..." builtProjectFileName
@@ -257,7 +251,7 @@ type UnusedSymbolClassifier
         } |> ignore)
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, onBufferChanged false)
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 100us, onBufferChanged false)
 
     let projectCheckedSubscription =
         // project check results needed for Unused Declarations only.

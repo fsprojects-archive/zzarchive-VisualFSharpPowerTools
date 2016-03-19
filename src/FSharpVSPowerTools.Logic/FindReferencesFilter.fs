@@ -26,24 +26,24 @@ type FindReferencesFilter
      ) =    
 
     let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath)
 
     let getDocumentState (progress: ShowProgress) =
         async {
             let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetCurrentDocument textDocument.FilePath
-                let! project = projectFactory.CreateForDocument view.TextBuffer doc
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FullName, project)
-                return doc.FullName, project, span, symbol }
+                let! project = project.Value
+                let! span, symbol = vsLanguageService.GetSymbol(caretPos, textDocument.FilePath, project)
+                return project, span, symbol }
 
             match projectItem with
-            | Some (file, project, span, symbol) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, file, project, AllowStaleResults.MatchingSource)
+            | Some (project, span, symbol) ->
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, textDocument.FilePath, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let! results = 
-                        match projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol file project with
+                        match projectFactory.GetSymbolDeclarationLocation fsSymbolUse.Symbol textDocument.FilePath project with
                         | Some SymbolDeclarationLocation.File ->
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInFileMessage))
                             vsLanguageService.FindUsagesInFile (span, symbol, fileScopedCheckResults)
@@ -66,7 +66,7 @@ type FindReferencesFilter
                                             (allProjects |> List.map (fun p -> p.ProjectFileName)))
                                     allProjects
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInProjectsMessage))
-                            vsLanguageService.FindUsages (span, file, project, projectsToCheck, progress) 
+                            vsLanguageService.FindUsages (span, textDocument.FilePath, project, projectsToCheck, progress) 
                     return (results |> Option.map (fun (_, _, references) -> references), symbol) |> Choice1Of2
                 | _ -> return Choice2Of2 Resource.findAllReferencesIllformedExpressionMessage
             | _ -> return Choice2Of2 Resource.findAllReferencesInvalidExpressionMessage

@@ -6,9 +6,9 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.ProjectSystem
 
-type VSDocument(source: string, doc: EnvDTE.Document, snapshot: ITextSnapshot) =
+type VSDocument(source: string, filePath: FilePath, snapshot: ITextSnapshot) =
     interface IDocument with
-        member __.FullName = doc.FullName
+        member __.FullName = filePath
         member __.LineCount = snapshot.LineCount
         member __.GetText() = source
         member __.GetLineText0(line0) =

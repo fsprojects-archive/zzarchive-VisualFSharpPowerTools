@@ -20,11 +20,13 @@ type QuickInfoViewModel() as self =
         with get () = quickInfo.Value
         and set v = quickInfo.Value <- v
 
-type QuickInfoMargin (textDocument: ITextDocument,
-                      view: ITextView,
-                      vsLanguageService: VSLanguageService,
-                      serviceProvider: IServiceProvider,
-                      projectFactory: ProjectFactory) =
+type QuickInfoMargin 
+    (
+        textDocument: ITextDocument,
+        view: ITextView,
+        vsLanguageService: VSLanguageService,
+        projectFactory: ProjectFactory
+    ) =
 
     let updateLock = obj()
     let model = QuickInfoViewModel()
@@ -93,7 +95,7 @@ type QuickInfoMargin (textDocument: ITextDocument,
         | Some '.' -> flatstr
         | Some _ -> flatstr + "."
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -101,17 +103,12 @@ type QuickInfoMargin (textDocument: ITextDocument,
             match buffer.GetSnapshotPoint caretPos, currentWord with
             | Some point, Some cw when cw.Snapshot = view.TextSnapshot && point.InSpan cw -> ()
             | Some point, _ ->
-                let projectAndDoc =
-                    maybe {
-                        let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                        let! project = projectFactory.CreateForDocument buffer doc
-                        return project, doc }
                 let! res = 
                     asyncMaybe {
-                        let! project, doc = projectAndDoc
+                        let! project = project.Value
                         let! tooltip, newWord =
                             asyncMaybe {
-                                let! newWord, longIdent = vsLanguageService.GetSymbol (point, doc.FullName, project)
+                                let! newWord, longIdent = vsLanguageService.GetSymbol (point, textDocument.FilePath, project)
                                 let lineStr = point.GetContainingLine().GetText()
                                 let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
                                 let! (FSharpToolTipText tooltip) =

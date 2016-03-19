@@ -157,16 +157,15 @@ type OutliningTagger
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
             let snapshot = buffer.CurrentSnapshot
-            let! doc = dte.GetCurrentDocument textDocument.FilePath
-            let! project = projectFactory.CreateForDocument buffer doc
+            let! project = project.Value
             let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
-            let! parseFileResults = languageService.ParseFileInProject (doc.FullName, project)
+            let! parseFileResults = languageService.ParseFileInProject (textDocument.FilePath, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast

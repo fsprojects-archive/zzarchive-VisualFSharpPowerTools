@@ -40,10 +40,12 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>
                     | true, doc ->
                         let generator =
                             new UnionPatternMatchCaseGenerator(
-                                  doc, textView,
+                                  doc, 
+                                  textView,
                                   undoHistoryRegistry.RegisterHistory(buffer),
-                                  fsharpVsLanguageService, serviceProvider,
-                                  projectFactory, Setting.getDefaultMemberBody codeGenOptions,
+                                  fsharpVsLanguageService,
+                                  projectFactory, 
+                                  Setting.getDefaultMemberBody codeGenOptions,
                                   openDocumentsTracker)
 
                         new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _

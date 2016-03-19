@@ -41,15 +41,15 @@ type ImplementInterface
     
     let buffer = view.TextBuffer
 
-    let queryInterfaceState (point: SnapshotPoint) (doc: EnvDTE.Document) (project: IProjectProvider) =
+    let queryInterfaceState (point: SnapshotPoint) (project: IProjectProvider) =
         asyncMaybe {
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let column = point.Position - point.GetContainingLine().Start.Position
-            let! ast = vsLanguageService.ParseFileInProject(doc.FullName, project)
+            let! ast = vsLanguageService.ParseFileInProject(textDocument.FilePath, project)
             let pos = Pos.fromZ line column
             let! input = ast.ParseTree
             let! iface = InterfaceStubGenerator.tryFindInterfaceDeclaration pos input
-            let! tokens = vsLanguageService.TokenizeLine(doc.FullName, buffer, project.CompilerOptions, line) 
+            let! tokens = vsLanguageService.TokenizeLine(textDocument.FilePath, buffer, project.CompilerOptions, line) 
             let endPosOfWidth =
                 tokens 
                 |> List.tryPick (fun (t: FSharpTokenInfo) ->
@@ -147,7 +147,7 @@ type ImplementInterface
                   createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
-    let dte = serviceProvider.GetDte()
+    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -156,9 +156,8 @@ type ImplementInterface
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! doc = dte.GetCurrentDocument textDocument.FilePath
-                    let! project = projectFactory.CreateForDocument buffer doc
-                    let! word, symbol = vsLanguageService.GetSymbol (point, doc.FullName, project) 
+                    let! project = project.Value
+                    let! word, symbol = vsLanguageService.GetSymbol (point, textDocument.FilePath, project) 
                     
                     do! match currentWord with
                         | None -> Some()
@@ -170,9 +169,9 @@ type ImplementInterface
                     suggestions <- []
                     match symbol.Kind with
                     | SymbolKind.Ident ->
-                        let! interfaceState = queryInterfaceState point doc project
+                        let! interfaceState = queryInterfaceState point project
                         let! (fsSymbolUse, results) = 
-                            vsLanguageService.GetFSharpSymbolUse (word, symbol, doc.FullName, project, AllowStaleResults.MatchingSource)
+                            vsLanguageService.GetFSharpSymbolUse (word, symbol, textDocument.FilePath, project, AllowStaleResults.MatchingSource)
                         // Recheck cursor position to ensure it's still in new word
                         let! point = buffer.GetSnapshotPoint view.Caret.Position
                         return!
