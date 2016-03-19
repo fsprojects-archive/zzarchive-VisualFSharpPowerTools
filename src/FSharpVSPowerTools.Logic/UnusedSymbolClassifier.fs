@@ -251,7 +251,7 @@ type UnusedSymbolClassifier
         } |> ignore)
 
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
-    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, onBufferChanged false)
+    let docEventListener = new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 100us, onBufferChanged false)
 
     let projectCheckedSubscription =
         // project check results needed for Unused Declarations only.

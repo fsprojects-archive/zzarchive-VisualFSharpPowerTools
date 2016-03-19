@@ -113,6 +113,7 @@ type SymbolClassifier
         else async.Return ()
 
     let events: EnvDTE80.Events2 option = tryCast dte.Events
+
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun p _ _ _ _ ->
         maybe {
             let! selfProject = project.Value
@@ -127,7 +128,7 @@ type SymbolClassifier
     do events |> Option.iter (fun e -> e.BuildEvents.add_OnBuildProjConfigDone onBuildDoneHandler)
 
     let docEventListener =
-        new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 200us, updateSyntaxConstructClassifiers false)
+        new DocumentEventListener ([ViewChange.bufferEvent doc.TextBuffer], 100us, updateSyntaxConstructClassifiers false)
 
     let getClassificationSpans (targetSnapshotSpan: SnapshotSpan) =
         match state.Value with
