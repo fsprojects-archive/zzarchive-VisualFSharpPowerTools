@@ -350,6 +350,7 @@ let showDialog (wnd: Window) (shell: IVsUIShell) =
         None
 
 open System.Threading
+open System.Threading.Tasks
 open System.Windows.Input
 
 [<Literal>]
