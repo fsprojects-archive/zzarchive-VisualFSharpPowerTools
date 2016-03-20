@@ -5,6 +5,7 @@ open System.Drawing
 open System.Collections.Generic
 open System.ComponentModel.Composition
 open System.Threading
+open System.Threading.Tasks
 open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
