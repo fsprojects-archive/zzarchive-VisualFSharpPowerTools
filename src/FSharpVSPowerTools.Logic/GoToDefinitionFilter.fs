@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Threading
+open System.Threading.Tasks
 open System.Security
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
