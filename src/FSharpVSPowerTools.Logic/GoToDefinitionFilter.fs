@@ -411,7 +411,25 @@ type GoToDefinitionFilter
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
+                | Some (project, _, _, _, FSharpFindDeclResult.DeclFound _) ->
+                    return!
+                        asyncMaybe {
+                            let! symbolUses = 
+                                vsLanguageService.GetAllUsesOfAllSymbolsInFile(
+                                    textDocument.TextBuffer.CurrentSnapshot, textDocument.FilePath, project, AllowStaleResults.No, false)
+
+                            let definitions = symbolUses |> Array.filter (fun x -> x.SymbolUse.IsFromDefinition)
+                            let definition =
+                                match definitions |> Array.tryFind (fun x -> x.SymbolUse.FileName.EndsWith ".fsi") with
+                                | Some def -> Some def
+                                | None -> definitions |> Array.tryHead
+
+                            match definition with
+                            | Some def -> 
+                                let r = def.SymbolUse.RangeAlternate
+                                serviceProvider.NavigateTo(def.SymbolUse.FileName, r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
+                            | None -> ()
+                        } |> Async.Ignore
                 | None ->
                     // no FSharpSymbol found, here we look at #load directive
                     let! directive = 
@@ -426,7 +444,6 @@ type GoToDefinitionFilter
                     | None ->
                         // Run the operation on UI thread since continueCommandChain may access UI components.
                         do! Async.SwitchToContext uiContext
-                        // Declaration location might exist so let Visual F# Tools handle it. 
                         return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
                     match navigationPreference with
