@@ -137,18 +137,16 @@ type ProjectFactory
                 if Array.exists ((=) filePath) projectProvider.SourceFiles then
                     return projectProvider
                 else
-                    let ext = Path.GetExtension filePath
-                    if isSourceExtension ext then
+                    if isSourceFile filePath then
                         let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
                         return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                     else
                         return! None
             elif not (filePath === null) then
-                let ext = Path.GetExtension filePath
-                if isSourceExtension ext then
+                if isSourceFile filePath then
                     let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
                     return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
-                elif isSignatureExtension ext then
+                elif isSignatureFile filePath then
                     match signatureProjectData.TryGetValue(filePath) with
                     | true, project -> return project
                     | _ -> return! None

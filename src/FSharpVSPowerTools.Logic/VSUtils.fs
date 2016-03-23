@@ -501,12 +501,16 @@ type IServiceProvider with
 
     member serviceProvider.GetDte() = serviceProvider.GetService<EnvDTE.DTE, SDTE>()
 
-let isSourceExtension ext =
+open System.IO
+
+let isSourceFile path =
+    let ext = Path.GetExtension path
     String.Equals (ext, ".fsx", StringComparison.OrdinalIgnoreCase) 
     || String.Equals (ext, ".fsscript", StringComparison.OrdinalIgnoreCase) 
     || String.Equals (ext, ".fs", StringComparison.OrdinalIgnoreCase)
 
-let isSignatureExtension ext =
+let isSignatureFile path =
+    let ext = Path.GetExtension path
     String.Equals(ext, ".fsi", StringComparison.OrdinalIgnoreCase)
 
 let listFSharpProjectsInSolution (dte: DTE) =

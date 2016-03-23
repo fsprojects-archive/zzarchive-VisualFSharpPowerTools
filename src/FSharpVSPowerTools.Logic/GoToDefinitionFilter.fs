@@ -48,6 +48,7 @@ type GoToDefinitionFilter
     
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
     let mutable currentUrl = None
+
     let dte = serviceProvider.GetDte()
     let project = lazy (projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath)
 
@@ -67,8 +68,8 @@ type GoToDefinitionFilter
                     let lineStr = span.Start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
                     return Some (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse, findDeclResult) 
-                | _ -> return None
-            | _ -> return None
+                | None -> return None
+            | None -> return None
         }
 
     // Use a single cache across text views
@@ -137,7 +138,7 @@ type GoToDefinitionFilter
     let gotoExactLocation signature filePath signatureProject currentSymbol vsTextBuffer =
         async {
             let! symbolUses = 
-                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(signature, filePath, signatureProject, AllowStaleResults.No, false)
+                vsLanguageService.GetAllUsesOfAllSymbolsInSourceString(signature, filePath, signatureProject, AllowStaleResults.No, checkForUnusedOpens=false)
 
             /// Try to reconstruct fully qualified name for the purpose of matching symbols
             let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 
@@ -306,7 +307,7 @@ type GoToDefinitionFilter
         | Entity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
-    let replace (b:string) c (a:string) = a.Replace(b, c)
+    let replace (oldValue: string) newValue (str: string) = str.Replace(oldValue, newValue)
 
     let getSymbolCacheDir() = 
         let keyName = String.Format(@"Software\Microsoft\VisualStudio\{0}.0\Debugger",
@@ -386,7 +387,7 @@ type GoToDefinitionFilter
                 // Fsi files don't appear on symbol servers, so we try to get urls via its associated fs files
                 let path, isFsiFile = 
                     let path = fullPathOf range.FileName
-                    let isFsiFile = path.EndsWith(".fsi", StringComparison.OrdinalIgnoreCase)
+                    let isFsiFile = isSignatureFile path
                     let newPath = if isFsiFile then changeExt ".fs" path else path
                     newPath, isFsiFile
                 let! url = pdbReader.GetDownloadUrl(path)
@@ -422,7 +423,7 @@ type GoToDefinitionFilter
                     match directive with
                     | Some fileToOpen ->
                         // directive found, navigate to the file at first line
-                        serviceProvider.NavigateTo(fileToOpen, 0, 0, 0, 0)
+                        serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
                     | None ->
                         // Run the operation on UI thread since continueCommandChain may access UI components.
                         do! Async.SwitchToContext uiContext
