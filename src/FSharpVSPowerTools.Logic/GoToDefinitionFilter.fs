@@ -22,6 +22,7 @@ open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open System.Text
+open FSharpVSPowerTools.AsyncMaybe
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -32,6 +33,17 @@ type NavigationPreference =
 type internal UrlChangeEventArgs(url: string) =
     inherit EventArgs()
     member __.Url = url
+
+type private FileType =
+    | Signature
+    | Code
+
+type private SymbolLocation =
+    { FileName: FilePath
+      StartLine: int
+      StartCol: int
+      EndLine: int
+      EndCol: int }
 
 type GoToDefinitionFilter
     (
@@ -398,6 +410,30 @@ type GoToDefinitionFilter
                 return! None
         }
 
+    let getFileType (file: FilePath) =
+        match Path.GetExtension(file).ToLower() with
+        | ".fsi" -> Some Signature
+        | ".fs" | ".fsx" -> Some Code
+        | _ -> None
+
+    let (|Definition|Usage|) (symbolUse: FSharpSymbolUse) =
+        if symbolUse.IsFromDefinition then Definition else Usage
+
+    let gotoSourceCodeDefinition (symbol: FSharpSymbolUse) =
+        asyncMaybe {
+            let! currentFileType = getFileType textDocument.FilePath
+            
+            let! loc =
+                match symbol, currentFileType with
+                | Definition, Code
+                | Usage, Signature ->
+                    symbol.Symbol.DeclarationLocation |> Option.orElse symbol.Symbol.ImplementationLocation
+                | _ ->
+                    symbol.Symbol.ImplementationLocation |> Option.orElse symbol.Symbol.DeclarationLocation
+                        
+            serviceProvider.NavigateTo(loc.FileName, loc.StartLine - 1, loc.StartColumn, loc.EndLine - 1, loc.EndColumn)
+        } |> Async.Ignore
+
     let cancellationToken = Atom None
 
     let gotoDefinition continueCommandChain =
@@ -411,25 +447,9 @@ type GoToDefinitionFilter
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some (project, _, _, _, FSharpFindDeclResult.DeclFound _) ->
-                    return!
-                        asyncMaybe {
-                            let! symbolUses = 
-                                vsLanguageService.GetAllUsesOfAllSymbolsInFile(
-                                    textDocument.TextBuffer.CurrentSnapshot, textDocument.FilePath, project, AllowStaleResults.No, false)
-
-                            let definitions = symbolUses |> Array.filter (fun x -> x.SymbolUse.IsFromDefinition)
-                            let definition =
-                                match definitions |> Array.tryFind (fun x -> x.SymbolUse.FileName.EndsWith ".fsi") with
-                                | Some def -> Some def
-                                | None -> definitions |> Array.tryHead
-
-                            match definition with
-                            | Some def -> 
-                                let r = def.SymbolUse.RangeAlternate
-                                serviceProvider.NavigateTo(def.SymbolUse.FileName, r.StartLine, r.StartColumn, r.EndLine, r.EndColumn)
-                            | None -> ()
-                        } |> Async.Ignore
+                | Some (_, _, _, fsSymbolUse, FSharpFindDeclResult.DeclFound _) ->
+                    do! Async.SwitchToContext uiContext
+                    return! gotoSourceCodeDefinition fsSymbolUse
                 | None ->
                     // no FSharpSymbol found, here we look at #load directive
                     let! directive = 
