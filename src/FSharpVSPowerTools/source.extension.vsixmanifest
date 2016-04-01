@@ -17,7 +17,6 @@
     <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[13.0,15.0)" />
   </Installation>
   <Dependencies>
-    <Dependency d:Source="Installed" Id="FSharp.Editor" DisplayName="Microsoft Visual FSharp Editor Extensions" Version="[12.0,15.0)" d:InstallSource="Download" Location="http://www.microsoft.com/en-us/download/details.aspx?id=48179" />
   </Dependencies>
   <Assets>
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
