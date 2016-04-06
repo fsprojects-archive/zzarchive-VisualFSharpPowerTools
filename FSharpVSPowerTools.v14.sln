@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -19,7 +19,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{83F16175-43B1-4C90-A1EE-8E351C33435D}"
 	ProjectSection(SolutionItems) = preProject
 		docs\tools\generate.fsx = docs\tools\generate.fsx
-		docs\tools\packages.config = docs\tools\packages.config
 		docs\tools\templates\template.cshtml = docs\tools\templates\template.cshtml
 	EndProjectSection
 EndProject

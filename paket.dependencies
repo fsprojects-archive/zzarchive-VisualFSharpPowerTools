@@ -10,6 +10,7 @@ nuget FSharpLint.Core prerelease
 nuget VSSDK.IDE.Deploy.14
 nuget FSharp.Management
 nuget FsPickler
+nuget FSharp.Interop.Dynamic
 
 group Test
 source http://nuget.org/api/v2
