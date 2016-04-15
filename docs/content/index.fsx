@@ -25,7 +25,6 @@ Here are currently supported features:
 
  * [Auto-generating XmlDoc](xmldoc.html)
  * [Source code formatting](codeformatting.html)
- * [Navigation bar](navbar.html)
  * [Highlight references](highlightusage.html)
  * [Rename refactoring](rename.html)
  * [Depth colorizer](depthcolorizer.html)
