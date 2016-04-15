@@ -35,7 +35,6 @@ namespace FSharpVSPowerTools
             this.flowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
             this.chbXmlDoc = new System.Windows.Forms.CheckBox();
             this.chbFormatting = new System.Windows.Forms.CheckBox();
-            this.chbNavBar = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.chbHighlightUsage = new System.Windows.Forms.CheckBox();
             this.chbHighlightPrintf = new System.Windows.Forms.CheckBox();
@@ -59,9 +58,8 @@ namespace FSharpVSPowerTools
             this.chbQuickInfoPanel = new System.Windows.Forms.CheckBox();
             this.chbLinter = new System.Windows.Forms.CheckBox();
             this.chbOutlining = new System.Windows.Forms.CheckBox();
-            this.lblInformation = new System.Windows.Forms.Label();
-            this.lblInfo = new System.Windows.Forms.Label();
             this.chbPeekDefinition = new System.Windows.Forms.CheckBox();
+            this.lblInfo = new System.Windows.Forms.Label();
             this.grbOptions.SuspendLayout();
             this.tblLayoutPanel.SuspendLayout();
             this.flowLayoutPanel.SuspendLayout();
@@ -91,7 +89,6 @@ namespace FSharpVSPowerTools
             this.tblLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tblLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 13F));
             this.tblLayoutPanel.Controls.Add(this.flowLayoutPanel, 0, 0);
-            this.tblLayoutPanel.Controls.Add(this.lblInformation, 0, 1);
             this.tblLayoutPanel.Controls.Add(this.lblInfo, 0, 2);
             this.tblLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tblLayoutPanel.Location = new System.Drawing.Point(1, 16);
@@ -128,7 +125,6 @@ namespace FSharpVSPowerTools
             this.flowLayoutPanel.AutoScroll = true;
             this.flowLayoutPanel.Controls.Add(this.chbXmlDoc);
             this.flowLayoutPanel.Controls.Add(this.chbFormatting);
-            this.flowLayoutPanel.Controls.Add(this.chbNavBar);
             this.flowLayoutPanel.Controls.Add(this.tableLayoutPanel1);
             this.flowLayoutPanel.Controls.Add(this.chbRenameRefactoring);
             this.flowLayoutPanel.Controls.Add(this.chbDepthColorizer);
@@ -153,7 +149,7 @@ namespace FSharpVSPowerTools
             this.flowLayoutPanel.Location = new System.Drawing.Point(2, 2);
             this.flowLayoutPanel.Margin = new System.Windows.Forms.Padding(2);
             this.flowLayoutPanel.Name = "flowLayoutPanel";
-            this.flowLayoutPanel.Size = new System.Drawing.Size(453, 258);
+            this.flowLayoutPanel.Size = new System.Drawing.Size(453, 277);
             this.flowLayoutPanel.TabIndex = 0;
             // 
             // chbXmlDoc
@@ -185,25 +181,13 @@ namespace FSharpVSPowerTools
             this.chbFormatting.Text = "Source code formatting";
             this.chbFormatting.UseVisualStyleBackColor = true;
             // 
-            // chbNavBar
-            // 
-            this.chbNavBar.AutoSize = true;
-            this.chbNavBar.Location = new System.Drawing.Point(3, 45);
-            this.chbNavBar.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
-            this.chbNavBar.Name = "chbNavBar";
-            this.chbNavBar.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.chbNavBar.Size = new System.Drawing.Size(120, 17);
-            this.chbNavBar.TabIndex = 6;
-            this.chbNavBar.Text = "Navigation bar ***";
-            this.chbNavBar.UseVisualStyleBackColor = true;
-            // 
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.ColumnCount = 1;
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel1.Controls.Add(this.chbHighlightUsage, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.chbHighlightPrintf, 0, 1);
-            this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 63);
+            this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 42);
             this.tableLayoutPanel1.Margin = new System.Windows.Forms.Padding(0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 2;
@@ -242,7 +226,7 @@ namespace FSharpVSPowerTools
             this.chbRenameRefactoring.AutoSize = true;
             this.chbRenameRefactoring.Checked = true;
             this.chbRenameRefactoring.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRenameRefactoring.Location = new System.Drawing.Point(3, 115);
+            this.chbRenameRefactoring.Location = new System.Drawing.Point(3, 94);
             this.chbRenameRefactoring.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbRenameRefactoring.Name = "chbRenameRefactoring";
             this.chbRenameRefactoring.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -254,7 +238,7 @@ namespace FSharpVSPowerTools
             // chbDepthColorizer
             // 
             this.chbDepthColorizer.AutoSize = true;
-            this.chbDepthColorizer.Location = new System.Drawing.Point(3, 136);
+            this.chbDepthColorizer.Location = new System.Drawing.Point(3, 115);
             this.chbDepthColorizer.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbDepthColorizer.Name = "chbDepthColorizer";
             this.chbDepthColorizer.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -268,7 +252,7 @@ namespace FSharpVSPowerTools
             this.chbNavigateTo.AutoSize = true;
             this.chbNavigateTo.Checked = true;
             this.chbNavigateTo.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbNavigateTo.Location = new System.Drawing.Point(3, 157);
+            this.chbNavigateTo.Location = new System.Drawing.Point(3, 136);
             this.chbNavigateTo.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbNavigateTo.Name = "chbNavigateTo";
             this.chbNavigateTo.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -286,7 +270,7 @@ namespace FSharpVSPowerTools
             this.tblLayoutPanelSyntax.Controls.Add(this.chbSyntaxColoring, 0, 0);
             this.tblLayoutPanelSyntax.Controls.Add(this.chbUnusedReferences, 0, 2);
             this.tblLayoutPanelSyntax.Controls.Add(this.chbUnusedOpens, 0, 1);
-            this.tblLayoutPanelSyntax.Location = new System.Drawing.Point(0, 175);
+            this.tblLayoutPanelSyntax.Location = new System.Drawing.Point(0, 154);
             this.tblLayoutPanelSyntax.Margin = new System.Windows.Forms.Padding(0);
             this.tblLayoutPanelSyntax.Name = "tblLayoutPanelSyntax";
             this.tblLayoutPanelSyntax.RowCount = 2;
@@ -342,7 +326,7 @@ namespace FSharpVSPowerTools
             // chbFolderOrganization
             // 
             this.chbFolderOrganization.AutoSize = true;
-            this.chbFolderOrganization.Location = new System.Drawing.Point(207, 3);
+            this.chbFolderOrganization.Location = new System.Drawing.Point(3, 220);
             this.chbFolderOrganization.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbFolderOrganization.Name = "chbFolderOrganization";
             this.chbFolderOrganization.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -356,7 +340,7 @@ namespace FSharpVSPowerTools
             this.chbFindAllReferences.AutoSize = true;
             this.chbFindAllReferences.Checked = true;
             this.chbFindAllReferences.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbFindAllReferences.Location = new System.Drawing.Point(207, 24);
+            this.chbFindAllReferences.Location = new System.Drawing.Point(3, 241);
             this.chbFindAllReferences.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbFindAllReferences.Name = "chbFindAllReferences";
             this.chbFindAllReferences.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -370,7 +354,7 @@ namespace FSharpVSPowerTools
             this.chbInterfaceImplementation.AutoSize = true;
             this.chbInterfaceImplementation.Checked = true;
             this.chbInterfaceImplementation.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbInterfaceImplementation.Location = new System.Drawing.Point(207, 45);
+            this.chbInterfaceImplementation.Location = new System.Drawing.Point(207, 3);
             this.chbInterfaceImplementation.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbInterfaceImplementation.Name = "chbInterfaceImplementation";
             this.chbInterfaceImplementation.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -384,7 +368,7 @@ namespace FSharpVSPowerTools
             this.chbRecordStubGeneration.AutoSize = true;
             this.chbRecordStubGeneration.Checked = true;
             this.chbRecordStubGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbRecordStubGeneration.Location = new System.Drawing.Point(207, 66);
+            this.chbRecordStubGeneration.Location = new System.Drawing.Point(207, 24);
             this.chbRecordStubGeneration.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbRecordStubGeneration.Name = "chbRecordStubGeneration";
             this.chbRecordStubGeneration.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -398,7 +382,7 @@ namespace FSharpVSPowerTools
             this.chbUnionPatternMatchCaseGeneration.AutoSize = true;
             this.chbUnionPatternMatchCaseGeneration.Checked = true;
             this.chbUnionPatternMatchCaseGeneration.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(207, 87);
+            this.chbUnionPatternMatchCaseGeneration.Location = new System.Drawing.Point(207, 45);
             this.chbUnionPatternMatchCaseGeneration.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbUnionPatternMatchCaseGeneration.Name = "chbUnionPatternMatchCaseGeneration";
             this.chbUnionPatternMatchCaseGeneration.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -412,7 +396,7 @@ namespace FSharpVSPowerTools
             this.chbResolveUnopenedNamespaces.AutoSize = true;
             this.chbResolveUnopenedNamespaces.Checked = true;
             this.chbResolveUnopenedNamespaces.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(207, 108);
+            this.chbResolveUnopenedNamespaces.Location = new System.Drawing.Point(207, 66);
             this.chbResolveUnopenedNamespaces.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbResolveUnopenedNamespaces.Name = "chbResolveUnopenedNamespaces";
             this.chbResolveUnopenedNamespaces.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -426,7 +410,7 @@ namespace FSharpVSPowerTools
             this.chbGoToMetadata.AutoSize = true;
             this.chbGoToMetadata.Checked = true;
             this.chbGoToMetadata.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGoToMetadata.Location = new System.Drawing.Point(207, 129);
+            this.chbGoToMetadata.Location = new System.Drawing.Point(207, 87);
             this.chbGoToMetadata.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbGoToMetadata.Name = "chbGoToMetadata";
             this.chbGoToMetadata.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -440,7 +424,7 @@ namespace FSharpVSPowerTools
             this.chbTaskListComments.AutoSize = true;
             this.chbTaskListComments.Checked = true;
             this.chbTaskListComments.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbTaskListComments.Location = new System.Drawing.Point(207, 150);
+            this.chbTaskListComments.Location = new System.Drawing.Point(207, 108);
             this.chbTaskListComments.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbTaskListComments.Name = "chbTaskListComments";
             this.chbTaskListComments.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -454,7 +438,7 @@ namespace FSharpVSPowerTools
             this.chbGenerateReferences.AutoSize = true;
             this.chbGenerateReferences.Checked = true;
             this.chbGenerateReferences.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGenerateReferences.Location = new System.Drawing.Point(207, 171);
+            this.chbGenerateReferences.Location = new System.Drawing.Point(207, 129);
             this.chbGenerateReferences.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbGenerateReferences.Name = "chbGenerateReferences";
             this.chbGenerateReferences.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -468,7 +452,7 @@ namespace FSharpVSPowerTools
             this.chbGoToSymbolSource.AutoSize = true;
             this.chbGoToSymbolSource.Checked = true;
             this.chbGoToSymbolSource.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbGoToSymbolSource.Location = new System.Drawing.Point(207, 192);
+            this.chbGoToSymbolSource.Location = new System.Drawing.Point(207, 150);
             this.chbGoToSymbolSource.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbGoToSymbolSource.Name = "chbGoToSymbolSource";
             this.chbGoToSymbolSource.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -482,7 +466,7 @@ namespace FSharpVSPowerTools
             this.chbQuickInfoPanel.AutoSize = true;
             this.chbQuickInfoPanel.Checked = true;
             this.chbQuickInfoPanel.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbQuickInfoPanel.Location = new System.Drawing.Point(207, 213);
+            this.chbQuickInfoPanel.Location = new System.Drawing.Point(207, 171);
             this.chbQuickInfoPanel.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbQuickInfoPanel.Name = "chbQuickInfoPanel";
             this.chbQuickInfoPanel.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -496,7 +480,7 @@ namespace FSharpVSPowerTools
             this.chbLinter.AutoSize = true;
             this.chbLinter.Checked = true;
             this.chbLinter.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chbLinter.Location = new System.Drawing.Point(207, 234);
+            this.chbLinter.Location = new System.Drawing.Point(207, 192);
             this.chbLinter.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbLinter.Name = "chbLinter";
             this.chbLinter.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -508,7 +492,7 @@ namespace FSharpVSPowerTools
             // chbOutlining
             // 
             this.chbOutlining.AutoSize = true;
-            this.chbOutlining.Location = new System.Drawing.Point(424, 3);
+            this.chbOutlining.Location = new System.Drawing.Point(207, 213);
             this.chbOutlining.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
             this.chbOutlining.Name = "chbOutlining";
             this.chbOutlining.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
@@ -517,15 +501,17 @@ namespace FSharpVSPowerTools
             this.chbOutlining.Text = "Code Outlining";
             this.chbOutlining.UseVisualStyleBackColor = true;
             // 
-            // lblInformation
+            // chbPeekDefinition
             // 
-            this.lblInformation.AutoSize = true;
-            this.lblInformation.Location = new System.Drawing.Point(3, 262);
-            this.lblInformation.Name = "lblInformation";
-            this.lblInformation.Padding = new System.Windows.Forms.Padding(5, 3, 5, 3);
-            this.lblInformation.Size = new System.Drawing.Size(234, 19);
-            this.lblInformation.TabIndex = 13;
-            this.lblInformation.Text = "*** Admin privileges required to enable/disable";
+            this.chbPeekDefinition.AutoSize = true;
+            this.chbPeekDefinition.Location = new System.Drawing.Point(207, 234);
+            this.chbPeekDefinition.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
+            this.chbPeekDefinition.Name = "chbPeekDefinition";
+            this.chbPeekDefinition.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.chbPeekDefinition.Size = new System.Drawing.Size(108, 17);
+            this.chbPeekDefinition.TabIndex = 25;
+            this.chbPeekDefinition.Text = "Peek Definition";
+            this.chbPeekDefinition.UseVisualStyleBackColor = true;
             // 
             // lblInfo
             // 
@@ -537,18 +523,6 @@ namespace FSharpVSPowerTools
             this.lblInfo.Size = new System.Drawing.Size(341, 19);
             this.lblInfo.TabIndex = 5;
             this.lblInfo.Text = "You must restart Visual Studio in order for the changes to take effect.";
-            // 
-            // chbPeekDefinition
-            // 
-            this.chbPeekDefinition.AutoSize = true;
-            this.chbPeekDefinition.Location = new System.Drawing.Point(424, 24);
-            this.chbPeekDefinition.Margin = new System.Windows.Forms.Padding(3, 3, 3, 1);
-            this.chbPeekDefinition.Name = "chbPeekDefinition";
-            this.chbPeekDefinition.Padding = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.chbPeekDefinition.Size = new System.Drawing.Size(108, 17);
-            this.chbPeekDefinition.TabIndex = 25;
-            this.chbPeekDefinition.Text = "Peek Definition";
-            this.chbPeekDefinition.UseVisualStyleBackColor = true;
             // 
             // GeneralOptionsControl
             // 
@@ -577,7 +551,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.GroupBox grbOptions;
         private System.Windows.Forms.CheckBox chbFormatting;
         private System.Windows.Forms.CheckBox chbXmlDoc;
-        private System.Windows.Forms.CheckBox chbNavBar;
         private System.Windows.Forms.CheckBox chbHighlightUsage;
         private System.Windows.Forms.CheckBox chbRenameRefactoring;
         private System.Windows.Forms.CheckBox chbDepthColorizer;
@@ -585,7 +558,6 @@ namespace FSharpVSPowerTools
         private System.Windows.Forms.CheckBox chbFolderOrganization;
         private System.Windows.Forms.CheckBox chbSyntaxColoring;
         private System.Windows.Forms.CheckBox chbInterfaceImplementation;
-        private System.Windows.Forms.Label lblInformation;
         private System.Windows.Forms.CheckBox chbFindAllReferences;
         private System.Windows.Forms.CheckBox chbRecordStubGeneration;
         private System.Windows.Forms.CheckBox chbUnionPatternMatchCaseGeneration;

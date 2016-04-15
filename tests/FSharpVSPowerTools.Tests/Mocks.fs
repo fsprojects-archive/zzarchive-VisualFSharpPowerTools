@@ -26,7 +26,6 @@ let createGeneralOptionsPage() =
             page.GenerateRecordStubEnabled --> true
             page.HighlightUsageEnabled --> true
             page.InterfaceImplementationEnabled --> true
-            page.NavBarEnabled --> true
             page.NavigateToEnabled --> true
             page.RenameRefactoringEnabled --> true
             page.ResolveUnopenedNamespacesEnabled --> true

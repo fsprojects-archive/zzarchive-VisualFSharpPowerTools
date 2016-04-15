@@ -25,12 +25,6 @@ namespace FSharpVSPowerTools
             set { chbFormatting.Checked = value; }
         }
 
-        public bool NavBarEnabled
-        {
-            get { return chbNavBar.Checked; }
-            set { chbNavBar.Checked = value; }
-        }
-
         public bool HighlightUsageEnabled
         {
             get { return chbHighlightUsage.Checked; }
@@ -166,7 +160,6 @@ namespace FSharpVSPowerTools
         {
             XmlDocEnabled = _optionsPage.XmlDocEnabled;
             FormattingEnabled = _optionsPage.FormattingEnabled;
-            NavBarEnabled = _optionsPage.NavBarEnabled;
             HighlightUsageEnabled = _optionsPage.HighlightUsageEnabled;
             HighlightPrintfUsageEnabled = _optionsPage.HighlightPrintfUsageEnabled;
             RenameRefactoringEnabled = _optionsPage.RenameRefactoringEnabled;
