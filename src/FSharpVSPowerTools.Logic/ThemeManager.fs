@@ -37,8 +37,8 @@ type ThemeManager [<ImportingConstructor>]
     member __.GetCurrentTheme() =
         let themeGuid = getThemeId()
         match themes.TryGetValue(themeGuid) with
-            | true, t -> Some t
-            | _ -> None
+        | true, t -> Some t
+        | _ -> None
         |> Option.getOrTry (fun _ ->
             try 
                 let color = VSColorTheme.GetThemedColor EnvironmentColors.ToolWindowTextColorKey
@@ -49,3 +49,13 @@ type ThemeManager [<ImportingConstructor>]
             with _ -> 
                 Logging.logError (fun _ -> "Can't read Visual Studio themes from environment colors.")
                 VisualStudioTheme.Unknown)
+
+    member __.GetEditorTextColors (item: string) =
+        let dte = serviceProvider.GetDte()
+        let fontsAndColors = dte.Properties("FontsAndColors", "TextEditor")
+        let fontsAndColorsItems = fontsAndColors.Item("FontsAndColorsItems").Object :?> EnvDTE.FontsAndColorsItems
+        let selectedItem = fontsAndColorsItems.Item(item)
+        let foreColor = int selectedItem.Foreground |> System.Drawing.ColorTranslator.FromOle
+        let backColor = int selectedItem.Background |> System.Drawing.ColorTranslator.FromOle
+        (foreColor, backColor)
+

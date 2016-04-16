@@ -12,6 +12,8 @@ open Microsoft.Win32
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.PlatformUI
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Shell.Settings
 
 // An inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 
@@ -55,16 +57,14 @@ type DepthColorizerAdornment(view: IWpfTextView,
             | _ -> "Light"
 
         colors <-
-            let openKey key = 
-                protectOrDefault (fun _ -> Registry.CurrentUser.OpenSubKey key |> Option.ofNull) None
+            let openSubKey (root: RegistryKey) key = 
+                protectOrDefault (fun _ -> root.OpenSubKey key |> Option.ofNull) None
             
             protectOrDefault (fun _ ->
                 maybe { 
                     let themeString = themeToString currentTheme
-                    // NOTE: For some strange reason, the registry keys only work on VS 10.0, so we keep it.
-                    use! key = openKey (sprintf @"Software\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString)
-                               // I don't know if line below is needed actually, I don't really grok how Wow6432Node works
-                               |> Option.orElse (openKey (sprintf @"Software\Wow6432Node\Microsoft\VisualStudio\10.0\Text Editor\FSharpDepthColorizer\%s" themeString))
+                    let userSettingsKey = VSRegistry.RegistryRoot(Interop.__VsLocalRegistryType.RegType_UserSettings)
+                    use! key = openSubKey userSettingsKey (sprintf @"Text Editor\FSharpDepthColorizer\%s" themeString)
                     return [| for i in 0..9 do
                                   let s = key.GetValue(sprintf "Depth%d" i) :?> string
                                   yield match s.Split [| ',' |] |> Array.map byte with
@@ -72,30 +72,10 @@ type DepthColorizerAdornment(view: IWpfTextView,
                                         | _ -> failwith "Unhandled case" |]
                 }) None
             |> Option.getOrTry (fun _ ->
-                // Gets a set of default colors to use depending on whether a light or dark theme is being used
-                match currentTheme with
-                | VisualStudioTheme.Dark ->
-                    [| (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy)
-                       (70uy, 70uy, 70uy, 30uy, 30uy, 30uy) |]
-                | _ ->
-                    [| (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy)
-                       (225uy, 225uy, 225uy, 255uy, 255uy, 255uy) |])
+                // get the default colors based on the current theme and editor background
+                let _, background = themeManager.GetEditorTextColors("Plain Text")
+                let _, horizontalBar = themeManager.GetEditorTextColors("Indicator Margin")
+                Array.create 10 (horizontalBar.R, horizontalBar.G, horizontalBar.B, background.R, background.G, background.B))
     
         edgeColors <- colors |> Array.map (fun (r, g, b, _, _, _) -> Color.FromRgb(r, g, b))
         mainColors <- colors |> Array.map (fun (_, _, _, r, g, b) -> Color.FromRgb(r, g, b))
