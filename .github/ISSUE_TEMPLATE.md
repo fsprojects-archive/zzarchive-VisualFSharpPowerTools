@@ -25,6 +25,6 @@ Please provide a description of any known workarounds.
 ### Related information 
 
 * Operating system
-* Branch
-* .NET Runtime, CoreCLR or Mono Version
-* Performance information, links to performance testing scripts
+* Visual Studio version (include Updates 1, 2, etc.)
+* Other extensions installed in Visual Studio
+* Characteristics of your projects and solutions
