@@ -735,15 +735,15 @@ module Pervasive =
 module Dict = 
     open System.Collections.Generic
 
-    let add key value (dict: Dictionary<_,_>) =
+    let add key value (dict: #IDictionary<_,_>) =
         dict.[key] <- value
         dict
 
-    let remove (key: 'k) (dict: Dictionary<'k,_>) =
+    let remove (key: 'k) (dict: #IDictionary<'k,_>) =
         dict.Remove key |> ignore
         dict
 
-    let tryFind key (dict: Dictionary<'k, 'v>) = 
+    let tryFind key (dict: #IDictionary<'k, 'v>) = 
         let mutable value = Unchecked.defaultof<_>
         if dict.TryGetValue (key, &value) then Some value
         else None
