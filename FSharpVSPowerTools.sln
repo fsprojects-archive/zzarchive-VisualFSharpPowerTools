@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -35,7 +35,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\highlightusage.fsx = docs\content\highlightusage.fsx
 		docs\content\implementinterface.fsx = docs\content\implementinterface.fsx
 		docs\content\index.fsx = docs\content\index.fsx
-		docs\content\navbar.fsx = docs\content\navbar.fsx
 		docs\content\navigateto.fsx = docs\content\navigateto.fsx
 		docs\content\navigatetosource.fsx = docs\content\navigatetosource.fsx
 		docs\content\outlining.fsx = docs\content\outlining.fsx
@@ -115,16 +114,6 @@ Global
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|x86.ActiveCfg = Release|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Any CPU.Build.0 = Release|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{34D33ADF-B1EC-4227-B981-13C52F28D013}.Release|x86.ActiveCfg = Release|Any CPU
 		{C6800510-FCD0-4301-9890-36E41DFB29BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C6800510-FCD0-4301-9890-36E41DFB29BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6800510-FCD0-4301-9890-36E41DFB29BB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

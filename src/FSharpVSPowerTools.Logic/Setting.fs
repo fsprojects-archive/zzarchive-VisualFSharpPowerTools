@@ -3,7 +3,6 @@
 type IGeneralOptions =
     abstract XmlDocEnabled: bool with get, set
     abstract FormattingEnabled: bool with get, set
-    abstract NavBarEnabled: bool with get, set
     abstract HighlightUsageEnabled: bool with get, set
     abstract HighlightPrintfUsageEnabled: bool with get, set
     abstract RenameRefactoringEnabled: bool with get, set
