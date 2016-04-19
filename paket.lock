@@ -1,15 +1,10 @@
 NUGET
   remote: http://www.nuget.org/api/v2
   specs:
-    Dynamitey (1.0.2)
     Expression.Blend.Sdk (1.0.2)
     Fantomas (2.1)
       FSharp.Compiler.Service (>= 2.0.0.8)
     FSharp.Compiler.Service (2.0.0.8)
-    FSharp.Core (4.0.0.1)
-    FSharp.Interop.Dynamic (3.0)
-      Dynamitey (>= 1.0.2)
-      FSharp.Core (>= 3.1.2.1)
     FSharp.Management (0.3)
     FSharp.ViewModule.Core (0.9.9.1)
     FSharpLint.Core (0.0.16)

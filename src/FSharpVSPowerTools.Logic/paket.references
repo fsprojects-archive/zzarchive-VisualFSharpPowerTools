@@ -2,7 +2,6 @@ Expression.Blend.Sdk
 Fantomas
 FSharp.Compiler.Service
 FSharp.ViewModule.Core
-FSharp.Interop.Dynamic
 FsXaml.Wpf
 SourceLink.SymbolStore
 FSharpLint.Core
