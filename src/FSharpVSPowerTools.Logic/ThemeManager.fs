@@ -31,12 +31,15 @@ type ThemeManager [<ImportingConstructor>]
                (Guid("1ded0138-47ce-435e-84ef-9ec1f439b749"), VisualStudioTheme.Dark) ]
 
     let getThemeId() =
-        let themeService = serviceProvider.GetService(typeof<SVsColorThemeService>)
-        themeService?CurrentTheme?ThemeId: Guid
+        Option.attempt (fun _ -> 
+            let themeService = serviceProvider.GetService(typeof<SVsColorThemeService>)
+            themeService?CurrentTheme?ThemeId: Guid) 
+        |> Option.getOrElse Guid.Empty
 
     member __.GetCurrentTheme() =
         let themeGuid = getThemeId()
-        themes |> Dict.tryFind themeGuid
+        themes 
+        |> Dict.tryFind themeGuid
         |> Option.getOrTry (fun _ ->
             try 
                 let color = VSColorTheme.GetThemedColor EnvironmentColors.ToolWindowTextColorKey
@@ -56,4 +59,3 @@ type ThemeManager [<ImportingConstructor>]
         let foreColor = int selectedItem.Foreground |> System.Drawing.ColorTranslator.FromOle
         let backColor = int selectedItem.Background |> System.Drawing.ColorTranslator.FromOle
         (foreColor, backColor)
-
