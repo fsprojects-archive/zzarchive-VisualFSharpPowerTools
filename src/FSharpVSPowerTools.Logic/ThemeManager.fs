@@ -6,12 +6,12 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharp.Interop.Dynamic
 open System.Drawing
 open Microsoft.Win32
 open EnvDTE
 open Microsoft.VisualStudio.PlatformUI
 open System.Runtime.InteropServices
+open Reflection
 
 type VisualStudioTheme =
     | Unknown = 0
@@ -36,9 +36,7 @@ type ThemeManager [<ImportingConstructor>]
 
     member __.GetCurrentTheme() =
         let themeGuid = getThemeId()
-        match themes.TryGetValue(themeGuid) with
-        | true, t -> Some t
-        | _ -> None
+        themes |> Dict.tryFind themeGuid
         |> Option.getOrTry (fun _ ->
             try 
                 let color = VSColorTheme.GetThemedColor EnvironmentColors.ToolWindowTextColorKey
