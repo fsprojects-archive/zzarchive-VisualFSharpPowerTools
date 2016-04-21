@@ -38,6 +38,7 @@ namespace FSharpVSPowerTools
         private readonly IEditorOptionsFactoryService _editorOptionsFactory;
         private readonly ProjectFactory _projectFactory;
         private readonly ReferenceSourceProvider _referenceSourceProvider;
+        private readonly NavigateToMetadataService _navigationService;
         private readonly System.IServiceProvider _serviceProvider;
         private readonly SolutionEvents _solutionEvents;
 
@@ -50,6 +51,7 @@ namespace FSharpVSPowerTools
             IEditorOptionsFactoryService editorOptionsFactory,
             ITextDocumentFactoryService textDocumentFactoryService,
             [Import(typeof(DotNetReferenceSourceProvider))] ReferenceSourceProvider referenceSourceProvider,
+            NavigateToMetadataService navigationService,
             VSLanguageService languageService,
             ProjectFactory projectFactory)
         {
@@ -58,6 +60,7 @@ namespace FSharpVSPowerTools
             _editorOptionsFactory = editorOptionsFactory;
             _textDocumentFactoryService = textDocumentFactoryService;
             _referenceSourceProvider = referenceSourceProvider;
+            _navigationService = navigationService;
             _fsharpVsLanguageService = languageService;
             _projectFactory = projectFactory;
 
@@ -72,7 +75,7 @@ namespace FSharpVSPowerTools
 
         private void Cleanup()
         {
- 	        GoToDefinitionFilter.ClearXmlDocCache();
+            NavigateToMetadataService.ClearXmlDocCache();
         }
 
         public void VsTextViewCreated(IVsTextView textViewAdapter)
@@ -100,9 +103,9 @@ namespace FSharpVSPowerTools
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
-                var commandFilter = new GoToDefinitionFilter(doc, textView, _editorOptionsFactory,
-                                                             _fsharpVsLanguageService, _serviceProvider, _projectFactory,
-                                                             _referenceSourceProvider, preference, fireNavigationEvent);
+                var commandFilter = new GoToDefinitionFilter(doc, textView, _fsharpVsLanguageService,
+                                                             _serviceProvider, _projectFactory, _referenceSourceProvider,
+                                                             _navigationService, preference, fireNavigationEvent);
                 if (!_referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
                     _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);

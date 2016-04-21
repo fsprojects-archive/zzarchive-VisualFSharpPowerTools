@@ -19,7 +19,8 @@ type GoToDefinitionCommandHelper() =
                         languageService = base.VsLanguageService,
                         serviceProvider = base.ServiceProvider,
                         projectFactory = base.ProjectFactory,
-                        referenceSourceProvider = base.ReferenceSourceProvider)
+                        referenceSourceProvider = base.ReferenceSourceProvider,
+                        navigationService = Unchecked.defaultof<_>)
 
     member __.GetCommandFilter(wpfTextView) =
         command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)
