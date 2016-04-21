@@ -51,7 +51,7 @@ namespace FSharpVSPowerTools
             IEditorOptionsFactoryService editorOptionsFactory,
             ITextDocumentFactoryService textDocumentFactoryService,
             [Import(typeof(DotNetReferenceSourceProvider))] ReferenceSourceProvider referenceSourceProvider,
-            NavigateToMetadataService navigationService,
+            NavigateToMetadataService metadataService,
             VSLanguageService languageService,
             ProjectFactory projectFactory)
         {
@@ -60,7 +60,7 @@ namespace FSharpVSPowerTools
             _editorOptionsFactory = editorOptionsFactory;
             _textDocumentFactoryService = textDocumentFactoryService;
             _referenceSourceProvider = referenceSourceProvider;
-            _navigationService = navigationService;
+            _navigationService = metadataService;
             _fsharpVsLanguageService = languageService;
             _projectFactory = projectFactory;
 
@@ -88,8 +88,7 @@ namespace FSharpVSPowerTools
         internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent)
         {
             var textViewAdapter = _editorFactory.GetViewAdapter(textView);
-            if (textViewAdapter == null) return null;
-            return Register(textViewAdapter, textView, fireNavigationEvent);
+            return textViewAdapter == null ? null : Register(textViewAdapter, textView, fireNavigationEvent);
         }
 
         private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)

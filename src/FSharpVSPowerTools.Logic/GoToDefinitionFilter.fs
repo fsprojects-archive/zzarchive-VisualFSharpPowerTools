@@ -41,7 +41,7 @@ type GoToDefinitionFilter
         serviceProvider: System.IServiceProvider,                          
         projectFactory: ProjectFactory,
         referenceSourceProvider: ReferenceSourceProvider,
-        navigationService: NavigateToMetadataService,
+        metadataService: NavigateToMetadataService,
         navigationPreference: NavigationPreference,
         fireNavigationEvent: bool
     ) =
@@ -207,7 +207,7 @@ type GoToDefinitionFilter
                     match navigationPreference with
                     | NavigationPreference.Metadata ->
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
-                            return! navigationService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+                            return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
                     | NavigationPreference.SymbolSourceOrMetadata
                     | NavigationPreference.SymbolSource as pref ->   
                         let symbol = fsSymbolUse.Symbol
@@ -231,7 +231,7 @@ type GoToDefinitionFilter
                                 match pref with
                                 | NavigationPreference.SymbolSourceOrMetadata ->
                                     if shouldGenerateDefinition symbol then
-                                        return! navigationService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+                                        return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
                                 | _ ->
                                     let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
                                     statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
