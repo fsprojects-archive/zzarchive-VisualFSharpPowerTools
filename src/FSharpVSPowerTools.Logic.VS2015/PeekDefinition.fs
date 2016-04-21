@@ -16,7 +16,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open EnvDTE
 open Microsoft.VisualStudio.Text.Editor
 
-type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, peekResultFactory: IPeekResultFactory) =
+type internal DefinitionPeekableItem(peekResultFactory: IPeekResultFactory, span: SnapshotSpan, range: Range.range, isReadOnly) =
     interface IPeekableItem with
         member __.DisplayName = null
         member __.Relationships = seq [PredefinedPeekRelationships.Definitions]
@@ -29,7 +29,7 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
                         let label = sprintf "%s - (%d, %d)" filePath range.StartLine range.StartColumn
                         let displayInfo = 
                             new PeekResultDisplayInfo(label = label, labelTooltip = box filePath, title = fileName, 
-                                                        titleTooltip = filePath)
+                                                      titleTooltip = filePath)
                         
                         let result =
                             peekResultFactory.Create(
@@ -41,7 +41,7 @@ type internal DefinitionPeekableItem(span: SnapshotSpan, range: Range.range, pee
                                                 range.EndColumn,
                                                 span.StartLine.LineNumber,
                                                 span.StartColumn,
-                                                false)
+                                                isReadOnly)
 
                         resultCollection.Add result
             }
@@ -75,13 +75,12 @@ type PeekableItemSource
                     let start = span.Start
                     let lineStr = start.GetContainingLine().GetText()
                     let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
-                    
                     match findDeclResult with
                     | FSharpFindDeclResult.DeclFound range -> 
-                        return Some (span, range)
+                        return Some (span, range, false)
                     | FSharpFindDeclResult.DeclNotFound _ ->
                         let! range = metadataService.TryFindMetadataRange(project, textBuffer, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
-                        return range |> Option.map (fun r -> span, r)
+                        return range |> Option.map (fun r -> span, r, true)
                 | _ -> return None
             | _ -> return None
         }
@@ -92,8 +91,8 @@ type PeekableItemSource
                 do! if String.Equals(session.RelationshipName, PredefinedPeekRelationships.Definitions.Name, 
                                      StringComparison.OrdinalIgnoreCase) then Some() else None
                 let! triggerPoint = session.GetTriggerPoint(textBuffer.CurrentSnapshot) |> Option.ofNullable
-                let! symbolSpan, definitionRange = getDefinitionRange triggerPoint
-                peekableItems.Add (DefinitionPeekableItem(symbolSpan, definitionRange, peekResultFactory))
+                let! symbolSpan, definitionRange, isReadOnly = getDefinitionRange triggerPoint
+                peekableItems.Add (DefinitionPeekableItem(peekResultFactory, symbolSpan, definitionRange, isReadOnly))
             } |> Async.RunSynchronously |> ignore
 
         member __.Dispose() = ()
