@@ -98,12 +98,12 @@ type ProjectFactory
             debug "[ProjectFactory] Subscribed for ProjectItemsEvents"
         | _ -> fail "[ProjectFactory] Cannot subscribe for ProjectItemsEvents"
 
-    member __.RegisterSignatureProjectProvider(filePath: string, project: IProjectProvider) =
+    member __.RegisterSignatureProjectProvider (filePath: string) (signature: string, project) =
         // We have to keep the project provider even the buffer has been close.
         // If the buffer is reopened via Navigate Backward, we still have to colorize the text.
         // The project provider will be discard once the solution is closed.
         let signatureProject = SignatureProjectProvider(filePath, project) :> IProjectProvider
-        signatureProjectData.[filePath] <- signatureProject
+        signatureProjectData.[filePath] <- (signature, signatureProject)
         signatureProject
 
     member __.TryGetSignatureProjectProvider(filePath: string) =
@@ -148,7 +148,7 @@ type ProjectFactory
                     return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                 elif isSignatureFile filePath then
                     match signatureProjectData.TryGetValue(filePath) with
-                    | true, project -> return project
+                    | true, (_, project) -> return project
                     | _ -> return! None
                 else return! None
             else return! None

@@ -92,7 +92,7 @@ type NavigateToMetadataService [<ImportingConstructor>]
         | None -> []
 
     // Keep a single window frame for all text views
-    static let mutable currentWindow: (IVsWindowFrame * string) option = None 
+    static let mutable currentWindow: IVsWindowFrame option = None 
 
     let tryFindExactLocation signature filePath signatureProject currentSymbol =
         async {
@@ -169,10 +169,9 @@ type NavigateToMetadataService [<ImportingConstructor>]
 
     // Now the input is an entity or a member/value.
     // We always generate the full enclosing entity signature if the symbol is a member/value
-    let tryCreateMetadataContext(project, textBuffer, ast, span: SnapshotSpan, fsSymbolUse: FSharpSymbolUse) = 
+    let tryCreateMetadataContext project textBuffer ast (span: SnapshotSpan) (fsSymbolUse: FSharpSymbolUse) = 
         async {
             let fsSymbol = fsSymbolUse.Symbol
-            let displayContext = fsSymbolUse.DisplayContext
             let fileName = SignatureGenerator.getFileNameFromSymbol fsSymbol
 
             // The file system is case-insensitive so list.fsi and List.fsi can clash
@@ -182,20 +181,17 @@ type NavigateToMetadataService [<ImportingConstructor>]
             let filePath = Path.Combine(Path.GetTempPath(), subFolder, fileName)
             let editorOptions = editorOptionsFactory.GetOptions(textBuffer)
             let indentSize = editorOptions.GetOptionValue((IndentSize()).Key)  
+            let displayContext = fsSymbolUse.DisplayContext
             match VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Constants.guidLogicalTextView) with
-            | true, _hierarchy, _itemId, windowFrame ->
-                let vsTextView = VsShellUtilities.GetTextView(windowFrame)
-                let mutable vsTextLines = Unchecked.defaultof<_>
-                vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
-                let vsTextBuffer = vsTextLines :> IVsTextBuffer                
-                match currentWindow, projectFactory.TryGetSignatureProjectProvider(filePath) with
-                | Some (_, signature), Some signatureProject ->
+            | true, _hierarchy, _itemId, _windowFrame ->
+                match projectFactory.TryGetSignatureProjectProvider(filePath) with
+                | Some (signature, signatureProject) ->
                     let! range = tryFindExactLocation signature filePath signatureProject fsSymbol
-                    return Some (windowFrame, vsTextBuffer, range)
-                | _ -> 
+                    return Some (filePath, range)
+                | None -> 
                     Logging.logInfo (fun _ -> sprintf "Can't find a signature or signature project for '%s'" filePath)               
-                    return Some (windowFrame, vsTextBuffer, None)
-            | _ ->
+                    return None
+            | false, _, _, _ ->
                 let (startLine, startCol, _, _) = span.ToRange()
                 let pos = mkPos (startLine+1) startCol
                 let openDeclarations = 
@@ -209,72 +205,94 @@ type NavigateToMetadataService [<ImportingConstructor>]
                     let directoryPath = Path.GetDirectoryName(filePath)
                     Directory.CreateDirectory(directoryPath) |> ignore
                     File.WriteAllText(filePath, signature)
-                    let mutable hierarchy = Unchecked.defaultof<_>
-                    let mutable itemId = Unchecked.defaultof<_>
-                    let windowFrame = ref null
-                    let canShow = 
-                        try
-                            VsShellUtilities.OpenDocument(
-                                serviceProvider, 
-                                filePath, 
-                                Constants.guidLogicalTextView, 
-                                &hierarchy,
-                                &itemId,
-                                windowFrame)
-                            true
-                        with _ -> false
-                    if canShow then
-                        // Ensure that only one signature is opened at a time
-                        currentWindow 
-                        |> Option.bind (fun (window, _) -> Option.ofNull window)
-                        |> Option.iter (fun window -> window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
-                        // Prevent the window being reopened as a part of a solution
-                        (!windowFrame).SetProperty(int __VSFPROPID5.VSFPROPID_DontAutoOpen, true) |> ignore
-                        currentWindow <- Some (!windowFrame, signature)
-                        let vsTextView = VsShellUtilities.GetTextView(!windowFrame)
-                        let mutable vsTextLines = Unchecked.defaultof<_>
-                        vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
-                        let vsTextBuffer = vsTextLines :> IVsTextBuffer
-                        match vsTextBuffer.GetStateFlags() with
-                        | VSConstants.S_OK, currentFlags ->
-                            // Try to set buffer to read-only mode
-                            vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
-                        | _ -> ()
-                        let signatureProject = projectFactory.RegisterSignatureProjectProvider(filePath, project)
-                        let! range = tryFindExactLocation signature filePath signatureProject fsSymbol
-                        return Some (!windowFrame, vsTextBuffer, range)
-                    else
-                        return None
+                    let signatureProject = projectFactory.RegisterSignatureProjectProvider filePath (signature, project)
+                    let! range = tryFindExactLocation signature filePath signatureProject fsSymbol
+                    return Some (filePath, range)
                 | None ->
                     return None
         }
 
     let viewMetadata context = 
         match context with
-        | Some (windowFrame: IVsWindowFrame, vsTextBuffer: IVsTextBuffer, range: range option) ->
-            let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
-            range
-            |> Option.iter (fun r -> 
-                let (startRow, startCol) = (r.StartLine-1, r.StartColumn)
-                vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, startRow, startCol) 
-                |> ensureSucceeded)
-            // We display the window after putting the project into the project system.
-            // Hopefully syntax coloring on generated signatures will catch up on time.
-            windowFrame.Show() |> ensureSucceeded
+        | Some (filePath, range: range option) ->
+            match projectFactory.TryGetSignatureProjectProvider(filePath) with
+            | Some (signature, _signatureProject) -> 
+                let frameAndBuffer =  
+                    match VsShellUtilities.IsDocumentOpen(serviceProvider, filePath, Constants.guidLogicalTextView) with
+                    | true, _hierarchy, _itemId, windowFrame ->
+                        let vsTextView = VsShellUtilities.GetTextView(windowFrame)
+                        let mutable vsTextLines = Unchecked.defaultof<_>
+                        vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
+                        let vsTextBuffer = vsTextLines :> IVsTextBuffer         
+                        Some (windowFrame, vsTextBuffer)
+                    | false, _, _, _ ->
+                            let directoryPath = Path.GetDirectoryName(filePath)
+                            Directory.CreateDirectory(directoryPath) |> ignore
+                            File.WriteAllText(filePath, signature)
+                            let mutable hierarchy = Unchecked.defaultof<_>
+                            let mutable itemId = Unchecked.defaultof<_>
+                            let windowFrame = ref null
+                            let canShow = 
+                                try
+                                    VsShellUtilities.OpenDocument(
+                                        serviceProvider, 
+                                        filePath, 
+                                        Constants.guidLogicalTextView, 
+                                        &hierarchy,
+                                        &itemId,
+                                        windowFrame)
+                                    true
+                                with _ -> false
+                            if canShow then
+                                // Ensure that only one signature is opened at a time
+                                currentWindow 
+                                |> Option.bind Option.ofNull
+                                |> Option.iter (fun window -> window.CloseFrame(uint32 __FRAMECLOSE.FRAMECLOSE_NoSave) |> ignore)
+                                // Prevent the window being reopened as a part of a solution
+                                (!windowFrame).SetProperty(int __VSFPROPID5.VSFPROPID_DontAutoOpen, true) |> ignore
+                                currentWindow <- Some !windowFrame
+                                let vsTextView = VsShellUtilities.GetTextView(!windowFrame)
+                                let mutable vsTextLines = Unchecked.defaultof<_>
+                                vsTextView.GetBuffer(&vsTextLines) |> ensureSucceeded
+                                let vsTextBuffer = vsTextLines :> IVsTextBuffer
+                                match vsTextBuffer.GetStateFlags() with
+                                | VSConstants.S_OK, currentFlags ->
+                                    // Try to set buffer to read-only mode
+                                    vsTextBuffer.SetStateFlags(currentFlags ||| uint32 BUFFERSTATEFLAGS.BSF_USER_READONLY) |> ignore
+                                | _ -> ()
+                                Some (!windowFrame, vsTextBuffer)
+                            else
+                                None
+                frameAndBuffer
+                |> Option.iter (fun (windowFrame, vsTextBuffer) ->         
+                    let vsTextManager = serviceProvider.GetService<IVsTextManager, SVsTextManager>()
+                    let (startRow, startCol) = 
+                        range 
+                        |> Option.map (fun r -> r.StartLine-1, r.StartColumn)
+                        |> Option.getOrElse (0, 0)
+                    vsTextManager.NavigateToLineAndColumn(vsTextBuffer, ref Constants.guidLogicalTextView, startRow, startCol, startRow, startCol) 
+                    |> ensureSucceeded
+                    // We display the window after putting the project into the project system.
+                    // Hopefully syntax coloring on generated signatures will catch up on time.
+                    windowFrame.Show() |> ensureSucceeded)
+            | None -> ()
         | None ->
-            let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-            statusBar.SetText(Resource.goToDefinitionInvalidSymbolMessage) |> ignore  
+            ()
 
     member __.NavigateToMetadata(project, textBuffer, ast, span, fsSymbolUse) = 
         async {
-            let! context = tryCreateMetadataContext(project, textBuffer, ast, span, fsSymbolUse)
+            let! context = tryCreateMetadataContext project textBuffer ast span fsSymbolUse
             return viewMetadata context
         }
         
     member __.TryFindMetadataRange(project, textBuffer, ast, span, fsSymbolUse) = 
         async {
-            let! result = tryCreateMetadataContext(project, textBuffer, ast, span, fsSymbolUse)
-            return Option.bind (fun (_, _, x) -> x) result 
+            let! context = tryCreateMetadataContext project textBuffer ast span fsSymbolUse
+            return 
+                context
+                |> Option.map (fun (filePath, range) -> 
+                    let zeroPos = mkPos 1 0
+                    range |> Option.getOrTry (fun _ -> mkRange filePath zeroPos zeroPos)) 
         }
 
     static member ClearXmlDocCache() =
