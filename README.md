@@ -26,7 +26,6 @@ Alternatively, one can build [vs2012 branch](https://github.com/fsprojects/Visua
 ### Currently supported features
  - Auto-generating XmlDoc (via [F# XmlDoc extension](http://lorgonblog.wordpress.com/2010/12/04/source-code-for-f-xmldoc-extension/))
  - Formatting document / Formatting selection (via [Fantomas extension](https://github.com/dungpa/fantomas))
- - Navigation bar (see [this article](http://tomasp.net/blog/regions-navigation.aspx/))
  - Highlight references
  - Rename refactoring
  - Depth colorizer

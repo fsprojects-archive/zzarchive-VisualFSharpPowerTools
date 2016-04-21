@@ -25,6 +25,6 @@ Please provide a description of any known workarounds.
 ### Related information 
 
 * Operating system
+* Extension version (e.g. 2.3.0)
 * Visual Studio version (include Updates 1, 2, etc.)
 * Other extensions installed in Visual Studio
-* Characteristics of your projects and solutions
