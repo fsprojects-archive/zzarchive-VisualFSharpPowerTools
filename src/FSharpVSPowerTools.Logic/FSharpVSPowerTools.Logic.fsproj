@@ -139,6 +139,9 @@
     <Compile Include="ReferenceSourceProvider.fs">
       <Link>Navigation/ReferenceSourceProvider.fs</Link>
     </Compile>
+    <Compile Include="NavigateToMetadataService.fs">
+      <Link>Navigation/NavigateToMetadataService.fs</Link>
+    </Compile>
     <Compile Include="GoToDefinitionFilter.fs">
       <Link>Navigation/GoToDefinitionFilter.fs</Link>
     </Compile>

@@ -77,14 +77,12 @@ type UnusedSymbolClassifier
     let includeUnusedOpens() =
         includeUnusedOpens
         // Don't check for unused opens on generated signatures
-        && not (isSignatureExtension(Path.GetExtension doc.FilePath) 
-        && isCurrentProjectForStandaloneScript())
+        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript())
 
     let includeUnusedReferences() =
         includeUnusedReferences
         // Don't check for unused declarations on generated signatures
-        && not (isSignatureExtension(Path.GetExtension doc.FilePath)
-        && isCurrentProjectForStandaloneScript())
+        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript())
 
     let getCurrentSnapshot() =
         maybe {
@@ -282,7 +280,7 @@ type UnusedSymbolClassifier
             getClassificationSpans spans targetSnapshotSpan classificationRegistry
         | State.NoData ->
             // Only schedule an update on signature files
-            if isSignatureExtension (Path.GetExtension doc.FilePath) then
+            if isSignatureFile doc.FilePath then
                 // If not yet schedule an action, do it now.
                 onBufferChanged false (CallInUIContext.FromCurrentThread()) |> Async.StartInThreadPoolSafe
             [||]
