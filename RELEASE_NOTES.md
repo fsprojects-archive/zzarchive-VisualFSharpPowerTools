@@ -2,6 +2,7 @@
 * Enable peek definition for standalone F# files [#1329](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1329)
 * Optimize on caret move [#1349](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1349)
 * Remove dependencies on Visual F# Tools [#1355](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1355)
+* Remove Navigation Bar setting [#1364](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1364)
 * View metadata when Peek Definitions on external assemblies [#1369](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1369)
 
 #### 2.3.0 - January 4 2016
