@@ -53,28 +53,52 @@
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '104', 104)" onmouseover="showTip(event, '104', 104)">
-            getCategoriesAndLocations (...)
+          <code onmouseout="hideTip(event, '111', 111)" onmouseover="showTip(event, '111', 111)">
+            getCategorizedSpans (...)
           </code>
-          <div class="tip" id="104">
-            <strong>Signature:</strong> (allSymbolsUses:SymbolUse [] * checkResults:ParseAndCheckResults * lexer:LexerBase * getTextLine:(int -&gt; string) * openDeclarations:OpenDeclaration list * allEntities:Dictionary&lt;string,Idents list&gt; option) -&gt; CategorizedColumnSpan&lt;&#39;?24244&gt; []<br />
-                          <strong>Type parameters:</strong> '?24244          </div>
+          <div class="tip" id="111">
+            <strong>Signature:</strong> (allSymbolsUses:SymbolUse [] * checkResults:ParseAndCheckResults * lexer:LexerBase * getTextLine:(int -&gt; string)) -&gt; CategorizedColumnSpan&lt;&#39;?24140&gt; []<br />
+                          <strong>Type parameters:</strong> '?24140          </div>
         </td>
         <td class="xmldoc">
-            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs#L216-216" class="github-link">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs#L300-300" class="github-link">
               <img src="../content/img/github.png" class="normal" />
               <img src="../content/img/github-blue.png" class="hover" />
             </a>
-          
+          <p>Returns <code>CategorizedColumnSpan</code>s for all symbols, except unused ones.</p>
+
+
+
         </td>
       </tr>
       <tr>
         <td class="member-name">
 
-          <code onmouseout="hideTip(event, '105', 105)" onmouseover="showTip(event, '105', 105)">
+          <code onmouseout="hideTip(event, '112', 112)" onmouseover="showTip(event, '112', 112)">
+            getCategorizedSpansForUnusedSymbols (...)
+          </code>
+          <div class="tip" id="112">
+            <strong>Signature:</strong> (allSymbolsUses:SymbolUse [] * checkResults:ParseAndCheckResults * lexer:LexerBase * openDeclarations:OpenDeclaration list * allEntities:Dictionary&lt;string,Idents list&gt; option) -&gt; CategorizedColumnSpan&lt;&#39;?24142&gt; []<br />
+                          <strong>Type parameters:</strong> '?24142          </div>
+        </td>
+        <td class="xmldoc">
+            <a href="http://github.com/fsprojects/VisualFSharpPowerTools/tree/master/src/FSharpVSPowerTools.Core/SourceCodeClassifier.fs#L339-339" class="github-link">
+              <img src="../content/img/github.png" class="normal" />
+              <img src="../content/img/github-blue.png" class="hover" />
+            </a>
+          <p>Returns <code>CategorizedColumnSpan</code>s for unused declarations and unused open statements.</p>
+
+
+
+        </td>
+      </tr>
+      <tr>
+        <td class="member-name">
+
+          <code onmouseout="hideTip(event, '113', 113)" onmouseover="showTip(event, '113', 113)">
             getIdentifierCategory _arg1
           </code>
-          <div class="tip" id="105">
+          <div class="tip" id="113">
             <strong>Signature:</strong> _arg1:FSharpSymbol -&gt; Category<br />
                       </div>
         </td>
@@ -109,7 +133,6 @@
                 <li class="nav-header">Supported Features</li>
                 <li><a href="./../xmldoc.html">Auto-generating XmlDoc</a></li>
                 <li><a href="./../codeformatting.html">Source code formatting</a></li>
-                <li><a href="./../navbar.html">Navigation bar</a></li>
                 <li><a href="./../highlightusage.html">Highlight references</a></li>
                 <li><a href="./../rename.html">Rename refactoring</a></li>
                 <li><a href="./../depthcolorizer.html">Depth colorizer</a></li>
