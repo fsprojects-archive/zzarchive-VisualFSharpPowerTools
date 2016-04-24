@@ -1,4 +1,4 @@
-#### 2.4.0 - Unreleased
+#### 2.4.0 - April 24 2016
 * Enable peek definition for standalone F# files [#1329](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1329)
 * Optimize on caret move [#1349](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1349)
 * Remove dependencies on Visual F# Tools [#1355](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1355)
