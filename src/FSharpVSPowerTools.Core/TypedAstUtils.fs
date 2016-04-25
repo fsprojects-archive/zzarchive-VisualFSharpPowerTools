@@ -299,13 +299,13 @@ module TypedAstPatterns =
 module UnusedDeclarations =
     open System.Collections.Generic
 
-    let symbolsComparer =
+    let symbolUseComparer =
         { new IEqualityComparer<FSharpSymbolUse> with
               member __.Equals (x, y) = x.Symbol.IsEffectivelySameAs y.Symbol
               member __.GetHashCode x = x.Symbol.GetHashCode() }
 
     let getSingleDeclarations (symbolsUses: SymbolUse[]): FSharpSymbol[] =
-        let symbols = Dictionary<FSharpSymbolUse, int>(symbolsComparer)
+        let symbols = Dictionary<FSharpSymbolUse, int>(symbolUseComparer)
     
         for symbolUse in symbolsUses do
             match symbols.TryGetValue symbolUse.SymbolUse with
