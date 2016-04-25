@@ -300,27 +300,31 @@ module UnusedDeclarations =
     open System.Collections.Generic
 
     let symbolsComparer =
-        { new IEqualityComparer<FSharpSymbol> with
-              member __.Equals (x, y) = x.IsEffectivelySameAs y
-              member __.GetHashCode x = x.GetHashCode() }
+        { new IEqualityComparer<FSharpSymbolUse> with
+              member __.Equals (x, y) = x.Symbol.IsEffectivelySameAs y.Symbol
+              member __.GetHashCode x = x.Symbol.GetHashCode() }
 
     let getSingleDeclarations (symbolsUses: SymbolUse[]): FSharpSymbol[] =
-        symbolsUses
-        |> Seq.groupBy (fun x -> x.SymbolUse.Symbol)
-        |> Seq.choose (fun (symbol, uses) ->
-            match symbol with
-            | UnionCase _ when isSymbolLocalForProject symbol -> Some symbol
+        let symbols = Dictionary<FSharpSymbolUse, int>(symbolsComparer)
+    
+        for symbolUse in symbolsUses do
+            match symbols.TryGetValue symbolUse.SymbolUse with
+            | true, count -> symbols.[symbolUse.SymbolUse] <- count + 1
+            | _ -> symbols.[symbolUse.SymbolUse] <- 1
+
+        symbols
+        |> Seq.choose (fun (KeyValue(symbolUse, count)) ->
+            match symbolUse.Symbol with
+            | UnionCase _ when isSymbolLocalForProject symbolUse.Symbol -> Some symbolUse.Symbol
             // Determining that a record, DU or module is used anywhere requires
             // inspecting all their enclosed entities (fields, cases and func / vals)
             // for usefulness, which is too expensive to do. Hence we never gray them out.
             | Entity ((Record | UnionType | Interface | FSharpModule), _, _ | Class) -> None
-            // FCS returns inconsistent results for override members; we're going to skip these symbols.
+            // FCS returns inconsistent results for override members; we're skipping these symbols.
             | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
             // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
             | Parameter -> None
-            | _ ->
-                match List.ofSeq uses with
-                | [symbolUse] when symbolUse.SymbolUse.IsFromDefinition && isSymbolLocalForProject symbol ->
-                    Some symbol 
+            | _ when count = 1 && symbolUse.IsFromDefinition && isSymbolLocalForProject symbolUse.Symbol ->
+                    Some symbolUse.Symbol
                 | _ -> None)
         |> Seq.toArray

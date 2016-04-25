@@ -17,7 +17,7 @@ type internal CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSn
         snapshotSpan.Swap (fun oldSpan ->
             oldSpan
             |> Option.orTry (fun _ -> 
-                fromRange originalSnapshot (columnSpan.WordSpan.ToRange())
+                fromRange originalSnapshot columnSpan.WordSpan.Range.Value
                 |> Option.map (fun span -> 
                     { Span = span
                       Line = span.Start.GetContainingLine().LineNumber }))

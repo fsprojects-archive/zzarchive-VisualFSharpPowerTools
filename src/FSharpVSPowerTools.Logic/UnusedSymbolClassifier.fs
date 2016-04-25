@@ -114,17 +114,17 @@ type UnusedSymbolClassifier
             
             let! openDeclarations = OpenDeclarationGetter.getOpenDeclarations ast entities qualifyOpenDeclarations
             return
-                (entities
-                 |> Option.map (fun entities ->
-                     entities
-                     |> Seq.groupBy (fun e -> e.FullName)
-                     |> Seq.map (fun (fullName, entities) -> 
-                          fullName,
-                          entities
-                          |> Seq.map (fun e -> e.CleanedIdents) 
-                          |> Seq.toList)
-                     |> Dict.ofSeq),
-                openDeclarations)
+                entities
+                |> Option.map (fun entities ->
+                    entities
+                    |> Seq.groupBy (fun e -> e.FullName)
+                    |> Seq.map (fun (fullName, entities) -> 
+                         fullName,
+                         entities
+                         |> Seq.map (fun e -> e.CleanedIdents) 
+                         |> Seq.toList)
+                    |> Dict.ofSeq),
+                openDeclarations
         }
 
     let checkAstIsNotEmpty (ast: ParsedInput) =
@@ -265,7 +265,7 @@ type UnusedSymbolClassifier
 
                 match projects |> List.tryFind (fun p -> not p.Checked) with
                 | Some { Options = opts } ->
-                    // there is at least one yet unchecked project, start compilation on it
+                    // there is at least one yet unchecked project, start compiling it
                     vsLanguageService.CheckProjectInBackground opts
                 | None ->
                     // all the needed projects have been checked in background, let's calculate unused symbols
@@ -300,7 +300,7 @@ type UnusedSymbolClassifier
                 |> Option.map (fun data ->
                     data.Spans.Spans
                     |> Array.choose (fun wordSpan ->
-                        fromRange data.Snapshot (wordSpan.ColumnSpan.WordSpan.ToRange())
+                        fromRange data.Snapshot wordSpan.ColumnSpan.WordSpan.Range.Value
                         |> Option.map (fun span -> TagSpan(span, UnusedDeclarationTag()) :> ITagSpan<_>)))
                 |> Option.getOrElse [||]
 

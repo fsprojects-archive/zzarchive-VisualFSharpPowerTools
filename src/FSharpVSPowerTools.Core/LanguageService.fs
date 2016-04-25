@@ -121,7 +121,7 @@ type WordSpan =
           Line = r.StartLine
           StartCol = r.StartColumn 
           EndCol = r.EndColumn }
-    member x.ToRange() = x.Line, x.StartCol, x.Line, x.EndCol
+    member x.Range = lazy (x.Line, x.StartCol, x.Line, x.EndCol)
 
 [<AbstractClass>]
 type LexerBase() = 
