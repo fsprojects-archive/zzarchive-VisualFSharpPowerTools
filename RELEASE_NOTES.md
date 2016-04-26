@@ -1,4 +1,5 @@
-#### 2.5.0 - Unreleased
+#### 2.4.1 - April 26 2016
+* Fix unused declarations highlighting
 
 #### 2.4.0 - April 24 2016
 * Enable peek definition for standalone F# files [#1329](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1329)
