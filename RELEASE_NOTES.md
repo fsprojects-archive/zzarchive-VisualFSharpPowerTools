@@ -1,3 +1,5 @@
+#### 2.5.0 - Unreleased
+
 #### 2.4.1 - April 26 2016
 * Fix unused declarations highlighting
 
