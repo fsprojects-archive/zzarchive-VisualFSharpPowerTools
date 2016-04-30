@@ -18,7 +18,7 @@ type private DocumentState =
       File: string
       Project: IProjectProvider }
 
-type RenameCommandFilter(textDocument: ITextDocument,
+type RenameCommandFilter(doc: ITextDocument,
                          view: IWpfTextView, 
                          vsLanguageService: VSLanguageService, 
                          serviceProvider: System.IServiceProvider,
@@ -26,14 +26,14 @@ type RenameCommandFilter(textDocument: ITextDocument,
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
     let dte = serviceProvider.GetDte()
-    let project = lazy (projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer doc.FilePath
 
     let canRename() = 
         state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetCurrentDocument(textDocument.FilePath)
-                let! project = project.Value
+                let! doc = dte.GetCurrentDocument(doc.FilePath)
+                let! project = project()
                 return { Word = vsLanguageService.GetSymbol(caretPos, doc.FullName, project); File = doc.FullName; Project = project }
             }
         state |> Option.bind (fun s -> s.Word) |> Option.isSome

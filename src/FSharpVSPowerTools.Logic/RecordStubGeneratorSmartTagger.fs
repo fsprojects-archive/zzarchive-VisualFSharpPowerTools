@@ -17,7 +17,7 @@ type RecordStubGeneratorSmartTag(actionSets) =
 
 type RecordStubGenerator
     (
-        textDocument: ITextDocument,
+        doc: ITextDocument,
         view: ITextView,
         textUndoHistory: ITextUndoHistory,
         vsLanguageService: VSLanguageService,
@@ -63,7 +63,7 @@ type RecordStubGenerator
                   member __.Text = Resource.recordGenerationCommandName }
         ]
 
-    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     // Try to:
     // - Identify record expression binding
@@ -75,8 +75,8 @@ type RecordStubGenerator
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! project = project.Value
-                    let! word, _ = vsLanguageService.GetSymbol (point, textDocument.FilePath, project) 
+                    let! project = project()
+                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FilePath, project) 
                     
                     do! match currentWord with
                         | None -> Some()
@@ -86,8 +86,8 @@ type RecordStubGenerator
 
                     currentWord <- Some word
                     suggestions <- []
-                    let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
-                    let vsDocument = VSDocument(source, textDocument.FilePath, point.Snapshot)
+                    let! source = openDocumentTracker.TryGetDocumentText doc.FilePath
+                    let vsDocument = VSDocument(source, doc.FilePath, point.Snapshot)
                     let! symbolRange, recordExpression, recordDefinition, insertionPos =
                         tryFindRecordDefinitionFromPos codeGenService project point vsDocument
                     // Recheck cursor position to ensure it's still in new word

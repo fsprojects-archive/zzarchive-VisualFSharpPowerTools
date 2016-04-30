@@ -35,7 +35,7 @@ type internal UrlChangeEventArgs(url: string) =
 
 type GoToDefinitionFilter
     (
-        textDocument: ITextDocument,
+        doc: ITextDocument,
         view: IWpfTextView, 
         vsLanguageService: VSLanguageService, 
         serviceProvider: System.IServiceProvider,                          
@@ -51,19 +51,19 @@ type GoToDefinitionFilter
 
     let dte = serviceProvider.GetDte()
     let textBuffer = view.TextBuffer
-    let project = lazy (projectFactory.CreateForDocument textBuffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer doc.FilePath
 
     let getDocumentState () =
         async {
             let projectItems = maybe {
-                let! project = project.Value
+                let! project = project()
                 let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, textDocument.FilePath, project)
+                let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FilePath, project)
                 return project, span, symbol }
 
             match projectItems with
             | Some (project, span, symbol) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, textDocument.FilePath, project, AllowStaleResults.MatchingSource)
+                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, doc.FilePath, project, AllowStaleResults.MatchingSource)
                 match symbolUse with
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let lineStr = span.Start.GetContainingLine().GetText()
@@ -191,8 +191,8 @@ type GoToDefinitionFilter
                     // no FSharpSymbol found, here we look at #load directive
                     let! directive = 
                         asyncMaybe {
-                            let! project = project.Value
-                            return! vsLanguageService.GetLoadDirectiveFileNameAtCursor(textDocument.FilePath, view, project)
+                            let! project = project()
+                            return! vsLanguageService.GetLoadDirectiveFileNameAtCursor(doc.FilePath, view, project)
                         }
                     match directive with
                     | Some fileToOpen ->

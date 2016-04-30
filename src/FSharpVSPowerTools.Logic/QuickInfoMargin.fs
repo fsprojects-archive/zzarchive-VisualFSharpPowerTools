@@ -22,7 +22,7 @@ type QuickInfoViewModel() as self =
 
 type QuickInfoMargin 
     (
-        textDocument: ITextDocument,
+        doc: ITextDocument,
         view: ITextView,
         vsLanguageService: VSLanguageService,
         projectFactory: ProjectFactory
@@ -95,7 +95,7 @@ type QuickInfoMargin
         | Some '.' -> flatstr
         | Some _ -> flatstr + "."
 
-    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -105,16 +105,16 @@ type QuickInfoMargin
             | Some point, _ ->
                 let! res = 
                     asyncMaybe {
-                        let! project = project.Value
+                        let! project = project()
                         let! tooltip, newWord =
                             asyncMaybe {
-                                let! newWord, longIdent = vsLanguageService.GetSymbol (point, textDocument.FilePath, project)
+                                let! newWord, longIdent = vsLanguageService.GetSymbol (point, doc.FilePath, project)
                                 let lineStr = point.GetContainingLine().GetText()
                                 let idents = String.split StringSplitOptions.None [|"."|] longIdent.Text |> Array.toList
                                 let! (FSharpToolTipText tooltip) =
                                     vsLanguageService.GetOpenDeclarationTooltip(
                                         longIdent.Line + 1, longIdent.RightColumn, lineStr, idents, project,
-                                        textDocument.FilePath)
+                                        doc.FilePath)
                                 let! tooltip =
                                     tooltip
                                     |> List.tryHead
@@ -125,14 +125,14 @@ type QuickInfoMargin
                                 return Some tooltip, newWord
                             }
                         let! checkResults = 
-                            vsLanguageService.ParseAndCheckFileInProject(textDocument.FilePath, project, AllowStaleResults.MatchingSource)
+                            vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, project, AllowStaleResults.MatchingSource)
                         let! errors =
                             asyncMaybe {
                                 let! errors = checkResults.CheckErrors
                                 do! (if Array.isEmpty errors then None else Some())
                                 return!
                                     seq { for e in errors do
-                                            if String.Equals(textDocument.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
+                                            if String.Equals(doc.FilePath, e.FileName, StringComparison.InvariantCultureIgnoreCase) then
                                                 match fromRange buffer.CurrentSnapshot (e.StartLineAlternate, e.StartColumn, e.EndLineAlternate, e.EndColumn) with
                                                 | Some span when point.InSpan span -> yield e.Severity, flattenLines e.Message
                                                 | _ -> () }

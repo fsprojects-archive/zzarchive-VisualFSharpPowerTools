@@ -3,7 +3,6 @@
 open System
 open System.Diagnostics
 
-
 [<AutoOpen>]
 module Prelude =
     /// obj.ReferenceEquals
@@ -15,7 +14,6 @@ module Prelude =
     let inline isNull v = match v with | null -> true | _ -> false
     let inline isNotNull v = not (isNull v)
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
-    
 
 [<RequireQualifiedAccess>]
 module Null =
@@ -930,6 +928,9 @@ module File =
 
     let tryGetLastWriteTime file = Option.attempt (fun _ -> FileInfo(file).LastWriteTimeUtc)
 
+    let isScript (filePath: string) =
+        isNotNull filePath && String.Equals (Path.GetExtension filePath, ".fsx", StringComparison.InvariantCultureIgnoreCase)
+
 open System.Text
 open System.Diagnostics
 
@@ -965,5 +966,3 @@ type Profiler() =
              |> string)
 
     member __.Elapsed = total.Elapsed        
-
-    

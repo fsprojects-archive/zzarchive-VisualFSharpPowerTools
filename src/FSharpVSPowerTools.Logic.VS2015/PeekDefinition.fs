@@ -48,7 +48,7 @@ type internal DefinitionPeekableItem(peekResultFactory: IPeekResultFactory, span
 
 type PeekableItemSource
     (
-        textBuffer: ITextBuffer,
+        buffer: ITextBuffer,
         doc: ITextDocument,
         peekResultFactory: IPeekResultFactory,
         metadataService: NavigateToMetadataService,
@@ -56,13 +56,13 @@ type PeekableItemSource
         vsLanguageService: VSLanguageService
     ) =
 
-    let project = lazy (projectFactory.CreateForDocument textBuffer doc.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     let getDefinitionRange (point: SnapshotPoint) =
         async {
             let projectItems = 
                 maybe {
-                    let! project = project.Value
+                    let! project = project()
                     let! span, symbol = vsLanguageService.GetSymbol(point, doc.FilePath, project)
                     return project, span, symbol 
                 }
@@ -79,7 +79,7 @@ type PeekableItemSource
                     | FSharpFindDeclResult.DeclFound range -> 
                         return Some (span, range, false)
                     | FSharpFindDeclResult.DeclNotFound _ ->
-                        let! range = metadataService.TryFindMetadataRange(project, textBuffer, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
+                        let! range = metadataService.TryFindMetadataRange(project, buffer, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
                         return range |> Option.map (fun r -> span, r, true)
                 | _ -> return None
             | _ -> return None
@@ -90,7 +90,7 @@ type PeekableItemSource
             asyncMaybe {
                 do! if String.Equals(session.RelationshipName, PredefinedPeekRelationships.Definitions.Name, 
                                      StringComparison.OrdinalIgnoreCase) then Some() else None
-                let! triggerPoint = session.GetTriggerPoint(textBuffer.CurrentSnapshot) |> Option.ofNullable
+                let! triggerPoint = session.GetTriggerPoint(buffer.CurrentSnapshot) |> Option.ofNullable
                 let! symbolSpan, definitionRange, isReadOnly = getDefinitionRange triggerPoint
                 peekableItems.Add (DefinitionPeekableItem(peekResultFactory, symbolSpan, definitionRange, isReadOnly))
             } |> Async.RunSynchronously |> ignore

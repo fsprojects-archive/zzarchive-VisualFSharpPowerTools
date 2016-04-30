@@ -40,7 +40,7 @@ type SymbolClassifier
     let classificationChanged = Event<_,_>()
     let state = Atom State.NoData
     let dte = serviceProvider.GetDte()
-    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
     
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
@@ -80,7 +80,7 @@ type SymbolClassifier
                  
         if needUpdate then
             asyncMaybe {
-                let! currentProject = project.Value
+                let! currentProject = project()
                 let! snapshot = snapshot
                 debug "Effective update"
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, currentProject)
@@ -116,7 +116,7 @@ type SymbolClassifier
 
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun p _ _ _ _ ->
         maybe {
-            let! selfProject = project.Value
+            let! selfProject = project()
             let builtProjectFileName = Path.GetFileName p
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then

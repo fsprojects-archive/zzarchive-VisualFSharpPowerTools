@@ -170,7 +170,7 @@ type NavigateToItemProvider
                         let! doc = dte.GetActiveDocument()
                         let! openDoc = openDocumentsTracker.TryFindOpenDocument doc.FullName
                         let buffer = openDoc.Document.TextBuffer
-                        return! projectFactory.CreateForDocument buffer doc.FullName
+                        return! projectFactory.CreateForDocument (buffer, doc.FullName)
                     } |> Option.toArray
                 | xs -> List.toArray xs
             

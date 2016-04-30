@@ -16,7 +16,7 @@ type UnionPatternMatchCaseGeneratorSmartTag(actionSets) =
 
 type UnionPatternMatchCaseGenerator
     (
-        textDocument: ITextDocument,
+        doc: ITextDocument,
         view: ITextView,
         textUndoHistory: ITextUndoHistory,
         vsLanguageService: VSLanguageService,
@@ -57,7 +57,7 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
-    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {
@@ -66,8 +66,8 @@ type UnionPatternMatchCaseGenerator
             | (Some _ | None), _ ->
                 let! result = asyncMaybe {
                     let! point = buffer.GetSnapshotPoint view.Caret.Position
-                    let! project = project.Value
-                    let! word, _ = vsLanguageService.GetSymbol (point, textDocument.FilePath, project) 
+                    let! project = project()
+                    let! word, _ = vsLanguageService.GetSymbol (point, doc.FilePath, project) 
                     
                     do! match currentWord with
                         | None -> Some()
@@ -77,8 +77,8 @@ type UnionPatternMatchCaseGenerator
 
                     currentWord <- Some word
                     suggestions <- []
-                    let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
-                    let vsDocument = VSDocument(source, textDocument.FilePath, point.Snapshot)
+                    let! source = openDocumentTracker.TryGetDocumentText doc.FilePath
+                    let vsDocument = VSDocument(source, doc.FilePath, point.Snapshot)
                     let! symbolRange, patMatchExpr, unionTypeDefinition, insertionPos =
                         tryFindUnionDefinitionFromPos codeGenService project point vsDocument
                     // Recheck cursor position to ensure it's still in new word
