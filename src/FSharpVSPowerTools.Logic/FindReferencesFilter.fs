@@ -26,14 +26,14 @@ type FindReferencesFilter
      ) =    
 
     let dte = serviceProvider.GetDte()
-    let project = lazy (projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer textDocument.FilePath
 
     let getDocumentState (progress: ShowProgress) =
         async {
             let projectItem = maybe {
                 progress(OperationState.Reporting(Resource.findAllReferencesInitializingMessage))
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! project = project.Value
+                let! project = project()
                 let! span, symbol = vsLanguageService.GetSymbol(caretPos, textDocument.FilePath, project)
                 return project, span, symbol }
 

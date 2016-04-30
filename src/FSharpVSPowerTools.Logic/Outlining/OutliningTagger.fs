@@ -70,7 +70,7 @@ type OutliningHint (createView: ITextBuffer -> IWpfTextView, createBuffer) as se
             (content :?> ITextView).TextBuffer.CurrentSnapshot.GetText ()
 
 type OutliningTagger
-    (textDocument: ITextDocument,
+    (doc: ITextDocument,
      serviceProvider : IServiceProvider,
      textEditorFactoryService: ITextEditorFactoryService,
      projectionBufferFactoryService: IProjectionBufferFactoryService,
@@ -78,7 +78,7 @@ type OutliningTagger
      languageService: VSLanguageService,
      openDocumentsTracker: IOpenDocumentsTracker) as self =
 
-    let buffer = textDocument.TextBuffer
+    let buffer = doc.TextBuffer
     let tagsChanged = Event<_,_> ()
     let mutable scopedSnapSpans: ScopeSpan [] = [||]
     let mutable oldAST: ParsedInput option = None
@@ -157,15 +157,15 @@ type OutliningTagger
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
-    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =
         asyncMaybe {
             let snapshot = buffer.CurrentSnapshot
-            let! project = project.Value
-            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
-            let! parseFileResults = languageService.ParseFileInProject (textDocument.FilePath, project)
+            let! project = project()
+            let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath
+            let! parseFileResults = languageService.ParseFileInProject (doc.FilePath, project)
             let! ast = parseFileResults.ParseTree
             if checkAST oldAST ast then
                 oldAST <- Some ast
@@ -213,7 +213,7 @@ type OutliningTagger
             minIndent
 
 
-    let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument textDocument.FilePath)
+    let wpfTextView = lazy(serviceProvider.GetWPFTextViewOfDocument doc.FilePath)
 
     /// Create the WPFTextView for the Outlining tooltip scaled to 75% of the document's ZoomLevel
     let createElisionBufferView (textEditorFactoryService: ITextEditorFactoryService) (finalBuffer: ITextBuffer) =

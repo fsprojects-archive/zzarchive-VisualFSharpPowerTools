@@ -90,7 +90,7 @@ type HighlightUsageTagger(doc: ITextDocument,
         }
 
     let dte = serviceProvider.GetDte()
-    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
@@ -105,7 +105,7 @@ type HighlightUsageTagger(doc: ITextDocument,
             | Some point, _ ->
                 requestedPoint <- point
                 let currentRequest = requestedPoint
-                let! project = project.Value
+                let! project = project()
                 return!
                     match vsLanguageService.GetSymbol(currentRequest, doc.FilePath, project) with
                     | Some (newWord, symbol) ->

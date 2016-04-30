@@ -69,10 +69,10 @@ type UnusedSymbolClassifier
     let singleSymbolsProjects: Atom<CheckingProject list> = Atom []
     let unusedTasgChanged = Event<_,_>()
     let dte = serviceProvider.GetDte()
-    let project = lazy (projectFactory.CreateForDocument buffer doc.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
     
     let isCurrentProjectForStandaloneScript() =
-        project.Value |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false
+        project() |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false
 
     let includeUnusedOpens() =
         includeUnusedOpens
@@ -171,7 +171,7 @@ type UnusedSymbolClassifier
         } |> Async.Ignore
 
     let updateUnusedSymbolsIfNeeded (CallInUIContext callInUIContext) =
-        match project.Value, getCurrentSnapshot() with
+        match project(), getCurrentSnapshot() with
         | Some project, Some snapshot ->
             match state.Value with
             | State.Updating (_, oldSnapshot) when oldSnapshot = snapshot -> async.Return()
@@ -203,7 +203,7 @@ type UnusedSymbolClassifier
 
         if needUpdate then
             asyncMaybe {
-                let! currentProject = project.Value
+                let! currentProject = project()
                 
                 if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
                     do! updateUnusedSymbolsIfNeeded callInUIContext |> liftAsync
@@ -240,7 +240,7 @@ type UnusedSymbolClassifier
     
     let onBuildDoneHandler = EnvDTE._dispBuildEvents_OnBuildProjConfigDoneEventHandler (fun p _ _ _ _ ->
         maybe {
-            let! selfProject = project.Value
+            let! selfProject = project()
             let builtProjectFileName = Path.GetFileName p
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then

@@ -36,7 +36,7 @@ type XmlDocFilter
     let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
-    let project = lazy (projectFactory.CreateForDocument wpfTextView.TextBuffer fileName)
+    let project = projectFactory.CreateForDocumentMemoized wpfTextView.TextBuffer fileName
 
     interface IOleCommandTarget with
         member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =
@@ -54,7 +54,7 @@ type XmlDocFilter
                         asyncMaybe {
                             // XmlDocable line #1 are 1-based, editor is 0-based
                             let curLineNum = wpfTextView.Caret.Position.BufferPosition.GetContainingLine().LineNumber + 1 
-                            let! project = project.Value
+                            let! project = project()
                             let! parseResults = languageService.ParseFileInProject (fileName, project)
                             let! source = openDocumentsTracker.TryGetDocumentText fileName
                             let! xmlDocables = XmlDocParser.getXmlDocables (source, parseResults.ParseTree) |> liftAsync

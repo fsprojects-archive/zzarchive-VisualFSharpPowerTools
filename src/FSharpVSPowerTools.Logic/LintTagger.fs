@@ -13,39 +13,39 @@ open Microsoft.FSharp.Compiler
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)
 
-type LintTagger(textDocument: ITextDocument,
+type LintTagger(doc: ITextDocument,
                 vsLanguageService: VSLanguageService, 
                 serviceProvider: IServiceProvider,
                 projectFactory: ProjectFactory,
                 openDocumentsTracker: IOpenDocumentsTracker) as self =
     let tagsChanged = Event<_, _>()
     let mutable wordSpans = []
-    let buffer = textDocument.TextBuffer
+    let buffer = doc.TextBuffer
 
     let lintData = lazy(
         let lintOptions = Setting.getLintOptions serviceProvider
         lintOptions.UpdateDirectories()
-        let config = Path.GetDirectoryName textDocument.FilePath |> lintOptions.GetConfigurationForDirectory
+        let config = Path.GetDirectoryName doc.FilePath |> lintOptions.GetConfigurationForDirectory
         let shouldFileBeIgnored =
             match config.IgnoreFiles with
             | Some(ignoreFiles) ->
                 IgnoreFiles.shouldFileBeIgnored
                     ignoreFiles.Files
-                    textDocument.FilePath
+                    doc.FilePath
             | None -> false
         config, shouldFileBeIgnored)
 
     let dte = serviceProvider.GetDte()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
-    let project = lazy (projectFactory.CreateForDocument buffer textDocument.FilePath)
+    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         asyncMaybe {
-            let! project = project.Value
-            let! parseFileResults = vsLanguageService.ParseFileInProject (textDocument.FilePath, project)
+            let! project = project()
+            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FilePath, project)
             let! ast = parseFileResults.ParseTree
             let config, shouldFileBeIgnored = lintData.Value
-            let! source = openDocumentsTracker.TryGetDocumentText textDocument.FilePath
+            let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath
 
             if not shouldFileBeIgnored then
                 let res = 
@@ -55,7 +55,7 @@ type LintTagger(textDocument: ITextDocument,
                           Source = source
                           TypeCheckResults = None
                           FSharpVersion = version }
-                        textDocument.FilePath
+                        doc.FilePath
 
                 return
                     match res with

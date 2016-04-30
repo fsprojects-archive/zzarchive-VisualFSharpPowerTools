@@ -119,7 +119,13 @@ type ProjectFactory
         cache.Get project.FullName (fun _ ->
             new ProjectProvider (project, createProjectProvider, onProjectChanged)) :> _
 
-    member x.CreateForDocument buffer (filePath: FilePath) =
+    member x.CreateForDocumentMemoized buffer filePath =
+        let creator = 
+            if File.isScript filePath then x.CreateForDocument 
+            else memoize x.CreateForDocument
+        fun() -> creator (buffer, filePath)
+
+    member x.CreateForDocument (buffer: ITextBuffer, filePath: FilePath) =
         maybe {
             let! projectItem = dte.GetProjectItem filePath
             Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
