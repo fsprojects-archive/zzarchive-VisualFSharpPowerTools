@@ -60,7 +60,7 @@ type AlwaysPeekDefinitionFilter() =
                 let x = x :> IMenuCommand
                 x.NextTarget.QueryStatus(&pguidCmdGroup, cCmds, prgCmds, pCmdText)
 
-[<Export(typeof<IVsTextViewCreationListener>)>]
+[<Export(typeof<IWpfTextViewCreationListener>)>]
 [<ContentType("F#")>]
 [<TextViewRole(PredefinedTextViewRoles.PrimaryDocument)>]
 type NoPeekDefinitionFilterProvider [<ImportingConstructor>] 
@@ -81,10 +81,10 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
         lazy(let dte = serviceProvider.GetService<DTE, DTE>()
              VisualStudioVersion.fromDTEVersion dte.Version)
 
-    interface IVsTextViewCreationListener with
-        member __.VsTextViewCreated(textViewAdapter) = 
-            let textView = editorFactory.GetWpfTextView(textViewAdapter)
-            match textView with
+    interface IWpfTextViewCreationListener with
+        member __.TextViewCreated(textView) = 
+            let textViewAdapter = editorFactory.GetViewAdapter(textView)
+            match textViewAdapter with
             | null -> ()
             | _ ->
                 if Setting.getGeneralOptions(serviceProvider) 
