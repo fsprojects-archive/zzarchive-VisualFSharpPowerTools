@@ -69,20 +69,20 @@ type UnusedSymbolClassifier
     let singleSymbolsProjects: Atom<CheckingProject list> = Atom []
     let unusedTasgChanged = Event<_,_>()
     let dte = serviceProvider.GetDte()
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
     
-    let isCurrentProjectForStandaloneScript() =
-        project() |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false
+    let isCurrentProjectForStandaloneScript = 
+        lazy (project() |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false)
 
     let includeUnusedOpens() =
         includeUnusedOpens
         // Don't check for unused opens on generated signatures
-        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript())
+        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript.Value)
 
     let includeUnusedReferences() =
         includeUnusedReferences
         // Don't check for unused declarations on generated signatures
-        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript())
+        && not (isSignatureFile doc.FilePath && isCurrentProjectForStandaloneScript.Value)
 
     let getCurrentSnapshot() =
         maybe {

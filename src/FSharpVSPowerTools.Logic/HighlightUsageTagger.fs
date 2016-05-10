@@ -90,7 +90,7 @@ type HighlightUsageTagger(doc: ITextDocument,
         }
 
     let dte = serviceProvider.GetDte()
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let updateAtCaretPosition ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {

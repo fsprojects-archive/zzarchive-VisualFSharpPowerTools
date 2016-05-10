@@ -51,7 +51,7 @@ type GoToDefinitionFilter
 
     let dte = serviceProvider.GetDte()
     let textBuffer = view.TextBuffer
-    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer doc.FilePath
+    let project() = projectFactory.CreateForDocument view.TextBuffer doc.FilePath
 
     let getDocumentState () =
         async {

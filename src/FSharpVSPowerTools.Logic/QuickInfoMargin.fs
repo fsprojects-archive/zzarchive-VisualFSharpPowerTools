@@ -95,7 +95,7 @@ type QuickInfoMargin
         | Some '.' -> flatstr
         | Some _ -> flatstr + "."
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

@@ -928,9 +928,6 @@ module File =
 
     let tryGetLastWriteTime file = Option.attempt (fun _ -> FileInfo(file).LastWriteTimeUtc)
 
-    let isScript (filePath: string) =
-        isNotNull filePath && String.Equals (Path.GetExtension filePath, ".fsx", StringComparison.InvariantCultureIgnoreCase)
-
 open System.Text
 open System.Diagnostics
 

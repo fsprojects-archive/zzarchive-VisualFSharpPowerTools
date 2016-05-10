@@ -16,7 +16,7 @@ type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
 
     override x.AdjustProject(filePath, _) =
         maybe {
-            let! project = x.Services.ProjectFactory.CreateForDocument (x.TextBuffer, filePath)
+            let! project = x.Services.ProjectFactory.CreateForDocument x.TextBuffer filePath
             return (project, filePath)
         }
 
