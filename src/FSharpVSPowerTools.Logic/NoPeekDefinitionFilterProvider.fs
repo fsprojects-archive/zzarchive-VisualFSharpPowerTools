@@ -98,5 +98,10 @@ type NoPeekDefinitionFilterProvider [<ImportingConstructor>]
                         // Make sure that Peek Definition menu items are disabled on VS2013
                         addCommandFilter textViewAdapter (NoPeekDefinitionFilter())
                    | _ -> 
-                        addCommandFilter textViewAdapter (AlwaysPeekDefinitionFilter())
+                       if Setting.getGlobalOptions(serviceProvider) 
+                          |> Option.ofNull 
+                          |> Option.map (fun x -> x.PeekStandaloneFilesEnabled) 
+                          |> Option.getOrElse false then
+                            // Only modify command chains if users explicitly choose this option
+                            addCommandFilter textViewAdapter (AlwaysPeekDefinitionFilter())
         
