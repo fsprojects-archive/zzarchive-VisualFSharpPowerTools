@@ -157,7 +157,7 @@ type OutliningTagger
         | Scope.Comment               -> options.CommentsEnabled
         | _ -> true
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     /// doUpdate -=> triggerUpdate -=> tagsChanged
     let doUpdate (CallInUIContext callInUIContext) =

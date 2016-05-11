@@ -63,7 +63,7 @@ type RecordStubGenerator
                   member __.Text = Resource.recordGenerationCommandName }
         ]
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     // Try to:
     // - Identify record expression binding

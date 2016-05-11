@@ -56,7 +56,7 @@ type PeekableItemSource
         vsLanguageService: VSLanguageService
     ) =
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let getDefinitionRange (point: SnapshotPoint) =
         async {

@@ -26,7 +26,7 @@ type FindReferencesFilter
      ) =    
 
     let dte = serviceProvider.GetDte()
-    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer textDocument.FilePath
+    let project() = projectFactory.CreateForDocument view.TextBuffer textDocument.FilePath
 
     let getDocumentState (progress: ShowProgress) =
         async {

@@ -26,7 +26,7 @@ type RenameCommandFilter(doc: ITextDocument,
     let mutable state = None
     let documentUpdater = DocumentUpdater(serviceProvider)
     let dte = serviceProvider.GetDte()
-    let project = projectFactory.CreateForDocumentMemoized view.TextBuffer doc.FilePath
+    let project() = projectFactory.CreateForDocument view.TextBuffer doc.FilePath
 
     let canRename() = 
         state <-

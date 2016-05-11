@@ -40,8 +40,7 @@ type SymbolClassifier
     let classificationChanged = Event<_,_>()
     let state = Atom State.NoData
     let dte = serviceProvider.GetDte()
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
-    
+        
     let triggerClassificationChanged snapshot reason =
         let span = SnapshotSpan(snapshot, 0, snapshot.Length)
         classificationChanged.Trigger(self, ClassificationChangedEventArgs span)
@@ -59,6 +58,8 @@ type SymbolClassifier
             let! buffer = Option.ofNull doc.TextBuffer
             return buffer.CurrentSnapshot }
     
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
+
     let updateSyntaxConstructClassifiers force (CallInUIContext callInUIContext) = 
         let snapshot = getCurrentSnapshot()
         let needUpdate =
@@ -119,6 +120,7 @@ type SymbolClassifier
             let! selfProject = project()
             let builtProjectFileName = Path.GetFileName p
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
+
             if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
                 debug "Referenced project %s has been built, updating classifiers..." builtProjectFileName
                 let callInUIContext = CallInUIContext.FromCurrentThread()

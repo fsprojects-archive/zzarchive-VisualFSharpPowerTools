@@ -57,7 +57,7 @@ type UnionPatternMatchCaseGenerator
                   member __.Text = Resource.unionPatternMatchCaseCommandName }
         ]
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

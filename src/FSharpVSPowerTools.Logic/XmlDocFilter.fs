@@ -36,7 +36,7 @@ type XmlDocFilter
     let getTypedChar(pvaIn: IntPtr) = 
         char (Marshal.GetObjectForNativeVariant(pvaIn) :?> uint16)
 
-    let project = projectFactory.CreateForDocumentMemoized wpfTextView.TextBuffer fileName
+    let project() = projectFactory.CreateForDocument wpfTextView.TextBuffer fileName
 
     interface IOleCommandTarget with
         member __.Exec(pguidCmdGroup: byref<Guid>, nCmdID: uint32, nCmdexecopt: uint32, pvaIn: IntPtr, pvaOut: IntPtr) =

@@ -37,7 +37,7 @@ type LintTagger(doc: ITextDocument,
 
     let dte = serviceProvider.GetDte()
     let version = dte.Version |> VisualStudioVersion.fromDTEVersion |> VisualStudioVersion.toBestMatchFSharpVersion 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
                             
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         asyncMaybe {

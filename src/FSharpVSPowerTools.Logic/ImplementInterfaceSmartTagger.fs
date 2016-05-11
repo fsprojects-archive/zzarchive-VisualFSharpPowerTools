@@ -147,7 +147,7 @@ type ImplementInterface
                   createSuggestion Resource.implementInterfaceLightweightCommandName false ]
             else []
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         async {

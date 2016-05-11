@@ -34,12 +34,11 @@ type DepthTagger
     // only updated on the UI thread in the GetTags method
     let mutable state = None
     let tagsChanged = Event<_,_>()
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
     
     let refreshTags (CallInUIContext callInUIContext) = 
         asyncMaybe { 
             let snapshot = buffer.CurrentSnapshot // this is the possibly-out-of-date snapshot everyone here works with
-            
             let! project = project()
             let! parseResults = languageService.ParseFileInProject (doc.FilePath, project)
             let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath

@@ -61,7 +61,7 @@ type PrintfSpecifiersUsageTagger
     let onCaretMoveListener = 
         lazy (new DocumentEventListener ([ViewChange.layoutEvent view; ViewChange.caretEvent view], 200us, onCaretMove))
 
-    let project = projectFactory.CreateForDocumentMemoized buffer doc.FilePath
+    let project() = projectFactory.CreateForDocument buffer doc.FilePath
 
     let onBufferChanged ((CallInUIContext callInUIContext) as ciuc) =
         asyncMaybe {
