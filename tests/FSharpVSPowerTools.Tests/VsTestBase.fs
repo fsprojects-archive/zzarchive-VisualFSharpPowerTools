@@ -30,7 +30,8 @@ type VsTestBase() =
     static do serviceProvider.Services.[nameOf<EnvDTE.DTE>] <- dte
     static do serviceProvider.Services.[nameOf<SDTE>] <- dte
     static do serviceProvider.Services.[nameOf<SVsResourceManager>] <- Mocks.createSVsResourceManager()
-
+    
+    static do serviceProvider.Services.[nameOf<SVsRunningDocumentTable>] <- Mocks.createSVsRunningDocumentTable(dte)
     static do serviceProvider.Services.[nameOf<ILintOptions>] <- new Linting.LintOptionsPage(dte)
 
     let vsEditorAdaptersFactoryService = Mocks.createVsEditorAdaptersFactoryService()

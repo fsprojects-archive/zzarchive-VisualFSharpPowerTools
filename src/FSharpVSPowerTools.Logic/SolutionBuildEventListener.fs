@@ -17,7 +17,7 @@ type SolutionBuildEventListener(serviceProvider: IServiceProvider) as self =
 
     interface IVsUpdateSolutionEvents with
         member __.OnActiveProjectCfgChange(pIVsHierarchy: IVsHierarchy): int = 
-            match getProject pIVsHierarchy with
+            match tryGetProject pIVsHierarchy with
             | Some project ->
                 activeConfigChanged.Trigger(project)
             | None ->

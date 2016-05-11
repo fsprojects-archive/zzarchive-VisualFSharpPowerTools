@@ -4,6 +4,7 @@ open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.VisualStudio.Shell.Interop
 open System.ComponentModel.Composition
+open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open EnvDTE
 open FSharpVSPowerTools
@@ -12,6 +13,7 @@ open System.Diagnostics
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text
 open System.Collections.Concurrent
+open System.Runtime.InteropServices
 
 type private Cache<'K, 'V when 'K: comparison>() =
     let cache = ConcurrentDictionary<'K, 'V>()
@@ -46,8 +48,11 @@ type ProjectFactory
      openDocumentsTracker: IOpenDocumentsTracker,
      vsLanguageService: VSLanguageService) =
     let dte = serviceProvider.GetService<DTE, SDTE>()
+
     let events: EnvDTE80.Events2 option = tryCast dte.Events
     let cache = Cache<ProjectUniqueName, ProjectProvider>()
+
+    let runningDocumentTable = lazy(serviceProvider.GetService<IVsRunningDocumentTable, SVsRunningDocumentTable>())
 
     let mayReferToSameBuffer (buffer: ITextBuffer) filePath =
         match openDocumentsTracker.TryFindOpenDocument(filePath) with
@@ -121,37 +126,38 @@ type ProjectFactory
 
     member x.CreateForDocument (buffer: ITextBuffer) (filePath: FilePath) =
         maybe {
-            let! projectItem = dte.GetProjectItem filePath
+            let project = tryFindProject runningDocumentTable.Value filePath |> Option.bind Option.ofNull
             Debug.Assert(mayReferToSameBuffer buffer filePath, sprintf "Buffer '%A' doesn't refer to the current document '%s'." buffer filePath)
-            let project = projectItem.ContainingProject
             
             let getText (buffer: ITextBuffer) =
                 // Try to obtain cached document text; otherwise, retrieve the text from the buffer.
                 openDocumentsTracker.TryGetDocumentText filePath
                 |> Option.getOrTry (fun _ -> buffer.CurrentSnapshot.GetText())
-            
-            if not (project == null) && not (filePath == null) && isFSharpProject project then
+
+            match project, filePath with
+            | _, null -> 
+                return! None
+            | Some project, _ when isFSharpProject project ->            
                 let projectProvider = x.CreateForProject project
                 // If current file doesn't have 'BuildAction = Compile', it doesn't appear in the list of source files. 
-            // Consequently, we should interpret it as a script.
+                // Consequently, we should interpret it as a script.
                 if Array.exists ((=) filePath) projectProvider.SourceFiles then
                     return projectProvider
                 else
                     if isSourceFile filePath then
-                        let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
+                        let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
                         return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                     else
                         return! None
-            elif not (filePath === null) then
+            | _ ->
                 if isSourceFile filePath then
-                    let vsVersion = VisualStudioVersion.fromDTEVersion projectItem.DTE.Version
+                    let vsVersion = VisualStudioVersion.fromDTEVersion dte.Version
                     return (VirtualProjectProvider(getText buffer, filePath, vsVersion) :> _)
                 elif isSignatureFile filePath then
                     match signatureProjectData.TryGetValue(filePath) with
                     | true, (_, project) -> return project
                     | _ -> return! None
-                else return! None
-            else return! None
+                else return! None                
         }
 
     member __.ListFSharpProjectsInSolution dte =
