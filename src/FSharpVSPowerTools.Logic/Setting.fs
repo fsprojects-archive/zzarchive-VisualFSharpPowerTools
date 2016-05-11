@@ -52,6 +52,7 @@ type IGlobalOptions =
     abstract DiagnosticMode: bool with get, set
     abstract BackgroundCompilation: bool with get, set
     abstract ProjectCacheSize: int with get, set
+    abstract PeekStandaloneFilesEnabled: bool with get, set
 
 type ILintOptions =
     abstract UpdateDirectories: unit -> unit

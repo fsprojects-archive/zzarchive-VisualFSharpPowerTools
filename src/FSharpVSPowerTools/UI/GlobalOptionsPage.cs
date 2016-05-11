@@ -12,6 +12,7 @@ namespace FSharpVSPowerTools
             DiagnosticMode = false;
             BackgroundCompilation = true;
             ProjectCacheSize = 50;
+            PeekStandaloneFilesEnabled = false;
         }
 
         [Category("Debugging")]
@@ -29,5 +30,11 @@ namespace FSharpVSPowerTools
         [Description("The number of projects where their parse and check results are cached. A large value may cause high memory load, " +
                      "which will make Visual Studio sluggish.")]
         public int ProjectCacheSize { get; set; }
+
+        [Category("Miscellaneous")]
+        [DisplayName("Enable Peek Definition on standalone files")]
+        [Description("Caution: Enabling this feature may block AltGr keys on non-English keyboard layouts.")]
+        public bool PeekStandaloneFilesEnabled { get; set; }
+
     }
 }
