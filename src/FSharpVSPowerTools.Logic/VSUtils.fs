@@ -231,6 +231,22 @@ let fixInvalidSymbolSpans (snapshot: ITextSnapshot) (lastIdent: string) spans =
 open EnvDTE
 open VSLangProj
 
+let tryGetProject (hierarchy: IVsHierarchy) =
+    if isNull hierarchy then
+        None
+    else
+        match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT, int __VSHPROPID.VSHPROPID_ExtObject) with
+        | VSConstants.S_OK, p ->
+            tryCast<Project> p
+        | _ -> 
+            None
+
+let tryFindProject (rdt: IVsRunningDocumentTable) fileName =
+    match rdt.FindAndLockDocument(uint32 _VSRDTFLAGS.RDT_NoLock, fileName) with
+    | VSConstants.S_OK, hier, _, _, _ ->
+        tryGetProject hier            
+    | _ -> None
+
 type DTE with
     member x.GetActiveDocument() =
         let doc =
@@ -242,25 +258,6 @@ type DTE with
         | None -> debug "There is no active document or its project item is null."
         | _ -> ()
         doc
-
-    member x.GetProjectItem filePath =
-         x.Solution.FindProjectItem filePath |> Option.ofNull
-         
-    member x.GetCurrentDocument filePath =
-        match x.GetActiveDocument() with
-        | Some doc when doc.FullName = filePath -> 
-            Some doc
-        | docOpt ->
-            // If there is no current document or it refers to a different path,
-            // we try to find the exact document from solution by path.
-            let result = 
-                x.GetProjectItem filePath 
-                |> Option.bind (fun item -> Option.ofNull item.Document)
-            match docOpt, result with
-            | Some doc, None ->
-                Logging.logWarning (fun _ -> sprintf "Can't match between active document '%O' and current path '%O' in current solution." doc.FullName filePath)
-            | _ -> ()
-            result
 
     member x.TryGetProperty(category, page, name) = 
         x.Properties(category, page)
@@ -307,16 +304,6 @@ type Project with
         |> Option.bind (fun project ->
             Option.attempt (fun _ -> project.Object :?> VSProject)
             |> Option.bind Option.ofNull)
-
-let getProject (hierarchy: IVsHierarchy) =
-    if isNull hierarchy then
-        None
-    else
-        match hierarchy.GetProperty(VSConstants.VSITEMID_ROOT, int __VSHPROPID.VSHPROPID_ExtObject) with
-        | VSConstants.S_OK, p ->
-            tryCast<Project> p
-        | _ -> 
-            None
 
 let inline ensureSucceeded hr = 
     ErrorHandler.ThrowOnFailure hr

@@ -32,9 +32,8 @@ type RenameCommandFilter(doc: ITextDocument,
         state <-
             maybe {
                 let! caretPos = view.TextBuffer.GetSnapshotPoint view.Caret.Position
-                let! doc = dte.GetCurrentDocument(doc.FilePath)
                 let! project = project()
-                return { Word = vsLanguageService.GetSymbol(caretPos, doc.FullName, project); File = doc.FullName; Project = project }
+                return { Word = vsLanguageService.GetSymbol(caretPos, doc.FilePath, project); File = doc.FilePath; Project = project }
             }
         state |> Option.bind (fun s -> s.Word) |> Option.isSome
 
