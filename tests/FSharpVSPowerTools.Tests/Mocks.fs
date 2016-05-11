@@ -15,6 +15,7 @@ open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.OLE.Interop
+open EnvDTE
 
 let createGeneralOptionsPage() =
     Mock<IGeneralOptions>.With(fun page ->
@@ -251,3 +252,57 @@ type OpenDocumentTrackerStub() =
         member __.TryGetDocumentText _ = Some content
         member __.DocumentChanged = documentChanged.Publish
         member __.DocumentClosed = documentClosed.Publish
+
+let createSVsHierarchy(project: Project) =
+    {
+        new IVsHierarchy with
+            member __.AdviseHierarchyEvents(pEventSink, pdwCookie) = notimpl
+            member __.Close() = notimpl
+            member __.GetCanonicalName(itemid, pbstrName) = notimpl
+            member __.GetGuidProperty(itemid, propid, pguid) = notimpl
+            member __.GetNestedHierarchy(itemid, iidHierarchyNested, ppHierarchyNested, pitemidNested) = notimpl
+            member __.GetProperty(itemid, propid, pvar) = 
+                if itemid = VSConstants.VSITEMID_ROOT && propid = int __VSHPROPID.VSHPROPID_ExtObject then
+                   pvar <- project
+                   VSConstants.S_OK
+                else
+                   VSConstants.S_FALSE
+
+            member __.GetSite(ppSP) = notimpl
+            member __.ParseCanonicalName(pszName, pitemid) = notimpl
+            member __.QueryClose(pfCanClose) = notimpl
+            member __.SetGuidProperty(itemid, propid, rguid) = notimpl
+            member __.SetProperty(itemid, propid, var) = notimpl
+            member __.SetSite(psp) = notimpl
+            member __.UnadviseHierarchyEvents(dwCookie) = notimpl
+            member __.Unused0() = notimpl
+            member __.Unused1() = notimpl
+            member __.Unused2() = notimpl
+            member __.Unused3() = notimpl
+            member __.Unused4() = notimpl
+  }    
+
+let createSVsRunningDocumentTable(dte: DTE) =
+    {
+        new IVsRunningDocumentTable with
+            member __.AdviseRunningDocTableEvents(pSink, pdwCookie) = notimpl
+            member __.FindAndLockDocument(dwRDTLockType, pszMkDocument, ppHier, pitemid, ppunkDocData, pdwCookie) = 
+                let projectItem = dte.Solution.FindProjectItem pszMkDocument
+                ppHier <- createSVsHierarchy projectItem.ContainingProject
+                VSConstants.S_OK
+
+            member __.GetDocumentInfo(docCookie, pgrfRDTFlags, pdwReadLocks, pdwEditLocks, pbstrMkDocument, ppHier, pitemid, ppunkDocData) = notimpl
+            member __.GetRunningDocumentsEnum(ppenum) = notimpl
+            member __.LockDocument(grfRDTLockType, dwCookie) = notimpl
+            member __.ModifyDocumentFlags(docCookie, grfFlags, fSet) = notimpl
+            member __.NotifyDocumentChanged(dwCookie, grfDocChanged) = notimpl
+            member __.NotifyOnAfterSave(dwCookie) = notimpl
+            member __.NotifyOnBeforeSave(dwCookie) = notimpl
+            member __.RegisterAndLockDocument(grfRDTLockType, pszMkDocument, pHier, itemid, punkDocData, pdwCookie) = notimpl
+            member __.RegisterDocumentLockHolder(grfRDLH, dwCookie, pLockHolder, pdwLHCookie) = notimpl
+            member __.RenameDocument(pszMkDocumentOld, pszMkDocumentNew, pHier, itemidNew) = notimpl
+            member __.SaveDocuments(grfSaveOpts, pHier, itemid, docCookie) = notimpl
+            member __.UnadviseRunningDocTableEvents(dwCookie) = notimpl
+            member __.UnlockDocument(grfRDTLockType, dwCookie) = notimpl
+            member __.UnregisterDocumentLockHolder(dwLHCookie) = notimpl
+    }
