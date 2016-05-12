@@ -15,10 +15,9 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 [<AutoOpen>]
 module private Utils =
     let getMarker vsVersion isDef =
-        match vsVersion, isDef with
-        | VisualStudioVersion.VS2015, true ->
+        if isDef && vsVersion >= VisualStudioVersion.VS2015 then
             "MarkerFormatDefinition/HighlightedDefinition"
-        | _ ->
+        else
             "MarkerFormatDefinition/HighlightedReference"
 
 type HighlightUsageTag(vsVersion, isDef) = 

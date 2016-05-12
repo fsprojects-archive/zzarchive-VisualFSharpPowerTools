@@ -313,15 +313,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             | Action.NameAction a -> 
                 let folderNames = getFolderNamesFromProject info.Project
                 let uniqueFolderName =
-                    match VisualStudioVersion.fromDTEVersion dte.Version with
-                    | VisualStudioVersion.VS2012
-                    | VisualStudioVersion.VS2013 ->
-                        true
-                    | VisualStudioVersion.VS2015 -> 
-                        false
-                    | v ->
-                        Logging.logWarning (fun _ -> sprintf "Unknown Visual Studio version detected while adding/renaming folder: %O" v)
-                        true
+                    VisualStudioVersion.fromDTEVersion dte.Version < VisualStudioVersion.VS2015
 
                 let resources = 
                     match a with

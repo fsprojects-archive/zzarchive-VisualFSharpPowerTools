@@ -8,6 +8,7 @@ type VisualStudioVersion =
     | VS2012 = 11
     | VS2013 = 12
     | VS2015 = 14
+    | VS15   = 15
 
 type IMinimalVisualStudioVersionMetadata =
     abstract Version: VisualStudioVersion with get
@@ -32,6 +33,7 @@ module VisualStudioVersion =
                 | "11" -> VisualStudioVersion.VS2012
                 | "12" -> VisualStudioVersion.VS2013
                 | "14" -> VisualStudioVersion.VS2015
+                | "15" -> VisualStudioVersion.VS15
                 | _ -> VisualStudioVersion.Unknown
     
     let matches (currentVersion: VisualStudioVersion) (featureVersion: VisualStudioVersion) = 
@@ -44,4 +46,5 @@ module VisualStudioVersion =
         | VisualStudioVersion.VS2012 -> Version(3, 0)
         | VisualStudioVersion.VS2013 -> Version(3, 1)
         | VisualStudioVersion.VS2015 -> Version(4, 0)
+        | VisualStudioVersion.VS15   -> Version(4, 1)
         | version -> failwithf "Unsupported Visual Studio version: %A" version

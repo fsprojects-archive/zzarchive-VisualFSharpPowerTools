@@ -1,7 +1,10 @@
 #### 2.5.0 - Unreleased
+ * Better handling of finding projects [#1384](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1384) [#1386](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1386)
+ * Fix blocking of AltGr keys on non-English keyboard layouts [#1385](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1385)
+ * Initial support for VS 15 [#1389](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1389) [#1390](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1390)
 
 #### 2.4.1 - April 26 2016
-* Fix unused declarations highlighting
+* Fix unused declarations highlighting [#1374](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1374)
 
 #### 2.4.0 - April 24 2016
 * Enable peek definition for standalone F# files [#1329](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1329)
