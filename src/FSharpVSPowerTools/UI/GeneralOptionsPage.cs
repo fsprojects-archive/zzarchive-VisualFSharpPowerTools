@@ -17,7 +17,7 @@ namespace FSharpVSPowerTools
         public GeneralOptionsPage()
         {
             var dte = Package.GetGlobalService(typeof(SDTE)) as DTE;
-            var visualStudioVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
+            var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
 
             XmlDocEnabled = true;
             FormattingEnabled = true;
@@ -43,10 +43,7 @@ namespace FSharpVSPowerTools
             LinterEnabled = false;
             OutliningEnabled = false;
             PeekDefinitionEnabled = true;
-            PeekDefinitionAvailable =
-                visualStudioVersion != VisualStudioVersion.Unknown
-                && visualStudioVersion != VisualStudioVersion.VS2012
-                && visualStudioVersion != VisualStudioVersion.VS2013;
+            PeekDefinitionAvailable = vsVersion >= VisualStudioVersion.VS2015;
         }
 
         // We are letting Visual Studio know that these property value needs to be persisted

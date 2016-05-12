@@ -56,7 +56,7 @@ namespace FSharpVSPowerTools
 
             var dte = _serviceProvider.GetService(typeof(SDTE)) as EnvDTE.DTE;
             var vsVersion = VisualStudioVersionModule.fromDTEVersion(dte.Version);
-            if (vsVersion == VisualStudioVersion.VS2015) return null;
+            if (vsVersion >= VisualStudioVersion.VS2015) return null;
 
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(buffer, out doc))
