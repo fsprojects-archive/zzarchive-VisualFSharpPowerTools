@@ -6,7 +6,6 @@
              xmlns:local="clr-namespace:FSharpVSPowerTools.Linting;assembly=FSharpVSPowerTools.Logic"
              xmlns:fsxaml="http://github.com/fsprojects/FsXaml" 
              xmlns:fsx="clr-namespace:FsXaml;assembly=FsXaml.Wpf"
-             fsxaml:ViewController.Custom="{x:Type local:LintOptionsPageControl}"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>

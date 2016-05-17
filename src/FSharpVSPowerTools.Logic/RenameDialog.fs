@@ -11,7 +11,7 @@ open FSharp.ViewModule
 open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
 
-type RenameDialog = FsXaml.XAML<"RenameDialog.xaml", ExposeNamedProperties=true>
+type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 
 [<NoComparison>]
 type RenameContext =
@@ -177,10 +177,10 @@ module UI =
             if e.PropertyName = "Initialized" then 
                 window.txtName.IsEnabled <- true
                 window.txtName.SelectAll()
-                window.Root.Activate() |> ignore
+                window.Activate() |> ignore
                 // Schedule activation to happen after bindings enable and make controls visible
-                window.Root.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, 
+                window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, 
                                                    ThreadStart(fun _ -> ignore(window.txtName.Focus()))) |> ignore)
-        window.Root.Owner <- owner
-        window.Root.DataContext <- viewModel
-        window.Root
+        window.Owner <- owner
+        window.DataContext <- viewModel
+        window

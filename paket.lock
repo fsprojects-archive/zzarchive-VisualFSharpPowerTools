@@ -1,17 +1,15 @@
 NUGET
   remote: http://www.nuget.org/api/v2
   specs:
-    Expression.Blend.Sdk (1.0.2)
     Fantomas (2.2)
       FSharp.Compiler.Service (>= 2.0.0.8)
     FSharp.Compiler.Service (3.0)
     FSharp.Management (0.3)
-    FSharp.ViewModule.Core (0.9.9.1)
+    FSharp.ViewModule.Core (0.9.9.3)
     FSharpLint.Core (0.0.16)
       FSharp.Compiler.Service (>= 2.0.0.8)
     FsPickler (1.5.2)
-    FsXaml.Wpf (0.9.9)
-      Expression.Blend.Sdk (>= 1.0.2) - framework: >= net45
+    FsXaml.Wpf (2.0)
     SourceLink.SymbolStore (0.5)
     VSSDK.IDE.14 (14.0.4-preview)
     VSSDK.IDE.Deploy.14 (14.0.4-preview)

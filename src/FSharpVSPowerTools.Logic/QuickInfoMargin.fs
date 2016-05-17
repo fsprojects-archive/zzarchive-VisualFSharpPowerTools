@@ -11,7 +11,7 @@ open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml", ExposeNamedProperties=true>
+type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml">
 
 type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
@@ -32,8 +32,9 @@ type QuickInfoMargin
     let model = QuickInfoViewModel()
     let visual = QuickInfoVisual()
 
-    do visual.Root.DataContext <- model
-       visual.tbQuickInfo.MouseDoubleClick.Add (fun _ ->
+    do 
+        visual.DataContext <- model
+        visual.tbQuickInfo.MouseDoubleClick.Add (fun _ ->
            System.Windows.Clipboard.SetText visual.tbQuickInfo.Text
            visual.tbQuickInfo.SelectAll())
 

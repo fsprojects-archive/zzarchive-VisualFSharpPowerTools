@@ -4,8 +4,8 @@
 module FolderMenuUI =
     let loadNewFolderDialog (viewModel: NewFolderNameDialogModel) =
         let window = NewFolderNameDialog()
-        window.Root.DataContext <- viewModel
-        window.Root
+        window.DataContext <- viewModel
+        window
         
     let loadMoveToFolderDialog (viewModel: MoveToFolderDialogModel) =
         let window = MoveToFolderDialog()
@@ -14,5 +14,5 @@ module FolderMenuUI =
             viewModel.SelectedFolder <- Some (window.FoldersTree.SelectedItem :?> Folder)
         )
 
-        window.Root.DataContext <- viewModel
-        window.Root
+        window.DataContext <- viewModel
+        window

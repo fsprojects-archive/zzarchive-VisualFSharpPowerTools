@@ -2,7 +2,6 @@ source http://nuget.org/api/v2
 
 nuget FSharp.Compiler.Service
 nuget Fantomas
-nuget Expression.Blend.Sdk
 nuget FSharp.ViewModule.Core
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
