@@ -6,9 +6,9 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("FSharpVSPowerTools.Logic.VS2015")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
 [<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
-[<assembly: AssemblyVersionAttribute("2.5.1")>]
-[<assembly: AssemblyFileVersionAttribute("2.5.1")>]
+[<assembly: AssemblyVersionAttribute("2.5.0")>]
+[<assembly: AssemblyFileVersionAttribute("2.5.0")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "2.5.1"
+    let [<Literal>] Version = "2.5.0"
