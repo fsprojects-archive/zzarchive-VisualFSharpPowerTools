@@ -2,7 +2,7 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/pr)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
 [![NuGet](https://buildstats.info/nuget/FSharpVSPowerTools.Core)](https://www.nuget.org/packages/FSharpVSPowerTools.Core)
 
-Visual F# Power Tools
+[Visual F# Power Tools](https://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff)
 =====================
 
 [![Join the chat at https://gitter.im/fsprojects/VisualFSharpPowerTools](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/fsprojects/VisualFSharpPowerTools?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
