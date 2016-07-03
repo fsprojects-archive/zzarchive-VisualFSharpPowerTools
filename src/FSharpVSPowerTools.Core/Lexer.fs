@@ -97,7 +97,6 @@ module Lexer =
                     StaticallyResolvedTypeParameterPrefix
                  else Other
             else Other
-
        
         // Operators: Filter out overlapped operators (>>= operator is tokenized as three distinct tokens: GREATER, GREATER, EQUALS. 
         // Each of them has FullMatchedLength = 3. So, we take the first GREATER and skip the other two).
@@ -124,6 +123,10 @@ module Lexer =
                             | Some { Kind = GenericTypeParameter | StaticallyResolvedTypeParameter as kind } when isIdentifier token ->
                                 DraftToken.Create kind { token with LeftColumn = token.LeftColumn - 1
                                                                     FullMatchedLength = token.FullMatchedLength + 1 }
+                            // ^ operator                                                
+                            | Some { Kind = StaticallyResolvedTypeParameter } ->
+                                DraftToken.Create Operator { token with LeftColumn = token.LeftColumn - 1
+                                                                        FullMatchedLength = 1 }
                             | _ -> 
                                 let kind = if isOperator token then Operator elif isIdentifier token then Ident else Other
                                 DraftToken.Create kind token
