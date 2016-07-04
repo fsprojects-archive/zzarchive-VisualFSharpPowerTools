@@ -1118,6 +1118,15 @@ let _ = System.DateTime.Now :?> obj
          3, [ Cat.Operator, 6, 7; Cat.ValueType, 15, 23; Cat.Operator, 28, 31; Cat.ReferenceType, 32, 35 ]]
 
 [<Test>]
+let ``hat operator``() =
+    """
+let (^) x = x
+let _ = List.iter ^ fun _ -> ()
+"""
+    => [ 2, [ Cat.Operator, 5, 6; Cat.Operator, 10, 11 ]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 8, 12; Cat.Function, 13, 17; Cat.Operator, 18, 19 ]]
+
+[<Test>]
 let ``enum cases should not be colorized``() =
     """
 let _ = System.StringComparison.InvariantCultureIgnoreCase
