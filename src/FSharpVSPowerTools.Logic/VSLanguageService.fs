@@ -1,4 +1,48 @@
-﻿namespace FSharpVSPowerTools.ProjectSystem
+﻿namespace FSharp.EditingServices.BufferModel
+
+type VSSnapshotSpan  = Microsoft.VisualStudio.Text.SnapshotSpan
+type VSSnapshotPoint = Microsoft.VisualStudio.Text.SnapshotPoint
+type VSTextSnapshot  = Microsoft.VisualStudio.Text.ITextSnapshot
+
+type ITextSnapshot(snapshot: VSTextSnapshot) = 
+  class
+    member x.snapshotSpanFromRange (lineStart, colStart, lineEnd, colEnd) =
+        let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+        let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+        SnapshotSpan(snapshot, startPos, endPos - startPos)
+  end
+and SnapshotSpan(snapshot: VSTextSnapshot, startPos, length) =
+  class
+
+  end
+and SnapshotPoint(point: VSSnapshotPoint) =
+  class
+
+    let line () = point.Snapshot.GetLineNumberFromPosition point.Position
+    let col  () = point.Position - point.GetContainingLine().Start.Position
+    let line_text () = point.GetContainingLine().GetText()
+    
+    member x.ColumnIndex        = col ()
+    member x.LineIndex          = line ()
+    member x.ContainingLineText = line_text
+
+  end
+
+namespace Microsoft.VisualStudio.Text
+
+module RefactorExtensions = 
+  type Microsoft.VisualStudio.Text.ITextSnapshot
+  with
+    member x.snapshotSpanFromRange = FSharp.EditingServices.BufferModel.ITextSnapshot(x).snapshotSpanFromRange
+
+  type Microsoft.VisualStudio.Text.SnapshotPoint
+  with
+    member x.ColumnIndex        = FSharp.EditingServices.BufferModel.SnapshotPoint(x).ColumnIndex
+    member x.LineIndex          = FSharp.EditingServices.BufferModel.SnapshotPoint(x).LineIndex
+    member x.ContainingLineText = FSharp.EditingServices.BufferModel.SnapshotPoint(x).ContainingLineText
+
+
+namespace FSharpVSPowerTools.ProjectSystem
 
 open FSharpVSPowerTools
 open FSharp.ViewModule.Progress
@@ -16,6 +60,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools.AssemblyContentProvider
 open FSharpVSPowerTools.AsyncMaybe
+open Microsoft.VisualStudio.Text.RefactorExtensions
 
 type FilePath = string
 
@@ -108,18 +153,13 @@ type VSLanguageService
     let getSymbolUsing kind (point: SnapshotPoint) fileName (projectProvider: IProjectProvider) =
         maybe {
             let! source = openDocumentsTracker.TryGetDocumentText fileName
-            let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let col = point.Position - point.GetContainingLine().Start.Position
-            let lineStr = point.GetContainingLine().GetText()
+            let line = point.LineIndex
+            let col = point.ColumnIndex
+            let lineStr = point.ContainingLineText
             let args = projectProvider.CompilerOptions
-            
-            let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-                let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-                let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-                SnapshotSpan(snapshot, startPos, endPos - startPos)
-                                    
+
             let! symbol = Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
-            return snapshotSpanFromRange point.Snapshot symbol.Range, symbol
+            return point.Snapshot.snapshotSpanFromRange symbol.Range, symbol
         }
 
     let entityCache = EntityCache()
