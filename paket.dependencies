@@ -9,6 +9,7 @@ nuget FSharpLint.Core prerelease
 nuget VSSDK.IDE.Deploy.14
 nuget FSharp.Management
 nuget FsPickler
+nuget FSharp.Core redirects:on
 
 group Test
 source http://nuget.org/api/v2
@@ -18,7 +19,6 @@ nuget NUnit.Runners
 nuget NUnit
 nuget Foq
 nuget FsCheck
-nuget FSharp.Core 3.1.2.5 redirects:on
 nuget FAKE
 
 group Build
@@ -27,7 +27,6 @@ source http://nuget.org/api/v2
 nuget FSharp.Formatting
 nuget FAKE
 nuget Nuget.CommandLine
-nuget FSharp.Core 3.1.2.5 redirects:on
 nuget canopy
 nuget Selenium.WebDriver.ChromeDriver
 
