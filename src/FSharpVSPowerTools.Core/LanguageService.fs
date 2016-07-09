@@ -82,7 +82,10 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             | Some (checkResults, _parseResults) -> 
                 return! checkResults.GetDeclarationLocationAlternate(line+1, col, lineStr, [ident], preferSignature)
         }
-            
+
+    member __.GetDeclarationLocation(symbol, lineStr, preferSignature) =
+        __.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature)
+
     member __.GetIdentTooltip (line, colAtEndOfNames, lineText, names) =
         Debug.Assert(names <> [], "The names should not be empty (for which GetToolTip raises exceptions).")
         asyncMaybe {

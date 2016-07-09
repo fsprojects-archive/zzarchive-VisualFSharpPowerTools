@@ -15,6 +15,8 @@ open SourceLink.SymbolStore
 open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
+open FSharpVSPowerTools.AsyncMaybe
+open Microsoft.FSharp.Compiler.Ast
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -25,6 +27,12 @@ type NavigationPreference =
 type internal UrlChangeEventArgs(url: string) =
     inherit EventArgs()
     member __.Url = url
+
+[<NoComparisonAttribute; NoEquality>]
+type GoToDefinitionResolution =
+    | FoundByFSharpLanguageService
+    | FoundButNotHandled of (IProjectProvider * ParsedInput option * SnapshotSpan * FSharpSymbolUse)
+    | FoundLoadDirective of string
 
 type GoToDefinitionFilter
     (
@@ -47,23 +55,30 @@ type GoToDefinitionFilter
     let project() = projectFactory.CreateForDocument view.TextBuffer doc.FilePath
 
     let getDocumentState () =
-        async {
-            let projectItems = maybe {
-                let! project = project()
-                let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, doc.FilePath, project)
-                return project, span, symbol }
-
-            match projectItems with
-            | Some (project, span, symbol) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, doc.FilePath, project, AllowStaleResults.MatchingSource)
-                match symbolUse with
-                | Some (fsSymbolUse, fileScopedCheckResults) ->
-                    let lineStr = span.Start.GetContainingLine().GetText()
-                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
-                    return Some (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse, findDeclResult) 
-                | None -> return None
-            | None -> return None
+        asyncMaybe {
+            let fileName = doc.FilePath
+            let! project = project ()
+            let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
+            let spanAndSymbol = vsLanguageService.GetSymbol(caretPos, fileName, project)
+            
+            match spanAndSymbol with
+            | Some (span, symbol) ->
+              let! result = vsLanguageService.GetFSharpSymbolUse(span, symbol, fileName, project, AllowStaleResults.MatchingSource) |> liftAsync
+              match result with
+              | Some (fsSymbolUse, fileScopedCheckResults) ->
+                let lineText = span.Start.GetContainingLine().GetText()
+                let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
+              
+                let gotoDefinitionResult = 
+                    match findDeclResult with
+                    | FSharpFindDeclResult.DeclFound _ -> FoundByFSharpLanguageService
+                    | FSharpFindDeclResult.DeclNotFound _ -> FoundButNotHandled (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
+              
+                return! Some gotoDefinitionResult
+              | None -> return! None
+            | None -> 
+                let! loadDirectiveFile  = vsLanguageService.GetLoadDirectiveFileNameAtCursor(fileName, view, project)
+                return! Some (FoundLoadDirective loadDirectiveFile)
         }
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
@@ -179,24 +194,16 @@ type GoToDefinitionFilter
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
+                | Some FoundByFSharpLanguageService
                 | None ->
-                    // no FSharpSymbol found, here we look at #load directive
-                    let! directive = 
-                        asyncMaybe {
-                            let! project = project()
-                            return! vsLanguageService.GetLoadDirectiveFileNameAtCursor(doc.FilePath, view, project)
-                        }
-                    match directive with
-                    | Some fileToOpen ->
-                        // directive found, navigate to the file at first line
-                        serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
-                    | None ->
-                        // Run the operation on UI thread since continueCommandChain may access UI components.
-                        do! Async.SwitchToContext uiContext
-                        // Declaration location might exist so let Visual F# Tools handle it. 
-                        return continueCommandChain()
-                | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
+                    // Run the operation on UI thread since continueCommandChain may access UI components.
+                    do! Async.SwitchToContext uiContext
+                    // Declaration location might exist so let Visual F# Tools handle it. 
+                    return continueCommandChain()
+                | Some (FoundLoadDirective fileToOpen) -> 
+                    // directive found, navigate to the file at first line
+                    serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
+                | Some (FoundButNotHandled (project, parseTree, span, fsSymbolUse)) ->
                     match navigationPreference with
                     | NavigationPreference.Metadata ->
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
