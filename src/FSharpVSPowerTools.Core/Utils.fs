@@ -16,44 +16,12 @@ module Prelude =
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
 
 [<RequireQualifiedAccess>]
-module Null =
-    let inline fill defaultValue x = 
-        if isNull x then null else defaultValue
-
-    let inline fillWith (genDefaultValue: unit -> 'T) x = 
-        if isNull x then null else genDefaultValue ()
-
-[<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
-    let tryHead s =
-        if Seq.isEmpty s then None else Some (Seq.head s)
-
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
-open System.Collections.Generic
 [<RequireQualifiedAccess>]
 module List =
-    let tryHead = function [] -> None | h :: _ -> Some h
-
-    let rec last (xs:'a list) =
-        match xs with
-        | [] -> failwith "an empty list has no last element"
-        | [x] -> x
-        | _::tl -> last tl
-
-    let rec skipWhile p xs =
-        match xs with
-        | head :: tail when p head -> skipWhile p tail
-        | _ -> xs
-
-    let takeWhile p xs =
-        let rec loop acc xs =
-            match xs with
-            | head :: tail when p head -> loop (head :: acc) tail
-            | _ -> List.rev acc
-        loop [] xs
-
     /// Fold over the list passing the index and element at that index to a folding function
     let foldi (folder: 'State -> int -> 'T -> 'State) (state: 'State) (xs: 'T list) =
         match xs with 
@@ -65,29 +33,6 @@ module List =
                 | [] -> s
                 | h::t -> loop (idx+1) (f.Invoke(s,idx,h)) t
             loop 0 state xs
-
-
-    let inline groupBy (keyfn:'T->'Key) (list: 'T list) =
-        let dict = Dictionary<'Key,ResizeArray<'T>> (HashIdentity.Structural)
-        // Build the groupings
-        let rec loop list =
-            match list with
-            | v :: t -> 
-                let key = keyfn v
-                let ok,prev = dict.TryGetValue key
-                if ok then
-                    prev.Add v
-                else 
-                    let prev = new ResizeArray<'T> 1
-                    dict.[key] <- prev
-                    prev.Add v
-                loop t
-            | _ -> ()
-        loop list
-        dict  // Return the list-of-lists.
-        |> Seq.map (fun group -> (group.Key, Seq.toList group.Value))
-        |> Seq.toList
-
 
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
@@ -146,11 +91,6 @@ module Array =
         res.[index] <- value
         res
 
-    let head (array: 'T []) =
-         checkNonNull "array" array
-         if array.Length = 0 then invalidArg "array" "cannot get the head of an empty array"
-         array.[0]
-
     /// Returns all heads of a given array.
     /// For [|1;2;3|] it returns [|[|1; 2; 3|]; [|1; 2|]; [|1|]|]
     let heads (array: 'T []) =
@@ -171,46 +111,6 @@ module Array =
             state <- folder.Invoke (state, i, array.[i])
         state
 
-    /// Get the first element of the array or None if the Array is null or empty
-    let tryHead array =
-        match array with
-        | null | [||] -> None
-        | arr  -> Some arr.[0]
-
-    /// Get the last element of the array or None if the Array is null or empty
-    let tryLast array =
-        match array with
-        | null | [||] -> None
-        | arr  -> Some arr.[arr.Length-1]
-
-    /// Returns an array that contains no duplicate entries according to generic hash and
-    /// equality comparisons on the entries.
-    /// If an element occurs multiple times in the array then the later occurrences are discarded.
-    let distinct (array: 'T []) =
-        checkNonNull "array" array
-        if array.Length = 0 then [||] else
-        let temp = Array.zeroCreate array.Length
-        let mutable i = 0
-        let hashSet = HashSet<'T> HashIdentity.Structural<'T>
-        for v in array do 
-            if hashSet.Add(v) then
-                temp.[i] <- v
-                i <- i + 1
-        temp.[0..i-1]
-
-
-    let distinctBy keyf (array:'T []) =
-        checkNonNull "array" array
-        if array.Length = 0 then [||] else
-        let temp = Array.zeroCreate array.Length
-        let mutable i = 0 
-        let hashSet = HashSet<_> HashIdentity.Structural<_>
-        for v in array do
-            if hashSet.Add(keyf v) then
-                temp.[i] <- v
-                i <- i + 1
-        temp.[0..i-1]
-
     /// pass an array byref to reverse it in place
     let revInPlace (array: 'T []) =
         checkNonNull "array" array
@@ -221,26 +121,6 @@ module Array =
             let t2 = array.[arrlen-idx]
             array.[idx] <- t2
             array.[arrlen-idx] <- t1
-
-    /// Return an array of elements that preceded the first element that failed
-    /// to satisfy the predicate
-    let takeWhile predicate (array: 'T []) =
-        checkNonNull "array" array
-        if array.Length = 0 then [||] else
-        let mutable count = 0
-        while count < array.Length-1 && predicate array.[count] do
-            count <- count + 1
-        array.[0..count-1]
-
-    /// Return an array of elements that begin at the first element that failed
-    /// to satisfy the predicate
-    let skipWhile predicate (array: 'T []) =
-        checkNonNull "array" array
-        if array.Length = 0 then [||] else
-        let mutable count = 0
-        while count < array.Length-1 && predicate array.[count] do
-            count <- count + 1
-        array.[count..array.Length-1]
 
     /// Map all elements of the array that satisfy the predicate
     let filterMap predicate mapfn (array: 'T [])  =
@@ -254,28 +134,6 @@ module Array =
                count <- count + 1
         if count = 0 then [||] else
         result.[0..count-1]
-
-    let groupBy (keyfn:'T->'Key) (array: 'T []) =
-        checkNonNull "array" array
-        let dict = Dictionary<'Key,ResizeArray<'T>> HashIdentity.Structural
-        // Build the groupings
-        for i = 0 to (array.Length - 1) do
-            let v = array.[i]
-            let key = keyfn v
-            let ok, prev = dict.TryGetValue key
-            if ok then 
-                prev.Add v
-            else 
-                let prev = ResizeArray<'T> 1
-                dict.[key] <- prev
-                prev.Add v 
-        // Return the array-of-arrays.
-        let result = Array.zeroCreate dict.Count
-        let mutable i = 0
-        for group in dict do
-            result.[i] <- group.Key, group.Value.ToArray ()
-            i <- i + 1
-        result
 
     /// <summary>
     /// Splits the collection into two (2) collections, containing the elements for which the given function returns

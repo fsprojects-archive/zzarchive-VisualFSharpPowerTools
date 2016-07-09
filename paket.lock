@@ -1,9 +1,9 @@
 NUGET
   remote: http://www.nuget.org/api/v2
-  specs:
     Fantomas (2.2)
       FSharp.Compiler.Service (>= 2.0.0.8)
     FSharp.Compiler.Service (3.0)
+    FSharp.Core (4.0.0.1) - redirects: on
     FSharp.Management (0.3)
     FSharp.ViewModule.Core (0.9.9.3)
     FSharpLint.Core (0.0.16)
@@ -18,7 +18,6 @@ NUGET
 GROUP Build
 NUGET
   remote: http://www.nuget.org/api/v2
-  specs:
     canopy (0.9.36)
       FSharp.Core (>= 3.0.2)
       Selenium.Support (2.48)
@@ -52,13 +51,11 @@ NUGET
       Selenium.WebDriver (>= 2.40)
 GITHUB
   remote: fsharp/FAKE
-  specs:
     modules/Octokit/Octokit.fsx (060734077d6eb55a0a86988a39468178b9d8dc19)
       Octokit
 GROUP Test
 NUGET
   remote: http://www.nuget.org/api/v2
-  specs:
     FAKE (4.9.5)
     Foq (1.7.1)
     FsCheck (2.1)
