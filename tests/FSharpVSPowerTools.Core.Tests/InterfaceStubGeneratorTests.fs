@@ -410,7 +410,7 @@ type Generators =
 
         let random = 
             Arb.generate
-            |> Gen.suchThat (fun (x: string) -> 
+            |> Gen.filter (fun (x: string) -> 
                 x <> null && x.Length > 0 && not (Char.IsDigit x.[0])
                 && x.ToCharArray() |> Array.forall (fun c -> Char.IsLetterOrDigit c || c = '_')
                 && not (allUnderscores x))
