@@ -22,6 +22,7 @@ open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open System.Text
+open FSharpVSPowerTools.AsyncMaybe
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -32,6 +33,17 @@ type NavigationPreference =
 type internal UrlChangeEventArgs(url: string) =
     inherit EventArgs()
     member __.Url = url
+
+type private FileType =
+    | Signature
+    | Code
+
+type private SymbolLocation =
+    { FileName: FilePath
+      StartLine: int
+      StartCol: int
+      EndLine: int
+      EndCol: int }
 
 type GoToDefinitionFilter
     (
@@ -173,6 +185,30 @@ type GoToDefinitionFilter
                 return! None
         }
 
+    let getFileType (file: FilePath) =
+        match Path.GetExtension(file).ToLower() with
+        | ".fsi" -> Some Signature
+        | ".fs" | ".fsx" -> Some Code
+        | _ -> None
+
+    let (|Definition|Usage|) (symbolUse: FSharpSymbolUse) =
+        if symbolUse.IsFromDefinition then Definition else Usage
+
+    let gotoSourceCodeDefinition (symbol: FSharpSymbolUse) =
+        asyncMaybe {
+            let! currentFileType = getFileType textDocument.FilePath
+            
+            let! loc =
+                match symbol, currentFileType with
+                | Definition, Code
+                | Usage, Signature ->
+                    symbol.Symbol.DeclarationLocation |> Option.orElse symbol.Symbol.ImplementationLocation
+                | _ ->
+                    symbol.Symbol.ImplementationLocation |> Option.orElse symbol.Symbol.DeclarationLocation
+                        
+            serviceProvider.NavigateTo(loc.FileName, loc.StartLine - 1, loc.StartColumn, loc.EndLine - 1, loc.EndColumn)
+        } |> Async.Ignore
+
     let cancellationToken = Atom None
 
     let gotoDefinition continueCommandChain =
@@ -186,7 +222,9 @@ type GoToDefinitionFilter
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some (_, _, _, _, FSharpFindDeclResult.DeclFound _) 
+                | Some (_, _, _, fsSymbolUse, FSharpFindDeclResult.DeclFound _) ->
+                    do! Async.SwitchToContext uiContext
+                    return! gotoSourceCodeDefinition fsSymbolUse
                 | None ->
                     // no FSharpSymbol found, here we look at #load directive
                     let! directive = 
@@ -201,7 +239,6 @@ type GoToDefinitionFilter
                     | None ->
                         // Run the operation on UI thread since continueCommandChain may access UI components.
                         do! Async.SwitchToContext uiContext
-                        // Declaration location might exist so let Visual F# Tools handle it. 
                         return continueCommandChain()
                 | Some (project, parseTree, span, fsSymbolUse, FSharpFindDeclResult.DeclNotFound _) ->
                     match navigationPreference with
