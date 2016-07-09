@@ -3,7 +3,6 @@
 open System
 open System.IO
 open System.Diagnostics
-open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open AsyncMaybe
@@ -39,7 +38,6 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         }
 
     member __.ParseTree = infoOpt |> Option.bind (fun (_, parseResults) -> parseResults.ParseTree)
-    member __.CheckResults = infoOpt |> Option.map fst
     member __.CheckErrors = infoOpt |> Option.map (fun (checkResults, _) -> checkResults.Errors)
     member __.ParseErrors = infoOpt |> Option.map (fun (_, parseResults) -> parseResults.Errors)
     
@@ -50,16 +48,6 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
 
     member __.GetFormatSpecifierLocationsAndArity() =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.GetFormatSpecifierLocationsAndArity())
-
-    member __.GetNavigationItems() =
-        match infoOpt with 
-        | None -> [||]
-        | Some (_checkResults, parseResults) -> 
-           // GetNavigationItems is not 100% solid and throws occasional exceptions
-            try parseResults.GetNavigationItems().Declarations
-            with _ -> 
-                fail "Couldn't update navigation items, ignoring"
-                [||]
 
     member __.PartialAssemblySignature =
         infoOpt |> Option.map (fun (checkResults, _) -> checkResults.PartialAssemblySignature)
@@ -109,36 +97,10 @@ type AllowStaleResults =
     /// regardless of whether if has been recently checked or not.
     | No
 
-type WordSpan = 
-    { SymbolKind: SymbolKind
-      Line: int
-      StartCol: int
-      EndCol: int }
-    static member inline Create (kind, line, startCol, endCol) =
-        { SymbolKind = kind
-          Line = line
-          StartCol = startCol
-          EndCol = endCol }
-    static member inline FromRange (kind, r: Range.range) = 
-        { SymbolKind = kind
-          Line = r.StartLine
-          StartCol = r.StartColumn 
-          EndCol = r.EndColumn }
-    member x.Range = lazy (x.Line, x.StartCol, x.Line, x.EndCol)
-
-[<AbstractClass>]
-type LexerBase() = 
-    abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * rightCol: int -> Symbol option
-    abstract TokenizeLine: line: int -> FSharpTokenInfo list
-    abstract LineCount: int
-    member x.GetSymbolAtLocation (line: int, col: int) =
-           x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
-    member x.TokenizeAll() = [|0..x.LineCount-1|] |> Array.map x.TokenizeLine
-
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.Collections.Concurrent
 
-type FileState =
+type private FileState =
     | Checked
     | NeedChecking
     | BeingChecked
@@ -152,6 +114,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
 
   do Option.iter (fun fs -> Shim.FileSystem <- fs) fileSystem
   let mutable errorHandler = None
+  
   let handleCriticalErrors e file source opts = 
       errorHandler |> Option.iter (fun handle -> handle e file source opts)
 
@@ -167,9 +130,9 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
     let ctx = System.Threading.SynchronizationContext.Current
     async {
         do! Async.SwitchToThreadPool()
-        let! r = f checkerInstance
+        let! result = f checkerInstance
         do! Async.SwitchToContext ctx
-        return r
+        return result
     }
 
   /// When creating new script file on Mac, the filename we get sometimes 
@@ -346,22 +309,6 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
               return! parseAndCheckFileInProject(fileName, src, opts)
       }
 
-  /// Get all the uses of a symbol in the given file (using 'source' as the source for the file)
-  member x.GetUsesOfSymbolAtLocationInFile(projectOptions, fileName, source, line, col, lineStr, args, stale, queryLexState) = 
-      async { 
-          match Lexer.getSymbol source line col lineStr SymbolLookupKind.Fuzzy args queryLexState with
-          | Some sym ->
-                let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
-                return! checkResults.GetUsesOfSymbolInFileAtLocation(line, sym.RightColumn, lineStr, sym.Text)
-          | _ -> return None
-      }
-
-  member x.GetUsesOfSymbolAtLocationInFile(projectOptions, fileName, source, symbol: Symbol, line, lineStr, stale) = 
-      async { 
-          let! checkResults = x.ParseAndCheckFileInProject(projectOptions, fileName, source, stale)
-          return! checkResults.GetUsesOfSymbolInFileAtLocation(line, symbol.RightColumn, lineStr, symbol.Text)
-      }
-
   /// Get all the uses in the project of a symbol in the given file (using 'source' as the source for the file)
   member x.GetUsesOfSymbolInProjectAtLocationInFile
     (
@@ -407,7 +354,6 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
   member __.InvalidateConfiguration options =
       checkerAsync <| fun checker -> async { checker.InvalidateConfiguration options }
 
-  member __.CheckerAsync<'a> (f: FSharpChecker -> Async<'a>) = checkerAsync f
   member __.RawChecker = checkerInstance
 
   member x.GetAllUsesOfAllSymbolsInFile (projectOptions, fileName, source: string, stale, checkForUnusedOpens) : SymbolUse[] Async =
@@ -575,5 +521,4 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
             return! checkResults.GetIdentTooltip (line, colAtEndOfNames, lineStr, names)
         }
 
-    member __.SetCriticalErrorHandler func = 
-        errorHandler <- Some func
+    member __.SetCriticalErrorHandler func = errorHandler <- Some func

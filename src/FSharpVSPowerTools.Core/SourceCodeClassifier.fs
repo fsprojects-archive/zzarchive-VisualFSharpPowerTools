@@ -4,6 +4,23 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 
+type WordSpan = 
+    { SymbolKind: SymbolKind
+      Line: int
+      StartCol: int
+      EndCol: int }
+    static member inline Create (kind, line, startCol, endCol) =
+        { SymbolKind = kind
+          Line = line
+          StartCol = startCol
+          EndCol = endCol }
+    static member inline Create (kind, r: Range.range) = 
+        { SymbolKind = kind
+          Line = r.StartLine
+          StartCol = r.StartColumn 
+          EndCol = r.EndColumn }
+    member x.Range = lazy (x.Line, x.StartCol, x.Line, x.EndCol)
+
 [<RequireQualifiedAccess>]
 type Category =
     | ReferenceType
@@ -20,51 +37,54 @@ type Category =
     | Other
     override x.ToString() = sprintf "%A" x
 
-type CategorizedColumnSpan<'T> =
+type CategorizedSpan =
     { Category: Category
       WordSpan: WordSpan }
 
+[<AbstractClass>]
+type LexerBase() = 
+    abstract GetSymbolFromTokensAtLocation: FSharpTokenInfo list * line: int * rightCol: int -> Symbol option
+    abstract TokenizeLine: line: int -> FSharpTokenInfo list
+    abstract LineCount: int
+    member x.GetSymbolAtLocation (line: int, col: int) =
+           x.GetSymbolFromTokensAtLocation (x.TokenizeLine line, line, col)
+    member x.TokenizeAll() = [|0..x.LineCount-1|] |> Array.map x.TokenizeLine
+
 module private QuotationCategorizer =
-    let private categorize (lexer: LexerBase) ranges =
+    let private categorize (lexer: LexerBase) (ranges: Range.range seq) =
         let trimWhitespaces = 
             List.skipWhile (fun t -> t.CharClass = FSharpTokenCharKind.WhiteSpace) 
 
-        ranges
-        |> Seq.collect(fun (r: Range.range) -> 
-            if r.EndLine = r.StartLine then
-                seq [ { Category = Category.Quotation
-                        WordSpan = { SymbolKind = SymbolKind.Other
-                                     Line = r.StartLine
-                                     StartCol = r.StartColumn
-                                     EndCol = r.EndColumn }} ]
-            else
-                [r.StartLine..r.EndLine]
-                |> Seq.choose (fun line ->
-                     let tokens = lexer.TokenizeLine (line - 1) 
-
-                     let tokens =
-                         if line = r.StartLine then
-                             tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
-                         elif line = r.EndLine then
-                             tokens |> List.takeWhile (fun t -> t.RightColumn <= r.EndColumn)
-                         else tokens
-
-                     let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
+        seq {
+            for r in ranges do
+                if r.EndLine = r.StartLine then
+                    yield { Category = Category.Quotation
+                            WordSpan = WordSpan.Create(SymbolKind.Other, r) }
+                else
+                    for line in r.StartLine..r.EndLine do
+                        let tokens = lexer.TokenizeLine (line - 1) 
+                
+                        let tokens =
+                            if line = r.StartLine then
+                                tokens |> List.skipWhile (fun t -> t.LeftColumn < r.StartColumn)
+                            elif line = r.EndLine then
+                                tokens |> List.takeWhile (fun t -> t.RightColumn <= r.EndColumn)
+                            else tokens
+                
+                        let tokens = tokens |> trimWhitespaces |> List.rev |> trimWhitespaces |> List.rev
+                        
+                        match tokens with
+                        | [] -> ()
+                        | _ ->
+                           let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
                      
-                     match tokens with
-                     | [] -> None
-                     | _ ->
-                        let minCol = tokens |> List.map (fun t -> t.LeftColumn) |> function [] -> 0 | xs -> xs |> List.min
-                 
-                        let maxCol = 
-                            let tok = tokens |> List.maxBy (fun t -> t.RightColumn) 
-                            tok.LeftColumn + tok.FullMatchedLength
-
-                        Some { Category = Category.Quotation
-                               WordSpan = { SymbolKind = SymbolKind.Other
-                                            Line = line
-                                            StartCol = minCol
-                                            EndCol = maxCol }}))
+                           let maxCol = 
+                               let tok = tokens |> List.maxBy (fun t -> t.RightColumn) 
+                               tok.LeftColumn + tok.FullMatchedLength
+                
+                           yield { Category = Category.Quotation
+                                   WordSpan = WordSpan.Create (SymbolKind.Other, line, minCol, maxCol) }
+        }
 
     let getCategories ast lexer = UntypedAstUtils.getQuotationRanges ast |> categorize lexer
 
@@ -239,7 +259,7 @@ module SourceCodeClassifier =
                             else 
                                 Some (su, WordSpan.Create (sym.Kind, r.End.Line, r.Start.Column, r.End.Column))
                         | SymbolKind.Operator when sym.LeftColumn = r.StartColumn -> 
-                            Some (su, WordSpan.FromRange (sym.Kind, r))
+                            Some (su, WordSpan.Create (sym.Kind, r))
                         | _ -> None)))
         |> Seq.toArray
 
