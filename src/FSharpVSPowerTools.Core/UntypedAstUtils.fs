@@ -50,7 +50,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) =
         List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
-    and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, attrs, _, _)) =
+    and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, _, decls, _, attrs, _, _)) =
         List.iter walkAttribute attrs
         List.iter walkSynModuleDecl decls
 
@@ -327,10 +327,12 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     and walkTypeDefnRepr = function
         | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.iter walkMember defns
         | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+        | SynTypeDefnRepr.Exception _ -> ()
 
     and walkTypeDefnSigRepr = function
         | SynTypeDefnSigRepr.ObjectModel (_, defns, _) -> List.iter walkMemberSig defns
         | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+        | SynTypeDefnSigRepr.Exception _ -> ()
 
     and walkTypeDefn (TypeDefn (info, repr, members, _)) =
         let isTypeExtensionOrAlias =
@@ -346,7 +348,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
     and walkSynModuleDecl (decl: SynModuleDecl) =
         match decl with
         | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-        | SynModuleDecl.NestedModule (info, modules, _, _) ->
+        | SynModuleDecl.NestedModule (info, _, modules, _, _) ->
             walkComponentInfo false info
             List.iter walkSynModuleDecl modules
         | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
@@ -467,12 +469,12 @@ let getQuotationRanges ast =
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
             | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
             | SynModuleDecl.Types (types, _) -> List.iter visitType types
-            | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
+            | SynModuleDecl.NestedModule (_, _, decls, _, _) -> visitDeclarations decls
             | _ -> () )
 
     let visitModulesAndNamespaces modulesOrNss =
         modulesOrNss
-        |> Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls)
+        |> Seq.iter (fun (SynModuleOrNamespace(_, _, _, decls, _, _, _, _)) -> visitDeclarations decls)
     ast
     |> Option.iter (function
         | ParsedInput.ImplFile (ParsedImplFileInput(_, _, _, _, _, modules, _)) -> visitModulesAndNamespaces modules
@@ -565,11 +567,11 @@ let internal getStringLiterals ast : Range.range list =
             | SynModuleDecl.Let (_, bindings, _) -> visitBindindgs bindings
             | SynModuleDecl.DoExpr (_, expr, _) -> visitExpr expr
             | SynModuleDecl.Types (types, _) -> for ty in types do visitTypeDefn ty
-            | SynModuleDecl.NestedModule (_, decls, _, _) -> visitDeclarations decls
+            | SynModuleDecl.NestedModule (_, _, decls, _, _) -> visitDeclarations decls
             | _ -> ()
 
     let visitModulesAndNamespaces modulesOrNss =
-        Seq.iter (fun (SynModuleOrNamespace(_, _, decls, _, _, _, _)) -> visitDeclarations decls) modulesOrNss
+        Seq.iter (fun (SynModuleOrNamespace(_, _, _, decls, _, _, _, _)) -> visitDeclarations decls) modulesOrNss
 
     ast
     |> Option.iter (function
@@ -587,7 +589,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                 decls
                 |> List.fold (fun acc ->
                     function
-                    | SynModuleDecl.NestedModule (componentInfo, nestedModuleDecls, _, nestedModuleRange) ->
+                    | SynModuleDecl.NestedModule (componentInfo, _, nestedModuleDecls, _, nestedModuleRange) ->
                         if rangeContainsPos moduleRange pos then
                             let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
                             walkModuleOrNamespace (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
@@ -595,7 +597,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     | _ -> acc) idents
 
             modules
-            |> List.fold (fun acc (SynModuleOrNamespace(longIdent, _, decls, _, _, _, moduleRange)) ->
+            |> List.fold (fun acc (SynModuleOrNamespace(longIdent, _, _, decls, _, _, _, moduleRange)) ->
                     if rangeContainsPos moduleRange pos then
                         walkModuleOrNamespace (longIdent::acc) (decls, moduleRange) @ acc
                     else acc) []
@@ -604,7 +606,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                 decls
                 |> List.fold (fun acc ->
                     function
-                    | SynModuleSigDecl.NestedModule (componentInfo, nestedModuleDecls, nestedModuleRange) ->
+                    | SynModuleSigDecl.NestedModule (componentInfo, _, nestedModuleDecls, nestedModuleRange) ->
                         if rangeContainsPos moduleRange pos then
                             let (ComponentInfo(_,_,_,longIdent,_,_,_,_)) = componentInfo
                             walkModuleOrNamespaceSig (longIdent::acc) (nestedModuleDecls, nestedModuleRange)
@@ -612,7 +614,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
                     | _ -> acc) idents
 
             modules
-            |> List.fold (fun acc (SynModuleOrNamespaceSig(longIdent, _, decls, _, _, _, moduleRange)) ->
+            |> List.fold (fun acc (SynModuleOrNamespaceSig(longIdent, _, _, decls, _, _, _, moduleRange)) ->
                     if rangeContainsPos moduleRange pos then
                         walkModuleOrNamespaceSig (longIdent::acc) (decls, moduleRange) @ acc
                     else acc) []
@@ -664,7 +666,7 @@ module HashDirectiveInfo =
         let parseDirectives modules file =
             [|
             let baseDirectory = getDirectoryOfFile file
-            for (SynModuleOrNamespace (_, _, declarations, _, _, _, _)) in modules do
+            for (SynModuleOrNamespace (_, _, _, declarations, _, _, _, _)) in modules do
                 for decl in declarations do
                     match decl with
                     | SynModuleDecl.HashDirective (ParsedHashDirective("I",[directory],range),_) ->
@@ -1086,6 +1088,7 @@ module Outlining =
                 yield! rcheck Scope.Type Collapse.Below <| Range.endToEnd componentInfo.Range range
                 yield! parseSimpleRepr simpleRepr
                 yield! Seq.collect parseSynMemberDefn members
+            | SynTypeDefnRepr.Exception _ -> ()
         }
 
     let private getConsecutiveModuleDecls (predicate: SynModuleDecl -> range option) (scope:Scope) (decls: SynModuleDecls) =
@@ -1131,7 +1134,7 @@ module Outlining =
             | SynModuleDecl.Types (types,_) ->
                 yield! Seq.collect parseTypeDefn types
             // Fold the attributes above a module
-            | SynModuleDecl.NestedModule (SynComponentInfo.ComponentInfo (attrs,_,_,_,_,_,_,cmpRange), decls,_,_) ->
+            | SynModuleDecl.NestedModule (SynComponentInfo.ComponentInfo (attrs,_,_,_,_,_,_,cmpRange),_, decls,_,_) ->
                 // Outline the full scope of the module
                 yield! rcheck Scope.Module Collapse.Below <| Range.endToEnd cmpRange decl.Range
                 // A module's component info stores the ranges of its attributes
@@ -1146,7 +1149,7 @@ module Outlining =
         }
 
     let private parseModuleOrNamespace moduleOrNs =
-        seq { let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,decls,_,_,_,_)) = moduleOrNs
+        seq { let (SynModuleOrNamespace.SynModuleOrNamespace (_,_,_,decls,_,_,_,_)) = moduleOrNs
               yield! collectHashDirectives decls
               yield! collectOpens decls
               yield! Seq.collect parseDeclaration decls }
@@ -1245,7 +1248,7 @@ module Printf =
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) =
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, decls, _, _, _, _)) =
+        and walkSynModuleOrNamespace (SynModuleOrNamespace(_, _, _, decls, _, _, _, _)) =
             List.iter walkSynModuleDecl decls
 
         and walkTypeConstraint = function
@@ -1469,10 +1472,12 @@ module Printf =
         and walkTypeDefnRepr = function
             | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.iter walkMember defns
             | SynTypeDefnRepr.Simple _ -> ()
+            | SynTypeDefnRepr.Exception _ -> ()
 
         and walkTypeDefnSigRepr = function
             | SynTypeDefnSigRepr.ObjectModel (_, defns, _) -> List.iter walkMemberSig defns
             | SynTypeDefnSigRepr.Simple _ -> ()
+            | SynTypeDefnSigRepr.Exception _ -> ()
 
         and walkTypeDefn (TypeDefn (_, repr, members, _)) =
             walkTypeDefnRepr repr
@@ -1481,7 +1486,7 @@ module Printf =
         and walkSynModuleDecl (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule (_, modules, _, _) ->
+            | SynModuleDecl.NestedModule (_, _, modules, _, _) ->
                 List.iter walkSynModuleDecl modules
             | SynModuleDecl.Let (_, bindings, _) -> List.iter walkBinding bindings
             | SynModuleDecl.DoExpr (_, expr, _) -> walkExpr expr

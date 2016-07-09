@@ -73,7 +73,7 @@ module internal DepthParsing =
     let rec getRangesSynModuleDecl decl =
         match decl with
         | SynModuleDecl.ModuleAbbrev(_ident, _longIdent, _range) -> []
-        | SynModuleDecl.NestedModule(_synComponentInfo, synModuleDecls, _, range) -> (cutoffTheLineBefore range) :: (synModuleDecls |> List.collect getRangesSynModuleDecl)
+        | SynModuleDecl.NestedModule(_, _, synModuleDecls, _, range) -> (cutoffTheLineBefore range) :: (synModuleDecls |> List.collect getRangesSynModuleDecl)
         | SynModuleDecl.Let(_, synBindingList, range) -> (cutoffTheLineBefore range) :: (synBindingList |> List.collect getRangesSynBinding)
         | SynModuleDecl.DoExpr(_sequencePointInfoForBinding, synExpr, range) -> (cutoffTheLineBefore range) :: (getRangesSynExpr synExpr)
         | SynModuleDecl.Types(synTypeDefnList, range) -> (cutoffTheLineBefore range) :: (synTypeDefnList |> List.collect getRangesSynTypeDefn)
@@ -83,13 +83,13 @@ module internal DepthParsing =
         | SynModuleDecl.HashDirective(_parsedHashDirective, _range) -> []
         | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> getRangesSynModuleOrNamespace synModuleOrNamespace
 
-    and getRangesSynModuleOrNamespace (SynModuleOrNamespace(_longIdent, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, _range)) =
+    and getRangesSynModuleOrNamespace (SynModuleOrNamespace(_, _, _, synModuleDecls, _, _, _, _)) =
         (synModuleDecls |> List.collect getRangesSynModuleDecl)
 
     and getRangesSynExpr expr =
         getRangesSynExprK expr id
 
-    and getRangesSynExprK expr k=
+    and getRangesSynExprK expr k =
         match expr with 
         | SynExpr.Paren(synExpr,_,_, _range) -> getRangesSynExprK synExpr k
         | SynExpr.Quote(synExpr, _, synExpr2, _, _range) -> 
@@ -217,18 +217,20 @@ module internal DepthParsing =
             k (r1 @ r2)))
         | SynExpr.MatchLambda(_,_range,synMatchClauses, _seqInfo, _range2) -> 
             k (List.collect getRangesSynMatchClause synMatchClauses)
+        | SynExpr.Fixed(_, _) -> k[]
     
     and getRangesSynTypeDefn (SynTypeDefn.TypeDefn(_synComponentInfo, synTypeDefnRepr, synMemberDefns, _tRange)) =
         let stuff = 
             match synTypeDefnRepr with
-            | ObjectModel(_synTypeDefnKind, synMemberDefns, oRange) ->
+            | SynTypeDefnRepr.ObjectModel(_synTypeDefnKind, synMemberDefns, oRange) ->
                 let whole = 
                     synMemberDefns 
                     |> Seq.filter (function | SynMemberDefn.ImplicitCtor _ | SynMemberDefn.ImplicitInherit _ -> false | _ -> true)
                     |> Seq.map rangeOfSynMemberDefn |> Seq.fold unionRanges oRange
                     |> cutoffTheLineBefore
                 whole :: (synMemberDefns |> List.collect getRangesSynMemberDefn)
-            | Simple(_synTypeDefnSimpleRepr, _range) -> []
+            | SynTypeDefnRepr.Simple(_synTypeDefnSimpleRepr, _range) -> []
+            | SynTypeDefnRepr.Exception _ -> []
         stuff @ (synMemberDefns |> List.collect getRangesSynMemberDefn)
 
     and getRangesSynMemberDefn m =

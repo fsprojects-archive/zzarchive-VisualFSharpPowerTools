@@ -20,6 +20,7 @@ nuget NUnit
 nuget Foq
 nuget FsCheck
 nuget FAKE
+nuget FSharp.Core redirects:on
 
 group Build
 source http://nuget.org/api/v2
@@ -29,5 +30,6 @@ nuget FAKE
 nuget Nuget.CommandLine
 nuget canopy
 nuget Selenium.WebDriver.ChromeDriver
+nuget FSharp.Core redirects:on
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

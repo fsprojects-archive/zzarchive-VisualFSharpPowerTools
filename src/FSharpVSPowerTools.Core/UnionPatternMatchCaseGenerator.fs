@@ -82,7 +82,7 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
     let rec walkImplFileInput (ParsedImplFileInput(_name, _isScript, _fileName, _scopedPragmas, _hashDirectives, moduleOrNamespaceList, _)) = 
         List.tryPick walkSynModuleOrNamespace moduleOrNamespaceList
 
-    and walkSynModuleOrNamespace(SynModuleOrNamespace(_lid, _isModule, decls, _xmldoc, _attributes, _access, range)) =
+    and walkSynModuleOrNamespace(SynModuleOrNamespace(_, _, _, decls, _, _, _, range)) =
         getIfPosInRange range (fun () ->
             List.tryPick walkSynModuleDecl decls
         )
@@ -90,7 +90,7 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
     and walkSynModuleDecl(decl: SynModuleDecl) =
         getIfPosInRange decl.Range (fun () ->
             match decl with
-            | SynModuleDecl.Exception(ExceptionDefn(_repr, synMembers, _defnRange), _range) -> 
+            | SynModuleDecl.Exception(SynExceptionDefn(_, synMembers, _), _) -> 
                 List.tryPick walkSynMemberDefn synMembers
             | SynModuleDecl.Let(_isRecursive, bindings, _range) ->
                 List.tryPick walkBinding bindings
@@ -98,7 +98,7 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
                 None
             | SynModuleDecl.NamespaceFragment(fragment) ->
                 walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(_componentInfo, modules, _isContinuing, _range) ->
+            | SynModuleDecl.NestedModule(_, _, modules, _, _) ->
                 List.tryPick walkSynModuleDecl modules
             | SynModuleDecl.Types(typeDefs, _range) ->
                 List.tryPick walkSynTypeDefn typeDefs
@@ -121,8 +121,8 @@ let private tryFindPatternMatchExprInParsedInput (pos: pos) (parsedInput: Parsed
             match typeDefnRepr with
             | SynTypeDefnRepr.ObjectModel(_kind, members, _range) ->
                 List.tryPick walkSynMemberDefn members
-            | SynTypeDefnRepr.Simple(_repr, _range) -> 
-                None
+            | SynTypeDefnRepr.Simple _
+            | SynTypeDefnRepr.Exception _ -> None
         )
 
     and walkSynMemberDefn (memberDefn: SynMemberDefn) =
