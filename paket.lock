@@ -1,7 +1,7 @@
 NUGET
   remote: http://www.nuget.org/api/v2
-    Fantomas (2.2)
-      FSharp.Compiler.Service (>= 2.0.0.8)
+    Fantomas (2.3)
+      FSharp.Compiler.Service (>= 5.0)
     FParsec (1.0.2)
     FSharp.Compiler.Service (5.0)
     FSharp.Compiler.Service.ProjectCracker (3.0)
@@ -56,7 +56,7 @@ NUGET
 GITHUB
   remote: fsharp/FAKE
     modules/Octokit/Octokit.fsx (c56456abac6b744c3bb95b217687db19fd19b367)
-      Octokit (>= 0.20)
+      Octokit
 GROUP Test
 NUGET
   remote: http://www.nuget.org/api/v2
