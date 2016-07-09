@@ -20,7 +20,6 @@ module Prelude =
 module Seq =
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
-open System.Collections.Generic
 [<RequireQualifiedAccess>]
 module List =
     /// Fold over the list passing the index and element at that index to a folding function
