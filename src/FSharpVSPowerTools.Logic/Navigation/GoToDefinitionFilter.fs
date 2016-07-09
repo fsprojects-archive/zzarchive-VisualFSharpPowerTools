@@ -3,25 +3,18 @@
 open System
 open System.IO
 open System.Threading
-open System.Security
-open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
-open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.CodeGeneration
 open Microsoft.VisualStudio.Text
-open Microsoft.FSharp.Compiler.Range
 open SourceLink.SymbolStore
 open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
-open System.Text
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =

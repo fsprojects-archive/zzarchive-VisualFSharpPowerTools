@@ -49,7 +49,7 @@ module internal XmlDocParsing =
             | _ -> false
 
         let rec getXmlDocablesSynModuleDecl = function
-            | SynModuleDecl.NestedModule(_, synModuleDecls, _, _) -> 
+            | SynModuleDecl.NestedModule(_,  _, synModuleDecls, _, _) -> 
                 (synModuleDecls |> List.collect getXmlDocablesSynModuleDecl)
             | SynModuleDecl.Let(_, synBindingList, range) -> 
                 let anyXmlDoc = 
@@ -88,14 +88,15 @@ module internal XmlDocParsing =
             | SynModuleDecl.Attributes _
             | SynModuleDecl.HashDirective _ -> []
 
-        and getXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_, _, synModuleDecls, _, _, _, _)) =
+        and getXmlDocablesSynModuleOrNamespace (SynModuleOrNamespace(_, _,  _, synModuleDecls, _, _, _, _)) =
             (synModuleDecls |> List.collect getXmlDocablesSynModuleDecl)
 
         and getXmlDocablesSynTypeDefn (SynTypeDefn.TypeDefn(ComponentInfo(synAttributes, _, _, _, preXmlDoc, _, _, compRange), synTypeDefnRepr, synMemberDefns, tRange)) =
             let stuff = 
                 match synTypeDefnRepr with
-                | ObjectModel(_, synMemberDefns, _) -> (synMemberDefns |> List.collect getXmlDocablesSynMemberDefn)
-                | Simple(_synTypeDefnSimpleRepr, _range) -> []
+                | SynTypeDefnRepr.ObjectModel(_, synMemberDefns, _) -> (synMemberDefns |> List.collect getXmlDocablesSynMemberDefn)
+                | SynTypeDefnRepr.Simple(_synTypeDefnSimpleRepr, _range) -> []
+                | SynTypeDefnRepr.Exception _ -> []
             let docForTypeDefn = 
                 if isEmptyXmlDoc preXmlDoc then
                     let fullRange = synAttributes |> List.fold (fun r a -> unionRanges r a.Range) (unionRanges compRange tRange)

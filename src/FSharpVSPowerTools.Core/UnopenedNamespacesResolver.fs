@@ -118,7 +118,7 @@ module ParsedInput =
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.tryPick (walkSynModuleOrNamespace true) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace isTopLevel (SynModuleOrNamespace(_, isModule, decls, _, attrs, _, r)) =
+        and walkSynModuleOrNamespace isTopLevel (SynModuleOrNamespace(_, _, isModule, decls, _, attrs, _, r)) =
             if isModule && isTopLevel then None else List.tryPick walkAttribute attrs
             |> Option.orElse (ifPosInRange r (fun _ -> List.tryPick (walkSynModuleDecl isTopLevel) decls))
 
@@ -346,10 +346,12 @@ module ParsedInput =
         and walkTypeDefnRepr = function
             | SynTypeDefnRepr.ObjectModel (_, defns, _) -> List.tryPick walkMember defns
             | SynTypeDefnRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+            | SynTypeDefnRepr.Exception(_) -> None
 
         and walkTypeDefnSigRepr = function
             | SynTypeDefnSigRepr.ObjectModel (_, defns, _) -> List.tryPick walkMemberSig defns
             | SynTypeDefnSigRepr.Simple(defn, _) -> walkTypeDefnSimple defn
+            | SynTypeDefnSigRepr.Exception(_) -> None
 
         and walkTypeDefn (TypeDefn (info, repr, members, _)) =
             walkComponentInfo false info
@@ -359,7 +361,7 @@ module ParsedInput =
         and walkSynModuleDecl isTopLevel (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace isTopLevel fragment
-            | SynModuleDecl.NestedModule(info, modules, _, range) ->
+            | SynModuleDecl.NestedModule(info, _, modules, _, range) ->
                 walkComponentInfo true info
                 |> Option.orElse (ifPosInRange range (fun _ -> List.tryPick (walkSynModuleDecl false) modules))
             | SynModuleDecl.Open _ -> None
@@ -415,7 +417,7 @@ module ParsedInput =
             | [] -> None
             | firstDecl :: _ -> 
                 match firstDecl with
-                | SynModuleDecl.NestedModule (_, _, _, r) -> Some r
+                | SynModuleDecl.NestedModule (_, _, _, _, r) -> Some r
                 | SynModuleDecl.Let (_, _, r) -> Some r
                 | SynModuleDecl.DoExpr (_, _, r) -> Some r
                 | SynModuleDecl.Types (_, r) -> Some r
@@ -429,7 +431,7 @@ module ParsedInput =
         let rec walkImplFileInput (ParsedImplFileInput(_, _, _, _, _, moduleOrNamespaceList, _)) = 
             List.iter (walkSynModuleOrNamespace []) moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, isModule, decls, _, _, _, range)) =
+        and walkSynModuleOrNamespace (parent: LongIdent) (SynModuleOrNamespace(ident, _, isModule, decls, _, _, _, range)) =
             if range.EndLine >= currentLine then
                 match isModule, parent, ident with
                 | false, _, _ -> ns := Some (longIdentToIdents ident)
@@ -458,7 +460,7 @@ module ParsedInput =
         and walkSynModuleDecl (parent: LongIdent) (decl: SynModuleDecl) =
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace parent fragment
-            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), decls, _, range) ->
+            | SynModuleDecl.NestedModule(ComponentInfo(_, _, _, ident, _, _, _, _), _, decls, _, range) ->
                 let fullIdent = parent @ ident
                 addModule fullIdent range.EndLine range.StartColumn
                 if range.EndLine >= currentLine then

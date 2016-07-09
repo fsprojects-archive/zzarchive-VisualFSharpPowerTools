@@ -69,7 +69,7 @@ module NavigableItemsCollector =
         let addModuleAbbreviation (id: Ident) isSig =
             addIdent NavigableItemKind.ModuleAbbreviation id isSig 
         
-        let addExceptionRepr (ExceptionDefnRepr(_, UnionCase(_, id, _, _, _, _), _, _, _, _)) isSig = 
+        let addExceptionRepr (SynExceptionDefnRepr(_, UnionCase(_, id, _, _, _, _), _, _, _, _)) isSig = 
             addIdent NavigableItemKind.Exception id isSig
 
         let addComponentInfo kind (ComponentInfo(_, _, _, lid, _, _, _, _)) isSig = 
@@ -130,7 +130,7 @@ module NavigableItemsCollector =
             for item in moduleOrNamespaceList do
                 walkSynModuleOrNamespaceSig item
 
-        and walkSynModuleOrNamespaceSig (SynModuleOrNamespaceSig(lid, isModule, decls, _, _, _, _)) = 
+        and walkSynModuleOrNamespaceSig (SynModuleOrNamespaceSig(lid, _, isModule, decls, _, _, _, _)) = 
             if isModule then
                 addModule lid true
             for decl in decls do
@@ -140,11 +140,11 @@ module NavigableItemsCollector =
             match decl with
             | SynModuleSigDecl.ModuleAbbrev(lhs, _, _range) ->
                 addModuleAbbreviation lhs true
-            | SynModuleSigDecl.Exception(ExceptionSig(representation, _, _), _) ->
+            | SynModuleSigDecl.Exception(SynExceptionSig(representation, _, _), _) ->
                 addExceptionRepr representation true
             | SynModuleSigDecl.NamespaceFragment fragment ->
                 walkSynModuleOrNamespaceSig fragment
-            | SynModuleSigDecl.NestedModule(componentInfo, nestedDecls, _) ->
+            | SynModuleSigDecl.NestedModule(componentInfo, _, nestedDecls, _) ->
                 addComponentInfo NavigableItemKind.Module componentInfo true
                 for decl in nestedDecls do
                     walkSynModuleSigDecl decl
@@ -166,6 +166,7 @@ module NavigableItemsCollector =
                     walkSynMemberSig m
             | SynTypeDefnSigRepr.Simple(repr, _) ->
                 walkSynTypeDefnSimpleRepr repr true
+            | SynTypeDefnSigRepr.Exception _ -> ()
 
         and walkSynMemberSig (synMemberSig: SynMemberSig) = 
             match synMemberSig with
@@ -182,7 +183,7 @@ module NavigableItemsCollector =
             for item in moduleOrNamespaceList do
                 walkSynModuleOrNamespace item
 
-        and walkSynModuleOrNamespace(SynModuleOrNamespace(lid, isModule, decls, _, _, _, _)) =
+        and walkSynModuleOrNamespace(SynModuleOrNamespace(lid, _, isModule, decls, _, _, _, _)) =
             if isModule then
                 addModule lid false
             for decl in decls do
@@ -190,7 +191,7 @@ module NavigableItemsCollector =
 
         and walkSynModuleDecl(decl: SynModuleDecl) =
             match decl with
-            | SynModuleDecl.Exception(ExceptionDefn(repr, synMembers, _), _) -> 
+            | SynModuleDecl.Exception(SynExceptionDefn(repr, synMembers, _), _) -> 
                 addExceptionRepr repr false
                 for m in synMembers do
                     walkSynMemberDefn m
@@ -201,7 +202,7 @@ module NavigableItemsCollector =
                 addModuleAbbreviation lhs false
             | SynModuleDecl.NamespaceFragment(fragment) ->
                 walkSynModuleOrNamespace fragment
-            | SynModuleDecl.NestedModule(componentInfo, modules, _, _) ->
+            | SynModuleDecl.NestedModule(componentInfo, _, modules, _, _) ->
                 addComponentInfo NavigableItemKind.Module componentInfo false
                 for m in modules do
                     walkSynModuleDecl m
@@ -226,6 +227,7 @@ module NavigableItemsCollector =
                     walkSynMemberDefn m
             | SynTypeDefnRepr.Simple(repr, _) -> 
                 walkSynTypeDefnSimpleRepr repr false
+            | SynTypeDefnRepr.Exception _ -> ()
 
         and walkSynTypeDefnSimpleRepr(repr: SynTypeDefnSimpleRepr) isSig = 
             match repr with
@@ -242,7 +244,8 @@ module NavigableItemsCollector =
             | SynTypeDefnSimpleRepr.General _
             | SynTypeDefnSimpleRepr.LibraryOnlyILAssembly _
             | SynTypeDefnSimpleRepr.None _
-            | SynTypeDefnSimpleRepr.TypeAbbrev _ -> ()
+            | SynTypeDefnSimpleRepr.TypeAbbrev _
+            | SynTypeDefnSimpleRepr.Exception _ -> ()
 
         and walkSynMemberDefn (memberDefn: SynMemberDefn) =
             match memberDefn with

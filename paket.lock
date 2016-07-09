@@ -2,7 +2,7 @@ NUGET
   remote: http://www.nuget.org/api/v2
     Fantomas (2.2)
       FSharp.Compiler.Service (>= 2.0.0.8)
-    FSharp.Compiler.Service (3.0)
+    FSharp.Compiler.Service (5.0)
     FSharp.Core (4.0.0.1) - redirects: on
     FSharp.Management (0.3)
     FSharp.ViewModule.Core (0.9.9.3)

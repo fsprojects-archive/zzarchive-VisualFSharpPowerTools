@@ -325,8 +325,8 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
     // Try to get recent results from the F# service
     let res = 
         match stale with 
-        | AllowStaleResults.MatchingFileName -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options) 
-        | AllowStaleResults.MatchingSource -> checkerInstance.TryGetRecentTypeCheckResultsForFile(fileName, options, source=src)
+        | AllowStaleResults.MatchingFileName -> checkerInstance.TryGetRecentCheckResultsForFile(fileName, options) 
+        | AllowStaleResults.MatchingSource -> checkerInstance.TryGetRecentCheckResultsForFile(fileName, options, source=src)
         | AllowStaleResults.No -> None
     match res with 
     | Some (untyped,typed,_) when typed.HasFullTypeCheckInfo  -> Some (ParseAndCheckResults(typed, untyped))

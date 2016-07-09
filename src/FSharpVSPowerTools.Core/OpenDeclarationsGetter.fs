@@ -177,7 +177,7 @@ module OpenDeclarationGetter =
                 let rec loop acc exprs = async {
                     match exprs with
                     | [] -> return acc
-                    | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) :: rest -> 
+                    | SynModuleDecl.NestedModule (_, _, nestedModuleDecls, _, nestedModuleRange) :: rest -> 
                         let! acc' = walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                         return! loop acc' rest
                     | SynModuleDecl.Open (LongIdentWithDots(longIdent, _), openStatementRange) :: rest ->
@@ -259,7 +259,7 @@ module OpenDeclarationGetter =
             let rec loop acc exprs = async {
                 match exprs with
                 | [] -> return acc
-                | SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange) :: rest ->
+                | SynModuleOrNamespace(_, _, _, decls, _, _, _, moduleRange) :: rest ->
                     let! acc' = walkModuleOrNamespace acc (decls, moduleRange)
                     return! loop (acc' @ acc) rest
             }
@@ -275,7 +275,7 @@ module OpenDeclarationGetter =
                     decls
                     |> List.fold (fun acc -> 
                         function
-                        | SynModuleDecl.NestedModule (_, nestedModuleDecls, _, nestedModuleRange) -> 
+                        | SynModuleDecl.NestedModule (_, _, nestedModuleDecls, _, nestedModuleRange) -> 
                             if rangeContainsPos moduleRange pos then
                                 walkModuleOrNamespace acc (nestedModuleDecls, nestedModuleRange)
                             else acc
@@ -287,7 +287,7 @@ module OpenDeclarationGetter =
                         | _ -> acc) openStatements 
 
                 modules
-                |> List.fold (fun acc (SynModuleOrNamespace(_, _, decls, _, _, _, moduleRange)) ->
+                |> List.fold (fun acc (SynModuleOrNamespace(_, _, _, decls, _, _, _, moduleRange)) ->
                        if rangeContainsPos moduleRange pos then
                            walkModuleOrNamespace acc (decls, moduleRange) @ acc
                        else acc) []
@@ -296,7 +296,7 @@ module OpenDeclarationGetter =
                     decls
                     |> List.fold (fun acc -> 
                         function
-                        | SynModuleSigDecl.NestedModule (_, nestedModuleDecls, nestedModuleRange) -> 
+                        | SynModuleSigDecl.NestedModule (_, _, nestedModuleDecls, nestedModuleRange) -> 
                             if rangeContainsPos moduleRange pos then
                                 walkModuleOrNamespaceSig acc (nestedModuleDecls, nestedModuleRange)
                             else acc
@@ -308,7 +308,7 @@ module OpenDeclarationGetter =
                         | _ -> acc) openStatements
 
                 modules
-                |> List.fold (fun acc (SynModuleOrNamespaceSig(_, _, decls, _, _, _, moduleRange)) ->
+                |> List.fold (fun acc (SynModuleOrNamespaceSig(_, _, _, decls, _, _, _, moduleRange)) ->
                         if rangeContainsPos moduleRange pos then
                             walkModuleOrNamespaceSig acc (decls, moduleRange) @ acc
                         else acc) []
