@@ -17,9 +17,9 @@ module Symbols =
 
 type FileName = string
 type GetCheckResults = FileName -> Async<ParseAndCheckResults option>
-type FCSZeroBasedRange = int * int * int * int
+type ZeroBasedRange = int * int * int * int
 
-type CurrentLine = {Line: string; File: FileName; Range: FCSZeroBasedRange}
+type CurrentLine = { Line: string; File: FileName; Range: ZeroBasedRange }
     with
         member x.EndLine =
             let _, _, endLine, _ = x.Range
@@ -28,9 +28,10 @@ type CurrentLine = {Line: string; File: FileName; Range: FCSZeroBasedRange}
 module HighlightUsageInFile =
     open FSharpVSPowerTools
     open Microsoft.FSharp.Compiler.SourceCodeServices
-    [<NoComparisonAttribute(* due to FSharpSymbol*) >]
+    
+    [<NoComparisonAttribute(* due to FSharpSymbol *)>]
     type HighlightUsageInFileResult =
-    | UsageInFile of FSharpSymbol * string * FSharpSymbolUse array
+        | UsageInFile of FSharpSymbol * string * FSharpSymbolUse array
 
     let findUsageInFile (currentLine: CurrentLine) (symbol: Symbol) (getCheckResults: GetCheckResults) = 
         asyncMaybe {
