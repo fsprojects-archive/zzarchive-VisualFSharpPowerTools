@@ -1,4 +1,5 @@
-﻿namespace FSharpVSPowerTools.ProjectSystem
+﻿
+namespace FSharpVSPowerTools.ProjectSystem
 
 open FSharpVSPowerTools
 open FSharp.ViewModule.Progress
@@ -16,6 +17,8 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open FSharpVSPowerTools.AssemblyContentProvider
 open FSharpVSPowerTools.AsyncMaybe
+open FSharpPowerTools.Core.Symbols
+open FSharpPowerTools.Core
 
 type FilePath = string
 
@@ -88,16 +91,6 @@ type VSLanguageService
             debug "[Language Service] %O exception occurs while querying lexing states." e
             Logging.logExceptionWithContext(e, "Exception occurs while querying lexing states.")
             Lexer.queryLexState source defines line
-
-    let filterSymbolUsesDuplicates (uses: FSharpSymbolUse[]) =
-        uses
-        |> Seq.map (fun symbolUse -> (symbolUse.FileName, symbolUse))
-        |> Seq.groupBy (fst >> Path.GetFullPathSafe)
-        |> Seq.collect (fun (_, symbolUses) -> 
-            symbolUses 
-            |> Seq.map snd 
-            |> Seq.distinctBy (fun s -> s.RangeAlternate))
-        |> Seq.toArray
 
     let mayReferToSameBuffer (snapshot: ITextSnapshot) filePath =
         match openDocumentsTracker.TryFindOpenDocument(filePath) with
@@ -209,6 +202,19 @@ type VSLanguageService
                 debug "[Language Service] %O exception occurs while finding usages in file." e
                 Logging.logExceptionWithContext(e, "Exception occurs while finding usages in file.")
                 return None
+        }
+
+    member __.FindUsagesInFile (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
+        asyncMaybe {
+            let currentLine = { Line = word.Start.GetContainingLine().GetText(); Range = word.ToRange(); File = currentFile }
+            let getCheckResults currentFile = 
+                asyncMaybe {
+                    let! source = openDocumentsTracker.TryGetDocumentText currentFile
+                    let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
+                    let! results = instance.ParseAndCheckFileInProject(opts, currentFile, source, stale) |> liftAsync
+                    return results
+                }
+            return! HighlightUsageInFile.findUsageInFile currentLine symbol getCheckResults
         }
 
     member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
