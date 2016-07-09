@@ -5,6 +5,7 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
+open FSharpPowerTools.Core.HighlightUsageInFile
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.ProjectSystem
@@ -66,22 +67,15 @@ type HighlightUsageTagger(doc: ITextDocument,
         async {
             if currentRequest = requestedPoint then
                 try
-                    let! res = vsLanguageService.GetFSharpSymbolUse (newWord, symbol, fileName, projectProvider, AllowStaleResults.MatchingSource)
+                    let! res = vsLanguageService.FindUsagesInFile (newWord, symbol, fileName, projectProvider, AllowStaleResults.MatchingSource)
                     match res with
-                    | Some (_, checkResults) ->
-                        let! results = vsLanguageService.FindUsagesInFile (newWord, symbol, checkResults)
-                        let refSpans =
-                            results |> Option.map (fun (_, lastIdent, refs) -> symbolUsesToSpans newWord fileName lastIdent refs)
-
-                        match refSpans with
-                        | Some references -> 
-                            // Ignore symbols without any use
-                            let word = if List.isEmpty references then None else Some newWord
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, references, word)
-                        | None ->
-                            // Return empty values in order to clear up markers
-                            do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
-                    | None -> 
+                    | Some (UsageInFile (_, lastIdent, refs)) -> 
+                        let references = symbolUsesToSpans newWord fileName lastIdent refs
+                        // Ignore symbols without any use
+                        let word = if List.isEmpty references then None else Some newWord
+                        do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, references, word)
+                    | _ -> 
+                        // Return empty values in order to clear up markers
                         do! callInUIContext <| fun _ -> synchronousUpdate (currentRequest, [], None)
                 with e ->
                     Logging.logExceptionWithContext(e, "Failed to update highlight references.")
