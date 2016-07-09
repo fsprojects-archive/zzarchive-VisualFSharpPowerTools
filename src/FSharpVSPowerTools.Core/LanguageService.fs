@@ -74,6 +74,9 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
             return symbolUse.Symbol, ident, refs
         }
 
+    member __.GetDeclarationLocation(symbol, lineStr, preferSignature) =
+        __.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature)
+
     member __.GetDeclarationLocation(line, col, lineStr, ident, preferSignature) =
         async {
             match infoOpt with 

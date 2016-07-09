@@ -22,6 +22,7 @@ open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open System.Text
+open FSharpVSPowerTools.AsyncMaybe
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -54,23 +55,19 @@ type GoToDefinitionFilter
     let project = lazy (projectFactory.CreateForDocument textBuffer textDocument.FilePath)
 
     let getDocumentState () =
-        async {
-            let projectItems = maybe {
-                let! project = project.Value
-                let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
-                let! span, symbol = vsLanguageService.GetSymbol(caretPos, textDocument.FilePath, project)
-                return project, span, symbol }
+        asyncMaybe {
+            let fileName = textDocument.FilePath
+            let! project = project.Value
+            let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
+            let! span, symbol = vsLanguageService.GetSymbol(caretPos, fileName, project)
 
-            match projectItems with
-            | Some (project, span, symbol) ->
-                let! symbolUse = vsLanguageService.GetFSharpSymbolUse(span, symbol, textDocument.FilePath, project, AllowStaleResults.MatchingSource)
-                match symbolUse with
-                | Some (fsSymbolUse, fileScopedCheckResults) ->
-                    let lineStr = span.Start.GetContainingLine().GetText()
-                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
-                    return Some (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse, findDeclResult) 
-                | None -> return None
-            | None -> return None
+            let! result = vsLanguageService.GetFSharpSymbolUse(span, symbol, fileName, project, AllowStaleResults.MatchingSource) |> liftAsync
+            match result with
+            | Some (fsSymbolUse, fileScopedCheckResults) ->
+              let lineText = span.Start.GetContainingLine().GetText()
+              let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
+              return! Some (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse, findDeclResult)
+            | None -> return! None
         }
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
