@@ -72,199 +72,74 @@
     <Resource Include="MoveToFolderDialog.xaml">
     </Resource>
     <Resource Include="QuickInfoMargin.xaml" />
-    <Resource Include="LintOptionsPageControl.xaml" />
-    <Compile Include="Resource.fs">
-      <Link>Common/Resource.fs</Link>
-    </Compile>
-    <Compile Include="Constants.fs">
-      <Link>Common/Constants.fs</Link>
-    </Compile>
-    <Compile Include="Setting.fs">
-      <Link>Common/Setting.fs</Link>
-    </Compile>
-    <Compile Include="Logger.fs">
-      <Link>Common/Logger.fs</Link>
-    </Compile>
-    <Compile Include="VSUtils.fs">
-      <Link>Common/VSUtils.fs</Link>
-    </Compile>
-    <Compile Include="EventHandling.fs">
-      <Link>Common/EventHandling.fs</Link>
-    </Compile>
-    <Compile Include="VSColors.fs">
-      <Link>Common/VSColors.fs</Link>
-    </Compile>
-    <Compile Include="VisualStudioVersion.fs">
-      <Link>Common/VisualStudioVersion.fs</Link>
-    </Compile>
-    <Compile Include="ThemeManager.fs">
-      <Link>Common/ThemeManager.fs</Link>
-    </Compile>
-    <Compile Include="Status.fs">
-      <Link>Common/Status.fs</Link>
-    </Compile>
-    <Compile Include="CommonResources.xaml.fs">
-      <Link>Common/CommonResources.xaml.fs</Link>
-    </Compile>
-    <Compile Include="ProjectSystem.fs">
-      <Link>ProjectSystem/ProjectSystem.fs</Link>
-    </Compile>
-    <Compile Include="OpenDocumentsTracker.fs">
-      <Link>ProjectSystem/OpenDocumentsTracker.fs</Link>
-    </Compile>
-    <Compile Include="FileSystem.fs">
-      <Link>ProjectSystem/FileSystem.fs</Link>
-    </Compile>
-    <Compile Include="SolutionBuildEventListener.fs">
-      <Link>ProjectSystem/SolutionBuildEventListener.fs</Link>
-    </Compile>
-    <Compile Include="VSLanguageService.fs">
-      <Link>ProjectSystem/VSLanguageService.fs</Link>
-    </Compile>
-    <Compile Include="ProjectProvider.fs">
-      <Link>ProjectSystem/ProjectProvider.fs</Link>
-    </Compile>
-    <Compile Include="ProjectFactory.fs">
-      <Link>ProjectSystem/ProjectFactory.fs</Link>
-    </Compile>
-    <Compile Include="ActiveViewsRegistratorListener.fs">
-      <Link>Navigation/ActiveViewsRegistratorListener.fs</Link>
-    </Compile>
-    <Compile Include="NavigableItemCache.fs">
-      <Link>Navigation/NavigableItemCache.fs</Link>
-    </Compile>
-    <Compile Include="NavigateToItem.fs">
-      <Link>Navigation/NavigateToItem.fs</Link>
-    </Compile>
-    <Compile Include="ReferenceSourceProvider.fs">
-      <Link>Navigation/ReferenceSourceProvider.fs</Link>
-    </Compile>
-    <Compile Include="NavigateToMetadataService.fs">
-      <Link>Navigation/NavigateToMetadataService.fs</Link>
-    </Compile>
-    <Compile Include="GoToDefinitionFilter.fs">
-      <Link>Navigation/GoToDefinitionFilter.fs</Link>
-    </Compile>
-    <Compile Include="NoPeekDefinitionFilterProvider.fs">
-      <Link>Navigation/NoPeekDefinitionFilterProvider.fs</Link>
-    </Compile>
-    <Compile Include="CodeFormattingServices.fs">
-      <Link>Formatting/CodeFormattingServices.fs</Link>
-    </Compile>
-    <Compile Include="CodeFormattingCommands.fs">
-      <Link>Formatting/CodeFormattingCommands.fs</Link>
-    </Compile>
-    <Compile Include="FormatDocumentCommand.fs">
-      <Link>Formatting/FormatDocumentCommand.fs</Link>
-    </Compile>
-    <Compile Include="FormatSelectionCommand.fs">
-      <Link>Formatting/FormatSelectionCommand.fs</Link>
-    </Compile>
-    <Compile Include="DepthTagger.fs">
-      <Link>Coloring/DepthTagger.fs</Link>
-    </Compile>
-    <Compile Include="DepthAdornmentManager.fs">
-      <Link>Coloring/DepthAdornmentManager.fs</Link>
-    </Compile>
-    <Compile Include="ClassifierTypes.fs">
-      <Link>Coloring/ClassifierTypes.fs</Link>
-    </Compile>
-    <Compile Include="SymbolClassifier.fs">
-      <Link>Coloring/SymbolClassifier.fs</Link>
-    </Compile>
-    <Compile Include="UnusedSymbolClassifier.fs">
-      <Link>Coloring/UnusedSymbolClassifier.fs</Link>
-    </Compile>
-    <Compile Include="UnusedDeclarationMargin.fs">
-      <Link>Coloring/UnusedDeclarationMargin.fs</Link>
-    </Compile>
-    <Compile Include="HighlightUsageTagger.fs">
-      <Link>Symbol/HighlightUsageTagger.fs</Link>
-    </Compile>
-    <Compile Include="HighlightUsageFilter.fs">
-      <Link>Symbol/HighlightUsageFilter.fs</Link>
-    </Compile>
-    <Compile Include="PrintfSpecifiersUsageTagger.fs">
-      <Link>Symbol/PrintfSpecifiersUsageTagger.fs</Link>
-    </Compile>
-    <Compile Include="RenameDialog.fs">
-      <Link>Symbol/RenameDialog.fs</Link>
-    </Compile>
-    <Compile Include="RenameCommandFilter.fs">
-      <Link>Symbol/RenameCommandFilter.fs</Link>
-    </Compile>
-    <Compile Include="LibraryNode.fs">
-      <Link>Symbol/LibraryNode.fs</Link>
-    </Compile>
-    <Compile Include="Library.fs">
-      <Link>Symbol/Library.fs</Link>
-    </Compile>
-    <Compile Include="FindReferencesFilter.fs">
-      <Link>Symbol/FindReferencesFilter.fs</Link>
-    </Compile>
-    <Compile Include="QuickInfoMargin.fs">
-      <Link>Symbol/QuickInfoMargin.fs</Link>
-    </Compile>
-    <Compile Include="FolderNameDialog.fs">
-      <Link>FolderCommand/FolderNameDialog.fs</Link>
-    </Compile>
-    <Compile Include="MoveToFolderDialog.fs">
-      <Link>FolderCommand/MoveToFolderDialog.fs</Link>
-    </Compile>
-    <Compile Include="FolderMenuUI.fs">
-      <Link>FolderCommand/FolderMenuUI.fs</Link>
-    </Compile>
-    <Compile Include="FolderMenuCommands.fs">
-      <Link>FolderCommand/FolderMenuCommands.fs</Link>
-    </Compile>
-    <Compile Include="CodeGenerationUtils.fs">
-      <Link>CodeGeneration/CodeGenerationUtils.fs</Link>
-    </Compile>
-    <Compile Include="CodeGenerationService.fs">
-      <Link>CodeGeneration/CodeGenerationService.fs</Link>
-    </Compile>
-    <Compile Include="XmlDocFilter.fs">
-      <Link>CodeGeneration/XmlDocFilter.fs</Link>
-    </Compile>
-    <Compile Include="ImplementInterfaceSmartTagger.fs">
-      <Link>CodeGeneration/ImplementInterfaceSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="RecordStubGeneratorSmartTagger.fs">
-      <Link>CodeGeneration/RecordStubGeneratorSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="UnionPatternMatchCaseGeneratorSmartTagger.fs">
-      <Link>CodeGeneration/UnionPatternMatchCaseGeneratorSmartTagger.fs</Link>
-    </Compile>
-    <Compile Include="ResolveUnopenedNamespaceTagger.fs">
-      <Link>CodeGeneration/ResolveUnopenedNamespaceTagger.fs</Link>
-    </Compile>
-    <Compile Include="TaskListCommentOptions.fs">
-      <Link>TaskList/TaskListCommentOptions.fs</Link>
-    </Compile>
-    <Compile Include="TaskListManager.fs">
-      <Link>TaskList/TaskListManager.fs</Link>
-    </Compile>
-    <Compile Include="CrossSolutionTaskListCommentManager.fs">
-      <Link>TaskList/CrossSolutionTaskListCommentManager.fs</Link>
-    </Compile>
-    <Compile Include="TaskListCommentFilter.fs">
-      <Link>TaskList/TaskListCommentFilter.fs</Link>
-    </Compile>
-    <Compile Include="FsiReferenceCommand.fs">
-      <Link>Reference/FsiReferenceCommand.fs</Link>
-    </Compile>
+    <Compile Include="Common/Resource.fs" />
+    <Compile Include="Common/Constants.fs" />
+    <Compile Include="Common/Setting.fs"/>
+    <Compile Include="Common/Logger.fs"/>
+    <Compile Include="Common/VSUtils.fs"/>
+    <Compile Include="Common/EventHandling.fs"/>
+    <Compile Include="Common/VSColors.fs"/>
+    <Compile Include="Common/VisualStudioVersion.fs"/>
+    <Compile Include="Common/ThemeManager.fs"/>
+    <Compile Include="Common/Status.fs"/>
+    <Compile Include="Common/CommonResources.xaml.fs"/>
+    <Compile Include="ProjectSystem/ProjectSystem.fs" />
+    <Compile Include="ProjectSystem/OpenDocumentsTracker.fs" />
+    <Compile Include="ProjectSystem/FileSystem.fs" />
+    <Compile Include="ProjectSystem/SolutionBuildEventListener.fs" />
+    <Compile Include="ProjectSystem/VSLanguageService.fs" />
+    <Compile Include="ProjectSystem/ProjectProvider.fs" />
+    <Compile Include="ProjectSystem/ProjectFactory.fs" />
+    <Compile Include="Navigation/ActiveViewsRegistratorListener.fs" />
+    <Compile Include="Navigation/NavigableItemCache.fs" />
+    <Compile Include="Navigation/NavigateToItem.fs" />
+    <Compile Include="Navigation/ReferenceSourceProvider.fs" />
+    <Compile Include="Navigation/NavigateToMetadataService.fs" />
+    <Compile Include="Navigation/GoToDefinitionFilter.fs" />
+    <Compile Include="Navigation/NoPeekDefinitionFilterProvider.fs" />
+    <Compile Include="Formatting/CodeFormattingServices.fs"/>
+    <Compile Include="Formatting/CodeFormattingCommands.fs"/> 
+    <Compile Include="Formatting/FormatDocumentCommand.fs"/>
+    <Compile Include="Formatting/FormatSelectionCommand.fs"/>
+    <Compile Include="Coloring/DepthTagger.fs"/>
+    <Compile Include="Coloring/DepthAdornmentManager.fs"/>
+    <Compile Include="Coloring/ClassifierTypes.fs"/>
+    <Compile Include="Coloring/SymbolClassifier.fs"/>
+    <Compile Include="Coloring/UnusedSymbolClassifier.fs"/>
+    <Compile Include="Coloring/UnusedDeclarationMargin.fs"/>
+    <Compile Include="Symbol/HighlightUsageTagger.fs"/>
+    <Compile Include="Symbol/HighlightUsageFilter.fs"/>
+    <Compile Include="Symbol/PrintfSpecifiersUsageTagger.fs"/>
+    <Compile Include="Symbol/RenameDialog.fs"/>
+    <Compile Include="Symbol/RenameCommandFilter.fs"/>
+    <Compile Include="Symbol/LibraryNode.fs"/>
+    <Compile Include="Symbol/Library.fs"/>
+    <Compile Include="Symbol/FindReferencesFilter.fs"/>
+    <Compile Include="Symbol/QuickInfoMargin.fs"/>
+    <Compile Include="FolderCommand/FolderNameDialog.fs"/>
+    <Compile Include="FolderCommand/MoveToFolderDialog.fs"/>
+    <Compile Include="FolderCommand/FolderMenuUI.fs"/>
+    <Compile Include="FolderCommand/FolderMenuCommands.fs"/>
+    <Compile Include="CodeGeneration/CodeGenerationUtils.fs"/>
+    <Compile Include="CodeGeneration/CodeGenerationService.fs"/>
+    <Compile Include="CodeGeneration/XmlDocFilter.fs"/>
+    <Compile Include="CodeGeneration/ImplementInterfaceSmartTagger.fs"/>
+    <Compile Include="CodeGeneration/RecordStubGeneratorSmartTagger.fs"/>
+    <Compile Include="CodeGeneration/UnionPatternMatchCaseGeneratorSmartTagger.fs"/>
+    <Compile Include="CodeGeneration/ResolveUnopenedNamespaceTagger.fs"/>
+    <Compile Include="TaskList/TaskListCommentOptions.fs"/>
+    <Compile Include="TaskList/TaskListManager.fs"/>
+    <Compile Include="TaskList/CrossSolutionTaskListCommentManager.fs"/>
+    <Compile Include="TaskList/TaskListCommentFilter.fs"/>
+    <Compile Include="Reference/FsiReferenceCommand.fs"/>
     <Compile Include="Linting\FileViewModel.fs" />
     <Compile Include="Linting\RuleViewModel.fs" />
     <Compile Include="Linting\OptionsViewModel.fs" />
     <Compile Include="Linting\LintUtils.fs" />
     <Compile Include="Linting\LintOptionsPageControl.xaml.fs" />
     <Compile Include="Linting\LintOptionsPage.fs" />
-    <Compile Include="LintTagger.fs">
-      <Link>Linting/LintTagger.fs</Link>
-    </Compile>
-    <Compile Include="LintQuickInfoSource.fs">
-      <Link>Linting/LintQuickInfoSource.fs</Link>
-    </Compile>
+    <Compile Include="Linting/LintTagger.fs"/>
+    <Compile Include="Linting/LintQuickInfoSource.fs"/>
     <Compile Include="Outlining\OutliningTagger.fs" />
     <Compile Include="Outlining\OutliningFilter.fs" />
   </ItemGroup>

@@ -321,7 +321,7 @@ Target "All" DoNothing
   =?> ("VsixManifest", isAppVeyorBuild)
   ==> "Build"
   ==> "BuildTests"
-  //==> "UnitTests"
+  ==> "UnitTests"
   ==> "Main"
 
 "Clean"
