@@ -27,7 +27,7 @@ NUGET
       Selenium.Support (2.48)
       Selenium.WebDriver (2.48)
       SizSelCsZzz (0.3.36)
-    FAKE (4.9.5)
+    FAKE (4.29.2)
     FSharp.Compiler.Service (0.0.90)
     FSharp.Core (4.0.0.1) - redirects: on
     FSharp.Formatting (2.11)
@@ -56,7 +56,7 @@ NUGET
 GITHUB
   remote: fsharp/FAKE
     modules/Octokit/Octokit.fsx (c56456abac6b744c3bb95b217687db19fd19b367)
-      Octokit
+      Octokit (>= 0.20)
 GROUP Test
 NUGET
   remote: http://www.nuget.org/api/v2

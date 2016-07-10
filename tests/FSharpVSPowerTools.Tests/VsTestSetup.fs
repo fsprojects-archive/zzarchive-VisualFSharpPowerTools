@@ -7,7 +7,7 @@ open NUnit.Framework
 
 [<SetUpFixture>]
 type VsTestSetup() =
-    [<SetUp>]
+    [<OneTimeSetUp>]
     member __.SetUp() =
         TestUtilities.AssertListener.Initialize()
         DocumentEventListener.SkipTimerDelay <- true
