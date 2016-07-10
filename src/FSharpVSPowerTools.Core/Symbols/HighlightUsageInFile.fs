@@ -14,17 +14,7 @@ module Symbols =
             |> Seq.map snd 
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
         |> Seq.toArray
-
-type FileName = string
 type GetCheckResults = FileName -> Async<ParseAndCheckResults option>
-type ZeroBasedRange = int * int * int * int
-
-type CurrentLine = { Line: string; File: FileName; Range: ZeroBasedRange }
-    with
-        member x.EndLine =
-            let _, _, endLine, _ = x.Range
-            endLine
-
 module HighlightUsageInFile =
     open FSharpVSPowerTools
     open Microsoft.FSharp.Compiler.SourceCodeServices

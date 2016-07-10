@@ -97,7 +97,7 @@ type VSLanguageService
         | None -> true
         | Some doc ->
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
-
+            
     let getSymbolUsing kind (point: SnapshotPoint) fileName (projectProvider: IProjectProvider) =
         maybe {
             let! source = openDocumentsTracker.TryGetDocumentText fileName
@@ -105,20 +105,22 @@ type VSLanguageService
             let col = point.Position - point.GetContainingLine().Start.Position
             let lineStr = point.GetContainingLine().GetText()
             let args = projectProvider.CompilerOptions
-            
-            let snapshotSpanFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-                let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-                let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
-                SnapshotSpan(snapshot, startPos, endPos - startPos)
-                                    
-            let! symbol = Lexer.getSymbol source line col lineStr kind args (buildQueryLexState point.Snapshot.TextBuffer)
-            return snapshotSpanFromRange point.Snapshot symbol.Range, symbol
+
+            let queryLexState = buildQueryLexState point.Snapshot.TextBuffer
+
+            let! symbol = Lexer.getSymbol source line col lineStr kind args queryLexState
+            return SnapshotSpan.MakeFromRange point.Snapshot symbol.Range, symbol
         }
 
     let entityCache = EntityCache()
 
+    member __.GetQueryLexState (textBuffer) : QueryLexState = buildQueryLexState textBuffer
+
     member __.GetSymbol(point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
+
+    member __.GetSymbol(point: PointInDocument, projectProvider: IProjectProvider, queryLexState) =
+        Lexer.getSymbolAtPoint point SymbolLookupKind.Fuzzy (projectProvider.CompilerOptions) queryLexState
 
     member __.GetLongIdentSymbol(point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.ByLongIdent point fileName projectProvider
@@ -217,6 +219,14 @@ type VSLanguageService
             return! HighlightUsageInFile.findUsageInFile currentLine symbol getCheckResults
         }
 
+    member __.GetFSharpSymbolUse (currentLine: CurrentLine, symbol: Symbol, projectProvider: IProjectProvider, stale) = 
+        asyncMaybe {
+            let! source = openDocumentsTracker.TryGetDocumentText currentLine.File
+            let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
+            let! results = instance.ParseAndCheckFileInProject(opts, currentLine.File, source, stale) |> liftAsync
+            let! symbol = results.GetSymbolUseAtLocation (currentLine.EndLine + 1, symbol.RightColumn, currentLine.Line, [symbol.Text])
+            return symbol, results
+        }
     member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
         asyncMaybe {
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
@@ -339,3 +349,16 @@ type VSLanguageService
     member internal __.SkipLexCache 
         with get () = skipLexCache
         and set v = skipLexCache <- v
+
+
+    member __.MakePointInDocument (point: SnapshotPoint option) filename =
+        maybe {
+            let! point = point
+            let! source = openDocumentsTracker.TryGetDocumentText filename
+            let line = point.Snapshot.GetLineNumberFromPosition point.Position
+            let col = point.Position - point.GetContainingLine().Start.Position
+            let lineStr = point.GetContainingLine().GetText()
+            return {Point = (line, col); Line = lineStr; File = filename; Document = source }
+        }
+        
+        

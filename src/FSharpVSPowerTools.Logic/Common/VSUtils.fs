@@ -2,6 +2,7 @@
 module FSharpVSPowerTools.VSUtils
 
 open System
+open FSharpPowerTools.Core
 open FSharpVSPowerTools
 
 type String with
@@ -79,7 +80,8 @@ type SnapshotPoint with
         // The old snapshot might not be available anymore, we compare on updated snapshot
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
-
+    member x.ToPoint =
+        x.Snapshot.GetLineNumberFromPosition x.Position, x.Position - x.GetContainingLine().Start.Position
 type ITextSnapshot with
     /// SnapshotSpan of the entirety of this TextSnapshot
     member x.FullSpan =
@@ -135,6 +137,14 @@ type SnapshotSpan with
     /// (lineStart, colStart, lineEnd, colEnd)
     member inline x.ToRange () =
         (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
+
+    member inline x.MakeCurrentLine (filename) =
+        { Line = x.Start.GetContainingLine().GetText(); Range = x.ToRange(); File = filename }
+    
+    static member MakeFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
+        let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
+        let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+        SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 

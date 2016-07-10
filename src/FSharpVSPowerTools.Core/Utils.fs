@@ -1,4 +1,28 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharpPowerTools.Core
+
+type FileName = string
+
+type ZeroBasedPoint = int * int
+type ZeroBasedRange = int * int * int * int
+
+type CurrentLine = { Line: string; File: FileName; Range: ZeroBasedRange }
+    with
+        member x.EndLine =
+            let _, _, endLine, _ = x.Range
+            endLine
+
+[<NoComparison>]
+type PointInDocument = {
+  Point: ZeroBasedPoint
+  Line: string
+  Document: string
+  File: FileName
+}
+    with
+        member x.LineIndex = fst x.Point
+        member x.ColumnIndex = snd x.Point
+        member x.CurrentLine = {Line = x.Line; File = x.File; Range = x.LineIndex, x.ColumnIndex, x.LineIndex, x.Line.Length }
+namespace FSharpVSPowerTools
 
 open System
 open System.Diagnostics

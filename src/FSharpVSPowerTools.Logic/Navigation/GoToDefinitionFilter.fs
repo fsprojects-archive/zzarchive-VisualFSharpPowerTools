@@ -17,6 +17,7 @@ open System.Text.RegularExpressions
 open Microsoft.Win32
 open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.FSharp.Compiler.Ast
+open FSharpPowerTools.Core
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -31,9 +32,8 @@ type internal UrlChangeEventArgs(url: string) =
 [<NoComparison; NoEquality>]
 type GoToDefinitionResult =
     | FoundInternal
-    | FoundExternal of (IProjectProvider * ParsedInput option * SnapshotSpan * FSharpSymbolUse)
+    | FoundExternal of (IProjectProvider * ParsedInput option * Symbol * FSharpSymbolUse)
     | FoundLoadDirective of string
-    | NotFound
 
 type GoToDefinitionFilter
     (
@@ -55,29 +55,24 @@ type GoToDefinitionFilter
     let textBuffer = view.TextBuffer
     let project() = projectFactory.CreateForDocument view.TextBuffer doc.FilePath
 
-    let getDocumentState () =
+    let getDocumentState (point: PointInDocument option) getLexerState =
         asyncMaybe {
-            let fileName = doc.FilePath
-            let! project = project ()
-            let! caretPos = textBuffer.GetSnapshotPoint view.Caret.Position
-            let spanAndSymbol = vsLanguageService.GetSymbol(caretPos, fileName, project)
-            
-            match spanAndSymbol with
-            | Some (span, symbol) ->
-              let! result = vsLanguageService.GetFSharpSymbolUse(span, symbol, fileName, project, AllowStaleResults.MatchingSource) |> liftAsync
+            let! point = point
+            let! project = project()
+            let symbol = vsLanguageService.GetSymbol(point, project, getLexerState)
+            match symbol with
+            | Some symbol ->
+              let! fsSymbolUse, fileScopedCheckResults = vsLanguageService.GetFSharpSymbolUse(point.CurrentLine, symbol, project, AllowStaleResults.MatchingSource)
+              let lineText = point.Line
+              let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
 
-              match result with
-              | Some (fsSymbolUse, fileScopedCheckResults) ->
-                  let lineText = span.Start.GetContainingLine().GetText()
-                  let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
-              
-                  return 
-                      match findDeclResult with
-                      | FSharpFindDeclResult.DeclFound _ -> FoundInternal
-                      | FSharpFindDeclResult.DeclNotFound _ -> FoundExternal (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
-              | None -> return NotFound
-            | None -> 
-                let! loadDirectiveFile  = vsLanguageService.GetLoadDirectiveFileNameAtCursor(fileName, view, project)
+              return 
+                  match findDeclResult with
+                  | FSharpFindDeclResult.DeclFound _ -> FoundInternal
+                  | FSharpFindDeclResult.DeclNotFound _ -> FoundExternal (project, fileScopedCheckResults.ParseTree, symbol, fsSymbolUse)
+
+            | None ->
+                let! loadDirectiveFile = vsLanguageService.GetLoadDirectiveFileNameAtCursor(point.File, view, project)
                 return FoundLoadDirective loadDirectiveFile
         }
 
@@ -192,10 +187,12 @@ type GoToDefinitionFilter
         let uiContext = SynchronizationContext.Current
         let worker =
             async {
-                let! symbolResult = getDocumentState()
+                let getLexerState = vsLanguageService.GetQueryLexState textBuffer
+                let snapshotPoint = textBuffer.GetSnapshotPoint view.Caret.Position
+                let pointInDocument = vsLanguageService.MakePointInDocument snapshotPoint doc.FilePath
+                let! symbolResult = getDocumentState pointInDocument getLexerState
                 match symbolResult with
                 | Some FoundInternal
-                | Some NotFound
                 | None ->
                     // Run the operation on UI thread since continueCommandChain may access UI components.
                     do! Async.SwitchToContext uiContext
@@ -204,7 +201,9 @@ type GoToDefinitionFilter
                 | Some (FoundLoadDirective fileToOpen) -> 
                     // directive found, navigate to the file at first line
                     serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
-                | Some (FoundExternal (project, parseTree, span, fsSymbolUse)) ->
+                | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
+                    let snapshotPoint = snapshotPoint |> Option.get // this Option.get is guaranted safe because we actually had a match at position
+                    let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot symbol.Range
                     match navigationPreference with
                     | NavigationPreference.Metadata ->
                         if shouldGenerateDefinition fsSymbolUse.Symbol then

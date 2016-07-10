@@ -1,5 +1,5 @@
 ﻿namespace FSharpVSPowerTools
-
+open FSharpPowerTools.Core
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -30,6 +30,11 @@ type internal DraftToken =
       RightColumn: int }
     static member inline Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+
+type SourceCode = string
+type Defines = string list
+type LineIndex = int
+type QueryLexState = SourceCode -> Defines -> LineIndex -> FSharpTokenizerLexState
 
 module Lexer =
     /// Get the array of all lex states in current source
@@ -71,7 +76,7 @@ module Lexer =
             lexStates.[line]
 
     /// Return all tokens of current line
-    let tokenizeLine source (args: string[]) line lineStr queryLexState =
+    let tokenizeLine source (args: string[]) line lineStr (queryLexState: QueryLexState) =
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                  |> Seq.toList
@@ -199,4 +204,8 @@ module Lexer =
             getSymbolFromTokens tokens line col lineStr lookupKind
         with e ->
             debug "Getting lex symbols failed with %O" e
-            None 
+            None
+
+    let getSymbolAtPoint point lookupKind (args) queryLexState =
+        let line, col = point.Point
+        getSymbol point.Document line col point.Line lookupKind args queryLexState
