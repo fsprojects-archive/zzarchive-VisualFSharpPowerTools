@@ -1,7 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open System
-open System.IO
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -45,12 +44,10 @@ type SymbolClassifierHelper() =
             classifierProvider.Dispose()
 
 module SymbolClassifierTests =
-    
     let helper = new SymbolClassifierHelper()
     let mutable fileName = null 
-    let mutable dummyFileName = null
 
-    [<SetUp>]
+    [<OneTimeSetUp>]
     let setUp() = 
         fileName <- getTempFileName ".fsx"
 
@@ -151,7 +148,5 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
 
     [<OneTimeTearDown>]
     let tearDownAll() =
-        if File.Exists dummyFileName then
-            File.Delete dummyFileName
         dispose helper
         
