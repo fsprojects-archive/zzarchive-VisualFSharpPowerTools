@@ -58,7 +58,7 @@ type [<Measure>] ms
 #if APPVEYOR
 let timeout = 60000<ms>
 #else
-let timeout = 15000<ms>
+let timeout = 10000<ms>
 #endif
 
 let (=>) (startLine, startCol) (endLine, endCol) =
@@ -84,10 +84,11 @@ let testEventTrigger event errorMessage (timeout: int<ms>) triggerEvent predicat
         | false ->
             sw.Stop()
             Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-            Assert.Inconclusive errorMessage
+            Assert.Fail errorMessage
     finally
         ct.Cancel()
-        task.Wait (int timeout) |> ignore
+        if not task.IsCanceled then
+            task.Wait (int timeout) |> ignore
 
 let testEvent event errorMessage (timeout: int<ms>) predicate =
     testEventTrigger event errorMessage timeout id predicate
