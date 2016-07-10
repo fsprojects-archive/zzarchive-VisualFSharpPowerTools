@@ -47,7 +47,7 @@ module SymbolClassifierTests =
     let helper = new SymbolClassifierHelper()
     let mutable fileName = null 
 
-    [<OneTimeSetUp>]
+    [<SetUp>]
     let setUp() = 
         fileName <- getTempFileName ".fsx"
 
