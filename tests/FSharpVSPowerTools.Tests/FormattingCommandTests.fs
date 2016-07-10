@@ -3,10 +3,7 @@
 open System
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Text.Tagging
-open Microsoft.VisualStudio.Text
-open Microsoft.VisualStudio
+open Microsoft.VisualStudio 
 open Microsoft.VisualStudio.Text.Editor
 
 type FormattingCommandHelper() =
@@ -27,10 +24,12 @@ type FormattingCommandHelper() =
         command.RegisterCommandDispatcher(wpfTextView)
 
 module FormattingCommandTests =
+    open System.Threading
+
     let helper = FormattingCommandHelper()
     let fileName = getTempFileName ".fs"
 
-    [<Test; RequiresSTA>]
+    [<Test; Apartment(ApartmentState.STA)>]
     let ``should be able to format document``() =
         let content = """
 module M
@@ -69,7 +68,7 @@ type Type =
         | TyCon(s, ts) -> s
 """ )
 
-    [<Test; RequiresSTA>]
+    [<Test; Apartment(ApartmentState.STA)>]
     let ``should be able to format selection``() =
         let content = """
 let rangeTest testValue mid size =

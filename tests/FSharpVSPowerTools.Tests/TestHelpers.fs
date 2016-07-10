@@ -48,12 +48,10 @@ let inline assertNotSame<'T when 'T : not struct> (expected : 'T) (actual : 'T) 
     Assert.AreNotSame (expected, actual)
 
 /// Asserts that a condition is true.
-let inline assertTrue condition =
-    Assert.IsTrue (condition)
+let inline assertTrue (condition: bool) = Assert.IsTrue condition
 
 /// Asserts that a condition is false.
-let inline assertFalse condition =
-    Assert.IsFalse (condition)
+let inline assertFalse (condition: bool) = Assert.IsFalse condition
 
 type [<Measure>] ms
 

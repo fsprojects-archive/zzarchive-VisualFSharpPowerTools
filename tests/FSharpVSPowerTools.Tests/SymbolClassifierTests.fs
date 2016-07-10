@@ -149,7 +149,7 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
                   { Classification = "FSharp.Function"; Span = (7, 74, 7, 79) } ]
             actual |> assertEqual expected
 
-    [<TestFixtureTearDown>]
+    [<OneTimeTearDown>]
     let tearDownAll() =
         if File.Exists dummyFileName then
             File.Delete dummyFileName

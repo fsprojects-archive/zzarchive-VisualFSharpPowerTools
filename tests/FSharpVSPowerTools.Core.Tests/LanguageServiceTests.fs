@@ -32,7 +32,7 @@ let getFirstSymbol line col symbolText source =
     }
     |> Async.RunSynchronously
 
-[<Test; Ignore>]
+[<Test; Ignore "Ignored">]
 let ``should instantiate types correctly``() =
     let source = 
         """

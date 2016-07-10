@@ -73,7 +73,7 @@ let internal f() = ()
                   { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) } ]
             actual |> assertEqual expected
         
-    [<TestFixtureTearDown>]
+    [<OneTimeTearDown>]
     let tearDownAll() =
         if File.Exists dummyFileName then
             File.Delete dummyFileName
