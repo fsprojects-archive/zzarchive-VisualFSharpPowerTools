@@ -28,11 +28,12 @@ type internal UrlChangeEventArgs(url: string) =
     inherit EventArgs()
     member __.Url = url
 
-[<NoComparisonAttribute; NoEquality>]
-type GoToDefinitionResolution =
-    | FoundByFSharpLanguageService
-    | FoundButNotHandled of (IProjectProvider * ParsedInput option * SnapshotSpan * FSharpSymbolUse)
+[<NoComparison; NoEquality>]
+type GoToDefinitionResult =
+    | FoundInternal
+    | FoundExternal of (IProjectProvider * ParsedInput option * SnapshotSpan * FSharpSymbolUse)
     | FoundLoadDirective of string
+    | NotFound
 
 type GoToDefinitionFilter
     (
@@ -64,21 +65,20 @@ type GoToDefinitionFilter
             match spanAndSymbol with
             | Some (span, symbol) ->
               let! result = vsLanguageService.GetFSharpSymbolUse(span, symbol, fileName, project, AllowStaleResults.MatchingSource) |> liftAsync
+
               match result with
               | Some (fsSymbolUse, fileScopedCheckResults) ->
-                let lineText = span.Start.GetContainingLine().GetText()
-                let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
+                  let lineText = span.Start.GetContainingLine().GetText()
+                  let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
               
-                let gotoDefinitionResult = 
-                    match findDeclResult with
-                    | FSharpFindDeclResult.DeclFound _ -> FoundByFSharpLanguageService
-                    | FSharpFindDeclResult.DeclNotFound _ -> FoundButNotHandled (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
-              
-                return! Some gotoDefinitionResult
-              | None -> return! None
+                  return 
+                      match findDeclResult with
+                      | FSharpFindDeclResult.DeclFound _ -> FoundInternal
+                      | FSharpFindDeclResult.DeclNotFound _ -> FoundExternal (project, fileScopedCheckResults.ParseTree, span, fsSymbolUse)
+              | None -> return NotFound
             | None -> 
                 let! loadDirectiveFile  = vsLanguageService.GetLoadDirectiveFileNameAtCursor(fileName, view, project)
-                return! Some (FoundLoadDirective loadDirectiveFile)
+                return FoundLoadDirective loadDirectiveFile
         }
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
@@ -194,7 +194,8 @@ type GoToDefinitionFilter
             async {
                 let! symbolResult = getDocumentState()
                 match symbolResult with
-                | Some FoundByFSharpLanguageService
+                | Some FoundInternal
+                | Some NotFound
                 | None ->
                     // Run the operation on UI thread since continueCommandChain may access UI components.
                     do! Async.SwitchToContext uiContext
@@ -203,7 +204,7 @@ type GoToDefinitionFilter
                 | Some (FoundLoadDirective fileToOpen) -> 
                     // directive found, navigate to the file at first line
                     serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
-                | Some (FoundButNotHandled (project, parseTree, span, fsSymbolUse)) ->
+                | Some (FoundExternal (project, parseTree, span, fsSymbolUse)) ->
                     match navigationPreference with
                     | NavigationPreference.Metadata ->
                         if shouldGenerateDefinition fsSymbolUse.Symbol then
