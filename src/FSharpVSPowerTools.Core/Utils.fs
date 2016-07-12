@@ -5,7 +5,7 @@ type FileName = string
 [<Measure>] type FCS
 
 type Point<[<Measure>]'t> = { Line : int; Column : int }
-type Range<[<Measure>]'t> = { From : Point<'t>; To: Point<'t> }
+type Range<[<Measure>]'t> = { Start : Point<'t>; End: Point<'t> }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Point =
@@ -16,13 +16,13 @@ module Range =
 
     let make startLine startColumn endLine endColumn : Range<'t> =
         {
-          From = Point.make startLine startColumn
-          To = Point.make endLine endColumn 
+          Start = Point.make startLine startColumn
+          End = Point.make endLine endColumn 
         }
     
 type CurrentLine<[<Measure>]'t> = { Line: string; File: FileName; Range: Range<'t> }
     with
-        member x.EndLine = x.Range.To.Line 
+        member x.EndLine = x.Range.End.Line 
 
 [<NoComparison>]
 type PointInDocument<[<Measure>]'t> = {
