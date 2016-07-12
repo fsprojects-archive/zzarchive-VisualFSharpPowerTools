@@ -91,8 +91,8 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
 
        let computation =
            async { 
-               let mutable cts = new CancellationTokenSource()
-               startUpdate cts
+               let cts = ref (new CancellationTokenSource())
+               startUpdate !cts
 
                while true do
                    //let e = events
@@ -102,10 +102,10 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                    if not skipTimerDelay then
                        startNewTimer()
                        do! awaitPauseAfterChange()
-                   cts.Cancel()
-                   cts.Dispose()
-                   cts <- new CancellationTokenSource()
-                   startUpdate cts 
+                   cts.Value.Cancel()
+                   cts.Value.Dispose()
+                   cts := new CancellationTokenSource()
+                   startUpdate !cts
            }
        
        Async.StartInThreadPoolSafe (computation, tokenSource.Token)
