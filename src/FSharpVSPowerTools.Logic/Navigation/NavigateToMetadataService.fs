@@ -191,8 +191,8 @@ type NavigateToMetadataService [<ImportingConstructor>]
                     return None
             | false, _, _, _ ->
                 let range = span.ToRange()
-                let startLine = range.From.Line
-                let startCol = range.From.Column
+                let startLine = range.Start.Line
+                let startCol = range.Start.Column
                 let pos = mkPos (startLine+1) startCol
                 let openDeclarations = 
                     ast 

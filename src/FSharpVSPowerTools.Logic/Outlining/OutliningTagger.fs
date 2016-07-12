@@ -271,7 +271,7 @@ type OutliningTagger
             if acc >= textshot.LineCount + firstLineNum then "" else
             let text =  if acc = firstLineNum then
                             let range = snapshotSpan.ToRange ()
-                            let colstart = range.From.Column
+                            let colstart = range.Start.Column
                             textshot.LineText(acc).Substring(colstart).Trim ()
                         else textshot.LineText(acc).Trim ()
             if String.IsNullOrWhiteSpace text then loop (acc+1) else text

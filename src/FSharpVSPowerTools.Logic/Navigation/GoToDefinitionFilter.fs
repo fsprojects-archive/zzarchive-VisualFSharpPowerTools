@@ -237,7 +237,11 @@ type GoToDefinitionFilter
                         serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
                     | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
                         return! handleFoundExternal project parseTree symbol fsSymbolUse snapshotPoint
-                | _ -> return ()
+                | _ -> 
+                    // Run the operation on UI thread since continueCommandChain may access UI components.
+                    do! Async.SwitchToContext uiContext
+                    // Declaration location might exist so let Visual F# Tools handle it. 
+                    return continueCommandChain()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 

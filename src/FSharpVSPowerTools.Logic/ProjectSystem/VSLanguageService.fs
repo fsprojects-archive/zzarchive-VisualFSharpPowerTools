@@ -159,8 +159,8 @@ type VSLanguageService
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             try
                 let range = word.ToRange()
-                let endLine = range.To.Line
-                let endCol = range.To.Column
+                let endLine = range.End.Line
+                let endCol = range.End.Column
                 let! source = openDocumentsTracker.TryGetDocumentText currentFile
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = currentProject.TargetFramework
@@ -197,7 +197,7 @@ type VSLanguageService
         async {
             try 
                 let range = word.ToRange()
-                let endLine = range.To.Line
+                let endLine = range.End.Line
                 let currentLine = word.Start.GetContainingLine().GetText()
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
@@ -235,7 +235,7 @@ type VSLanguageService
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             let range = word.ToRange()
-            let endLine = range.To.Line
+            let endLine = range.End.Line
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
             let currentLine = word.Start.GetContainingLine().GetText()
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
@@ -247,8 +247,8 @@ type VSLanguageService
     member __.CreateLexer (fileName, snapshot, args) =
         maybe {
             let range = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
-            let lineStart = range.From.Line
-            let lineEnd = range.To.Line
+            let lineStart = range.Start.Line
+            let lineEnd = range.End.Line
             
             let getLineStr line =
                 let lineNumber = line - lineStart
