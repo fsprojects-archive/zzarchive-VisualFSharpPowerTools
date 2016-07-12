@@ -175,6 +175,42 @@ type GoToDefinitionFilter
 
     let cancellationToken = Atom None
 
+    let handleFoundExternal project parseTree (symbol: Symbol) fsSymbolUse snapshotPoint = async {        
+        let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot (symbol.Range |> fun (a, b, c, d) Range.make a b c d)
+        match navigationPreference with
+        | NavigationPreference.Metadata ->
+            if shouldGenerateDefinition fsSymbolUse.Symbol then
+                return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+        | NavigationPreference.SymbolSourceOrMetadata
+        | NavigationPreference.SymbolSource as pref ->   
+            let symbol = fsSymbolUse.Symbol
+            Logging.logInfo (fun _ -> sprintf "Checking symbol source of %s..." symbol.FullName)
+            if symbol.Assembly.FileName
+                |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
+                |> Option.getOrElse false then
+                match referenceSourceProvider.TryGetNavigatedUrl symbol with
+                | Some url ->
+                    if fireNavigationEvent then
+                        currentUrl <- Some url
+                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
+                    Process.Start url |> ignore
+                | None ->
+                    Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
+            else
+                match tryFindSourceUrl symbol with
+                | Some url ->
+                    return navigateToSource symbol url
+                | None ->
+                    match pref with
+                    | NavigationPreference.SymbolSourceOrMetadata ->
+                        if shouldGenerateDefinition symbol then
+                            return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+                    | _ ->
+                        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                        statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
+                        return ()
+    }
+
     let gotoDefinition continueCommandChain =
         let cancelToken = new CancellationTokenSource() 
         cancellationToken.Swap (fun _ -> Some (cancelToken))
@@ -201,39 +237,7 @@ type GoToDefinitionFilter
                         // directive found, navigate to the file at first line
                         serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
                     | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
-                        let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot symbol.Range
-                        match navigationPreference with
-                        | NavigationPreference.Metadata ->
-                            if shouldGenerateDefinition fsSymbolUse.Symbol then
-                                return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
-                        | NavigationPreference.SymbolSourceOrMetadata
-                        | NavigationPreference.SymbolSource as pref ->   
-                            let symbol = fsSymbolUse.Symbol
-                            Logging.logInfo (fun _ -> sprintf "Checking symbol source of %s..." symbol.FullName)
-                            if symbol.Assembly.FileName
-                               |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
-                               |> Option.getOrElse false then
-                                match referenceSourceProvider.TryGetNavigatedUrl symbol with
-                                | Some url ->
-                                    if fireNavigationEvent then
-                                        currentUrl <- Some url
-                                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
-                                    Process.Start url |> ignore
-                                | None ->
-                                    Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
-                            else
-                                match tryFindSourceUrl symbol with
-                                | Some url ->
-                                    return navigateToSource symbol url
-                                | None ->
-                                    match pref with
-                                    | NavigationPreference.SymbolSourceOrMetadata ->
-                                        if shouldGenerateDefinition symbol then
-                                            return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
-                                    | _ ->
-                                        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                                        statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
-                                        return ()
+                        return! handleFoundExternal project parseTree symbol fsSymbolUse snapshotPoint
                 | _ -> return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
