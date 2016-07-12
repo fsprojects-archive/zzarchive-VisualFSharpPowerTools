@@ -74,7 +74,7 @@ type PeekableItemSource
                 | Some (fsSymbolUse, fileScopedCheckResults) ->
                     let start = span.Start
                     let lineStr = start.GetContainingLine().GetText()
-                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol.Line, symbol.RightColumn, lineStr, symbol.Text, preferSignature=false)
+                    let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineStr, preferSignature = false)
                     match findDeclResult with
                     | FSharpFindDeclResult.DeclFound range -> 
                         return Some (span, range, false)

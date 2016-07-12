@@ -1,4 +1,42 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharpPowerTools.Core
+
+type FileName = string
+
+[<Measure>] type FCS
+
+type Point<[<Measure>]'t> = { Line : int; Column : int }
+type Range<[<Measure>]'t> = { Start : Point<'t>; End: Point<'t> }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Point =
+    let make line column : Point<'t> = { Line = line; Column = column }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Range =
+
+    let make startLine startColumn endLine endColumn : Range<'t> =
+        {
+          Start = Point.make startLine startColumn
+          End = Point.make endLine endColumn 
+        }
+    
+type CurrentLine<[<Measure>]'t> = { Line: string; File: FileName; Range: Range<'t> }
+    with
+        member x.EndLine = x.Range.End.Line 
+
+[<NoComparison>]
+type PointInDocument<[<Measure>]'t> = {
+  Point    : Point<'t>
+  Line     : string
+  Document : string
+  File     : FileName
+}
+    with
+        member x.LineIndex = x.Point.Line
+        member x.ColumnIndex = x.Point.Column
+        member x.CurrentLine : Lazy<CurrentLine<'t>> = lazy({Line = x.Line; File = x.File; Range = Range.make x.LineIndex x.ColumnIndex x.LineIndex x.Line.Length })
+
+namespace FSharpVSPowerTools
 
 open System
 open System.Diagnostics

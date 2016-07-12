@@ -2,6 +2,7 @@
 module FSharpVSPowerTools.VSUtils
 
 open System
+open FSharpPowerTools.Core
 open FSharpVSPowerTools
 
 type String with
@@ -79,6 +80,14 @@ type SnapshotPoint with
         // The old snapshot might not be available anymore, we compare on updated snapshot
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
+    member x.ToPoint =
+        x.Snapshot.GetLineNumberFromPosition x.Position, x.Position - x.GetContainingLine().Start.Position
+    
+    member x.MakePointInDocument filename source : PointInDocument<FCS> =
+        let line = x.Snapshot.GetLineNumberFromPosition x.Position
+        let col = x.Position - x.GetContainingLine().Start.Position
+        let lineStr = x.GetContainingLine().GetText()
+        { Point = Point.make line col; Line = lineStr; File = filename; Document = source }
 
 type ITextSnapshot with
     /// SnapshotSpan of the entirety of this TextSnapshot
@@ -133,8 +142,16 @@ type SnapshotSpan with
 
     /// Return corresponding zero-based FCS range
     /// (lineStart, colStart, lineEnd, colEnd)
-    member inline x.ToRange () =
-        (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
+    member inline x.ToRange () : Range<FCS> =
+        Range.make x.StartLineNum x.StartColumn x.EndLineNum (x.EndColumn - 1)
+
+    member inline x.MakeCurrentLine (filename) =
+        { Line = x.Start.GetContainingLine().GetText(); Range = x.ToRange(); File = filename }
+    
+    static member MakeFromRange (snapshot: ITextSnapshot) (range:Range<FCS>) =
+        let startPos = snapshot.GetLineFromLineNumber(range.Start.Line).Start.Position + range.Start.Column
+        let endPos = snapshot.GetLineFromLineNumber(range.End.Line).Start.Position + range.End.Column
+        SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 

@@ -3,6 +3,7 @@
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpPowerTools.Core
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
@@ -27,11 +28,11 @@ with
         member x.StartLine: int<Line1> = x.StartLine
 
     static member FromSymbol(symbol: Symbol) =
-        let startLine, startColumn, endLine, endColumn = symbol.Range
-        { StartLine = LanguagePrimitives.Int32WithMeasure startLine
-          StartColumn = startColumn
-          EndLine = LanguagePrimitives.Int32WithMeasure endLine
-          EndColumn = endColumn }
+        let range = symbol.Range
+        { StartLine = LanguagePrimitives.Int32WithMeasure range.Start.Line
+          StartColumn = range.Start.Column
+          EndLine = LanguagePrimitives.Int32WithMeasure range.End.Line
+          EndColumn = range.End.Column }
 
 type CodeGenerationTestService(languageService: LanguageService, compilerOptions: string[]) =
     interface ICodeGenerationService<FSharpProjectOptions, pos, Range> with

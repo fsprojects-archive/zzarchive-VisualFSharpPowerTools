@@ -15,15 +15,7 @@ module Symbols =
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
         |> Seq.toArray
 
-type FileName = string
 type GetCheckResults = FileName -> Async<ParseAndCheckResults option>
-type ZeroBasedRange = int * int * int * int
-
-type CurrentLine = { Line: string; File: FileName; Range: ZeroBasedRange }
-    with
-        member x.EndLine =
-            let _, _, endLine, _ = x.Range
-            endLine
 
 module HighlightUsageInFile =
     open FSharpVSPowerTools
@@ -33,7 +25,7 @@ module HighlightUsageInFile =
     type HighlightUsageInFileResult =
         | UsageInFile of FSharpSymbol * string * FSharpSymbolUse array
 
-    let findUsageInFile (currentLine: CurrentLine) (symbol: Symbol) (getCheckResults: GetCheckResults) = 
+    let findUsageInFile (currentLine: CurrentLine<FCS>) (symbol: Symbol) (getCheckResults: GetCheckResults) = 
         asyncMaybe {
             let! parseAndCheckResults = getCheckResults currentLine.File
             let! _ = parseAndCheckResults.GetSymbolUseAtLocation (currentLine.EndLine+1, symbol.RightColumn, currentLine.Line, [symbol.Text])

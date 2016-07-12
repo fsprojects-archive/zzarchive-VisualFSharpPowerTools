@@ -1,5 +1,5 @@
 ﻿namespace FSharpVSPowerTools
-
+open FSharpPowerTools.Core
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
@@ -16,7 +16,7 @@ type Symbol =
       LeftColumn: int
       RightColumn: int
       Text: string }
-    member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
+    member x.Range : Range<FCS> = { Start = Point.make x.Line x.LeftColumn; End = Point.make x.Line x.RightColumn }
 
 [<RequireQualifiedAccess>]
 type SymbolLookupKind =
@@ -30,6 +30,11 @@ type internal DraftToken =
       RightColumn: int }
     static member inline Create kind token = 
         { Kind = kind; Token = token; RightColumn = token.LeftColumn + token.FullMatchedLength - 1 }
+
+type SourceCode = string
+type Defines = string list
+type LineIndex = int
+type QueryLexState = SourceCode -> Defines -> LineIndex -> FSharpTokenizerLexState
 
 module Lexer =
     /// Get the array of all lex states in current source
@@ -71,7 +76,7 @@ module Lexer =
             lexStates.[line]
 
     /// Return all tokens of current line
-    let tokenizeLine source (args: string[]) line lineStr queryLexState =
+    let tokenizeLine source (args: string[]) line lineStr (queryLexState: QueryLexState) =
         let defines =
             args |> Seq.choose (fun s -> if s.StartsWith "--define:" then Some s.[9..] else None)
                  |> Seq.toList
@@ -84,7 +89,7 @@ module Lexer =
         loop (queryLexState source defines line) []
 
     // Returns symbol at a given position.
-    let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string) lookupKind: Symbol option =
+    let getSymbolFromTokens (tokens: FSharpTokenInfo list) line col (lineStr: string) lookupKind : Symbol option =
         let isIdentifier t = t.CharClass = FSharpTokenCharKind.Identifier
         let isOperator t = t.ColorClass = FSharpTokenColorKind.Operator
     
@@ -193,10 +198,14 @@ module Lexer =
                   RightColumn = token.RightColumn + 1
                   Text = lineStr.Substring(token.Token.LeftColumn, token.Token.FullMatchedLength) })
     
+    
     let getSymbol source line col lineStr lookupKind (args: string[]) queryLexState =
         let tokens = tokenizeLine source args line lineStr queryLexState
         try
             getSymbolFromTokens tokens line col lineStr lookupKind
         with e ->
             debug "Getting lex symbols failed with %O" e
-            None 
+            None
+
+    let getSymbolAtPoint point lookupKind args queryLexState =
+        getSymbol point.Document point.Point.Line point.Point.Column point.Line lookupKind args queryLexState
