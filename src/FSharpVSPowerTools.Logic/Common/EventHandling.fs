@@ -98,7 +98,6 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                    //let e = events
                    do! triggered.WaitAsync()
                    triggered.Reset()
-                   //Logging.logInfo <| fun _ -> "!!!!!!!!! awaited"
                    if not skipTimerDelay then
                        startNewTimer()
                        do! awaitPauseAfterChange()
