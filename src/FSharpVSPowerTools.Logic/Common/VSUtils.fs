@@ -148,9 +148,9 @@ type SnapshotSpan with
     member inline x.MakeCurrentLine (filename) =
         { Line = x.Start.GetContainingLine().GetText(); Range = x.ToRange(); File = filename }
     
-    static member MakeFromRange (snapshot: ITextSnapshot) (lineStart, colStart, lineEnd, colEnd) =
-        let startPos = snapshot.GetLineFromLineNumber(lineStart).Start.Position + colStart
-        let endPos = snapshot.GetLineFromLineNumber(lineEnd).Start.Position + colEnd
+    static member MakeFromRange (snapshot: ITextSnapshot) (range:Range<FCS>) =
+        let startPos = snapshot.GetLineFromLineNumber(range.From.Line).Start.Position + range.From.Column
+        let endPos = snapshot.GetLineFromLineNumber(range.To.Line).Start.Position + range.To.Column
         SnapshotSpan(snapshot, startPos, endPos - startPos)
 
 type ITextBuffer with

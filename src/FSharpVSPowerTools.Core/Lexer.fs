@@ -16,7 +16,7 @@ type Symbol =
       LeftColumn: int
       RightColumn: int
       Text: string }
-    member x.Range = x.Line, x.LeftColumn, x.Line, x.RightColumn
+    member x.Range : Range<FCS> = { From = Point.make x.Line x.LeftColumn; To = Point.make x.Line x.RightColumn }
 
 [<RequireQualifiedAccess>]
 type SymbolLookupKind =

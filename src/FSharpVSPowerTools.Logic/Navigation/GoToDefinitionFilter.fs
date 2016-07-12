@@ -175,8 +175,8 @@ type GoToDefinitionFilter
 
     let cancellationToken = Atom None
 
-    let handleFoundExternal project parseTree (symbol: Symbol) fsSymbolUse snapshotPoint = async {        
-        let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot (symbol.Range |> fun (a, b, c, d) Range.make a b c d)
+    let handleFoundExternal project parseTree (symbol: Symbol) (fsSymbolUse: FSharpSymbolUse) (snapshotPoint: SnapshotPoint) = async {        
+        let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot symbol.Range
         match navigationPreference with
         | NavigationPreference.Metadata ->
             if shouldGenerateDefinition fsSymbolUse.Symbol then

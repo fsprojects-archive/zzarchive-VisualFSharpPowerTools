@@ -3,6 +3,7 @@
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpPowerTools.Core
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpVSPowerTools.CodeGeneration
@@ -27,7 +28,7 @@ with
         member x.StartLine: int<Line1> = x.StartLine
 
     static member FromSymbol(symbol: Symbol) =
-        let startLine, startColumn, endLine, endColumn = symbol.Range
+        let { From = { Line = startLine; Column = startColumn }; To = { Line = endLine; Column = endColumn }} = symbol.Range
         { StartLine = LanguagePrimitives.Int32WithMeasure startLine
           StartColumn = startColumn
           EndLine = LanguagePrimitives.Int32WithMeasure endLine

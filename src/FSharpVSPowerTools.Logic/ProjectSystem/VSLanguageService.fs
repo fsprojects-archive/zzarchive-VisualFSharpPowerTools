@@ -358,15 +358,3 @@ type VSLanguageService
 
     member __.GetCompleteTextForDocument filename =
         openDocumentsTracker.TryGetDocumentText filename
-
-    member __.MakePointInDocument (point: SnapshotPoint option) filename =
-        maybe {
-            let! point = point
-            let! source = openDocumentsTracker.TryGetDocumentText filename
-            let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let col = point.Position - point.GetContainingLine().Start.Position
-            let lineStr = point.GetContainingLine().GetText()
-            return {Point = Point.make line col; Line = lineStr; File = filename; Document = source }
-        }
-        
-        
