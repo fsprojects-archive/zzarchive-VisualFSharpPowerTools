@@ -14,7 +14,9 @@ module Symbols =
             |> Seq.map snd 
             |> Seq.distinctBy (fun s -> s.RangeAlternate))
         |> Seq.toArray
+
 type GetCheckResults = FileName -> Async<ParseAndCheckResults option>
+
 module HighlightUsageInFile =
     open FSharpVSPowerTools
     open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -23,7 +25,7 @@ module HighlightUsageInFile =
     type HighlightUsageInFileResult =
         | UsageInFile of FSharpSymbol * string * FSharpSymbolUse array
 
-    let findUsageInFile (currentLine: CurrentLine) (symbol: Symbol) (getCheckResults: GetCheckResults) = 
+    let findUsageInFile (currentLine: CurrentLine<FCS>) (symbol: Symbol) (getCheckResults: GetCheckResults) = 
         asyncMaybe {
             let! parseAndCheckResults = getCheckResults currentLine.File
             let! _ = parseAndCheckResults.GetSymbolUseAtLocation (currentLine.EndLine+1, symbol.RightColumn, currentLine.Line, [symbol.Text])

@@ -82,6 +82,13 @@ type SnapshotPoint with
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
     member x.ToPoint =
         x.Snapshot.GetLineNumberFromPosition x.Position, x.Position - x.GetContainingLine().Start.Position
+    
+    member x.MakePointInDocument filename source : PointInDocument<FCS> =
+        let line = x.Snapshot.GetLineNumberFromPosition x.Position
+        let col = x.Position - x.GetContainingLine().Start.Position
+        let lineStr = x.GetContainingLine().GetText()
+        { Point = Point.make line col; Line = lineStr; File = filename; Document = source }
+
 type ITextSnapshot with
     /// SnapshotSpan of the entirety of this TextSnapshot
     member x.FullSpan =
@@ -135,8 +142,8 @@ type SnapshotSpan with
 
     /// Return corresponding zero-based FCS range
     /// (lineStart, colStart, lineEnd, colEnd)
-    member inline x.ToRange () =
-        (x.StartLineNum, x.StartColumn, x.EndLineNum, x.EndColumn-1)
+    member inline x.ToRange () : Range<FCS> =
+        Range.make x.StartLineNum x.StartColumn x.EndLineNum (x.EndColumn - 1)
 
     member inline x.MakeCurrentLine (filename) =
         { Line = x.Start.GetContainingLine().GetText(); Range = x.ToRange(); File = filename }

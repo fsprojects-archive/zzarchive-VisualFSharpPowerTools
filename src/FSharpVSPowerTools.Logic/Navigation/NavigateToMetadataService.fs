@@ -190,7 +190,9 @@ type NavigateToMetadataService [<ImportingConstructor>]
                     Logging.logInfo (fun _ -> sprintf "Can't find a signature or signature project for '%s'" filePath)               
                     return None
             | false, _, _, _ ->
-                let (startLine, startCol, _, _) = span.ToRange()
+                let range = span.ToRange()
+                let startLine = range.From.Line
+                let startCol = range.From.Column
                 let pos = mkPos (startLine+1) startCol
                 let openDeclarations = 
                     ast 

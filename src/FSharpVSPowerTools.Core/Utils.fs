@@ -2,26 +2,53 @@
 
 type FileName = string
 
-type ZeroBasedPoint = int * int
-type ZeroBasedRange = int * int * int * int
+[<Measure>] type FCS
 
-type CurrentLine = { Line: string; File: FileName; Range: ZeroBasedRange }
+type Point<[<Measure>]'t> = { Line : int; Column : int }
+type Range<[<Measure>]'t> = { From : Point<'t>; To: Point<'t> }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Point =
+    let make    line column : Point<'t> = { Line = line; Column = column }
+    //let makeFCS line column : Point<FCS> = { Line = line; Column = column }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Range =
+
+    let make startLine startColumn endLine endColumn : Range<'t> =
+        {
+          From = Point.make startLine startColumn
+          To = Point.make endLine endColumn 
+        }
+        (*
+    let makeVS startLine startColumn endLine endColumn =
+        { 
+          From = Point.makeVS startLine startColumn
+          To = Point.makeVS endLine endColumn 
+        }
+        
+    let makeFCS startLine startColumn endLine endColumn =
+        { 
+          From = Point.makeFCS startLine startColumn
+          To = Point.makeFCS endLine endColumn 
+        }
+        *)
+type CurrentLine<[<Measure>]'t> = { Line: string; File: FileName; Range: Range<'t> }
     with
-        member x.EndLine =
-            let _, _, endLine, _ = x.Range
-            endLine
+        member x.EndLine = x.Range.To.Line 
 
 [<NoComparison>]
-type PointInDocument = {
-  Point: ZeroBasedPoint
-  Line: string
-  Document: string
-  File: FileName
+type PointInDocument<[<Measure>]'t> = {
+  Point    : Point<'t>
+  Line     : string
+  Document : string
+  File     : FileName
 }
     with
-        member x.LineIndex = fst x.Point
-        member x.ColumnIndex = snd x.Point
-        member x.CurrentLine = {Line = x.Line; File = x.File; Range = x.LineIndex, x.ColumnIndex, x.LineIndex, x.Line.Length }
+        member x.LineIndex = x.Point.Line
+        member x.ColumnIndex = x.Point.Column
+        member x.CurrentLine : Lazy<CurrentLine<'t>> = lazy({Line = x.Line; File = x.File; Range = Range.make x.LineIndex x.ColumnIndex x.LineIndex x.Line.Length })
+
 namespace FSharpVSPowerTools
 
 open System

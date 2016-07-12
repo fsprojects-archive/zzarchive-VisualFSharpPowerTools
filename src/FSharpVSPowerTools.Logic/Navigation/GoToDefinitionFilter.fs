@@ -55,22 +55,19 @@ type GoToDefinitionFilter
     let textBuffer = view.TextBuffer
     let project() = projectFactory.CreateForDocument view.TextBuffer doc.FilePath
 
-    let getDocumentState (point: PointInDocument option) getLexerState =
+    let getDocumentState (point: PointInDocument<FCS>) getLexerState =
         asyncMaybe {
-            let! point = point
             let! project = project()
             let symbol = vsLanguageService.GetSymbol(point, project, getLexerState)
             match symbol with
             | Some symbol ->
-              let! fsSymbolUse, fileScopedCheckResults = vsLanguageService.GetFSharpSymbolUse(point.CurrentLine, symbol, project, AllowStaleResults.MatchingSource)
-              let lineText = point.Line
-              let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
-
-              return 
-                  match findDeclResult with
-                  | FSharpFindDeclResult.DeclFound _ -> FoundInternal
-                  | FSharpFindDeclResult.DeclNotFound _ -> FoundExternal (project, fileScopedCheckResults.ParseTree, symbol, fsSymbolUse)
-
+                let! fsSymbolUse, fileScopedCheckResults = vsLanguageService.GetFSharpSymbolUse(point.CurrentLine.Value, symbol, project, AllowStaleResults.MatchingSource)
+                let lineText = point.Line
+                let! findDeclResult = fileScopedCheckResults.GetDeclarationLocation(symbol, lineText, preferSignature = false) |> liftAsync
+                return 
+                    match findDeclResult with
+                    | FSharpFindDeclResult.DeclFound _ -> FoundInternal
+                    | FSharpFindDeclResult.DeclNotFound _ -> FoundExternal (project, fileScopedCheckResults.ParseTree, symbol, fsSymbolUse)
             | None ->
                 let! loadDirectiveFile = vsLanguageService.GetLoadDirectiveFileNameAtCursor(point.File, view, project)
                 return FoundLoadDirective loadDirectiveFile
@@ -188,54 +185,56 @@ type GoToDefinitionFilter
         let worker =
             async {
                 let getLexerState = vsLanguageService.GetQueryLexState textBuffer
-                let snapshotPoint = textBuffer.GetSnapshotPoint view.Caret.Position
-                let pointInDocument = vsLanguageService.MakePointInDocument snapshotPoint doc.FilePath
-                let! symbolResult = getDocumentState pointInDocument getLexerState
-                match symbolResult with
-                | Some FoundInternal
-                | None ->
-                    // Run the operation on UI thread since continueCommandChain may access UI components.
-                    do! Async.SwitchToContext uiContext
-                    // Declaration location might exist so let Visual F# Tools handle it. 
-                    return continueCommandChain()
-                | Some (FoundLoadDirective fileToOpen) -> 
-                    // directive found, navigate to the file at first line
-                    serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
-                | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
-                    let snapshotPoint = snapshotPoint |> Option.get // this Option.get is guaranted safe because we actually had a match at position
-                    let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot symbol.Range
-                    match navigationPreference with
-                    | NavigationPreference.Metadata ->
-                        if shouldGenerateDefinition fsSymbolUse.Symbol then
-                            return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
-                    | NavigationPreference.SymbolSourceOrMetadata
-                    | NavigationPreference.SymbolSource as pref ->   
-                        let symbol = fsSymbolUse.Symbol
-                        Logging.logInfo (fun _ -> sprintf "Checking symbol source of %s..." symbol.FullName)
-                        if symbol.Assembly.FileName
-                           |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
-                           |> Option.getOrElse false then
-                            match referenceSourceProvider.TryGetNavigatedUrl symbol with
-                            | Some url ->
-                                if fireNavigationEvent then
-                                    currentUrl <- Some url
-                                    urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
-                                Process.Start url |> ignore
-                            | None ->
-                                Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
-                        else
-                            match tryFindSourceUrl symbol with
-                            | Some url ->
-                                return navigateToSource symbol url
-                            | None ->
-                                match pref with
-                                | NavigationPreference.SymbolSourceOrMetadata ->
-                                    if shouldGenerateDefinition symbol then
-                                        return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
-                                | _ ->
-                                    let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-                                    statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
-                                    return ()
+                match textBuffer.GetSnapshotPoint view.Caret.Position, vsLanguageService.GetCompleteTextForDocument doc.FilePath with
+                | Some snapshotPoint, Some source ->
+                    let pointInDocument = snapshotPoint.MakePointInDocument doc.FilePath source
+                    // vsLanguageService.MakePointInDocument snapshotPoint doc.FilePath
+                    let! symbolResult = getDocumentState pointInDocument getLexerState
+                    match symbolResult with
+                    | Some FoundInternal
+                    | None ->
+                        // Run the operation on UI thread since continueCommandChain may access UI components.
+                        do! Async.SwitchToContext uiContext
+                        // Declaration location might exist so let Visual F# Tools handle it. 
+                        return continueCommandChain()
+                    | Some (FoundLoadDirective fileToOpen) -> 
+                        // directive found, navigate to the file at first line
+                        serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
+                    | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
+                        let span = SnapshotSpan.MakeFromRange snapshotPoint.Snapshot symbol.Range
+                        match navigationPreference with
+                        | NavigationPreference.Metadata ->
+                            if shouldGenerateDefinition fsSymbolUse.Symbol then
+                                return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+                        | NavigationPreference.SymbolSourceOrMetadata
+                        | NavigationPreference.SymbolSource as pref ->   
+                            let symbol = fsSymbolUse.Symbol
+                            Logging.logInfo (fun _ -> sprintf "Checking symbol source of %s..." symbol.FullName)
+                            if symbol.Assembly.FileName
+                               |> Option.map (Path.GetFileNameWithoutExtension >> referenceSourceProvider.AvailableAssemblies.Contains)
+                               |> Option.getOrElse false then
+                                match referenceSourceProvider.TryGetNavigatedUrl symbol with
+                                | Some url ->
+                                    if fireNavigationEvent then
+                                        currentUrl <- Some url
+                                        urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
+                                    Process.Start url |> ignore
+                                | None ->
+                                    Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
+                            else
+                                match tryFindSourceUrl symbol with
+                                | Some url ->
+                                    return navigateToSource symbol url
+                                | None ->
+                                    match pref with
+                                    | NavigationPreference.SymbolSourceOrMetadata ->
+                                        if shouldGenerateDefinition symbol then
+                                            return! metadataService.NavigateToMetadata(project, textBuffer, parseTree, span, fsSymbolUse)
+                                    | _ ->
+                                        let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
+                                        statusBar.SetText(Resource.goToDefinitionNoSourceSymbolMessage) |> ignore
+                                        return ()
+                | _ -> return ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 

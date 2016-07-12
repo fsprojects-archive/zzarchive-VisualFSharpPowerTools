@@ -119,7 +119,7 @@ type VSLanguageService
     member __.GetSymbol(point, fileName, projectProvider) =
         getSymbolUsing SymbolLookupKind.Fuzzy point fileName projectProvider
 
-    member __.GetSymbol(point: PointInDocument, projectProvider: IProjectProvider, queryLexState) =
+    member __.GetSymbol(point: PointInDocument<FCS>, projectProvider: IProjectProvider, queryLexState) =
         Lexer.getSymbolAtPoint point SymbolLookupKind.Fuzzy (projectProvider.CompilerOptions) queryLexState
 
     member __.GetLongIdentSymbol(point, fileName, projectProvider) =
@@ -158,7 +158,9 @@ type VSLanguageService
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             try
-                let (_, _, endLine, endCol) = word.ToRange()
+                let range = word.ToRange()
+                let endLine = range.To.Line
+                let endCol = range.To.Column
                 let! source = openDocumentsTracker.TryGetDocumentText currentFile
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = currentProject.TargetFramework
@@ -194,7 +196,8 @@ type VSLanguageService
     member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
             try 
-                let (_, _, endLine, _) = word.ToRange()
+                let range = word.ToRange()
+                let endLine = range.To.Line
                 let currentLine = word.Start.GetContainingLine().GetText()
             
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
@@ -219,7 +222,7 @@ type VSLanguageService
             return! HighlightUsageInFile.findUsageInFile currentLine symbol getCheckResults
         }
 
-    member __.GetFSharpSymbolUse (currentLine: CurrentLine, symbol: Symbol, projectProvider: IProjectProvider, stale) = 
+    member __.GetFSharpSymbolUse (currentLine: CurrentLine<FCS>, symbol: Symbol, projectProvider: IProjectProvider, stale) = 
         asyncMaybe {
             let! source = openDocumentsTracker.TryGetDocumentText currentLine.File
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
@@ -231,7 +234,8 @@ type VSLanguageService
         asyncMaybe {
             Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
-            let (_, _, endLine, _) = word.ToRange()
+            let range = word.ToRange()
+            let endLine = range.To.Line
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
             let currentLine = word.Start.GetContainingLine().GetText()
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
@@ -242,7 +246,9 @@ type VSLanguageService
 
     member __.CreateLexer (fileName, snapshot, args) =
         maybe {
-            let lineStart, _, lineEnd, _ = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            let range = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
+            let lineStart = range.From.Line
+            let lineEnd = range.To.Line
             
             let getLineStr line =
                 let lineNumber = line - lineStart
@@ -350,6 +356,8 @@ type VSLanguageService
         with get () = skipLexCache
         and set v = skipLexCache <- v
 
+    member __.GetCompleteTextForDocument filename =
+        openDocumentsTracker.TryGetDocumentText filename
 
     member __.MakePointInDocument (point: SnapshotPoint option) filename =
         maybe {
@@ -358,7 +366,7 @@ type VSLanguageService
             let line = point.Snapshot.GetLineNumberFromPosition point.Position
             let col = point.Position - point.GetContainingLine().Start.Position
             let lineStr = point.GetContainingLine().GetText()
-            return {Point = (line, col); Line = lineStr; File = filename; Document = source }
+            return {Point = Point.make line col; Line = lineStr; File = filename; Document = source }
         }
         
         
