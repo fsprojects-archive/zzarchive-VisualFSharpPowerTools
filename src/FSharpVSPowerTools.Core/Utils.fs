@@ -9,8 +9,7 @@ type Range<[<Measure>]'t> = { From : Point<'t>; To: Point<'t> }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Point =
-    let make    line column : Point<'t> = { Line = line; Column = column }
-    //let makeFCS line column : Point<FCS> = { Line = line; Column = column }
+    let make line column : Point<'t> = { Line = line; Column = column }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Range =
@@ -20,19 +19,7 @@ module Range =
           From = Point.make startLine startColumn
           To = Point.make endLine endColumn 
         }
-        (*
-    let makeVS startLine startColumn endLine endColumn =
-        { 
-          From = Point.makeVS startLine startColumn
-          To = Point.makeVS endLine endColumn 
-        }
-        
-    let makeFCS startLine startColumn endLine endColumn =
-        { 
-          From = Point.makeFCS startLine startColumn
-          To = Point.makeFCS endLine endColumn 
-        }
-        *)
+    
 type CurrentLine<[<Measure>]'t> = { Line: string; File: FileName; Range: Range<'t> }
     with
         member x.EndLine = x.Range.To.Line 

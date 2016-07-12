@@ -224,7 +224,6 @@ type GoToDefinitionFilter
                 match textBuffer.GetSnapshotPoint view.Caret.Position, vsLanguageService.GetCompleteTextForDocument doc.FilePath with
                 | Some snapshotPoint, Some source ->
                     let pointInDocument = snapshotPoint.MakePointInDocument doc.FilePath source
-                    // vsLanguageService.MakePointInDocument snapshotPoint doc.FilePath
                     let! symbolResult = getDocumentState pointInDocument getLexerState
                     match symbolResult with
                     | Some FoundInternal
