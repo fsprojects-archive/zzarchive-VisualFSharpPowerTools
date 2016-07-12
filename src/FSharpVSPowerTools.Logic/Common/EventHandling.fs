@@ -6,7 +6,6 @@ open Microsoft.VisualStudio.Text.Editor
 open System.Threading
 open System.Windows.Threading
 open FSharpVSPowerTools
-open System.Diagnostics
 open System.Threading.Tasks
 
 [<RequireQualifiedAccess>]
@@ -91,20 +90,15 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
 
        let computation =
            async { 
-               let cts = ref (new CancellationTokenSource())
-               startUpdate !cts
-
-               while true do
-                   //let e = events
-                   do! triggered.WaitAsync()
-                   triggered.Reset()
-                   if not skipTimerDelay then
-                       startNewTimer()
-                       do! awaitPauseAfterChange()
-                   cts.Value.Cancel()
-                   cts.Value.Dispose()
-                   cts := new CancellationTokenSource()
-                   startUpdate !cts
+              while true do
+                  use cts = new CancellationTokenSource()
+                  startUpdate cts
+                  do! triggered.WaitAsync()
+                  triggered.Reset()
+                  if not skipTimerDelay then
+                      startNewTimer()
+                      do! awaitPauseAfterChange()
+                  cts.Cancel()           
            }
        
        Async.StartInThreadPoolSafe (computation, tokenSource.Token)
