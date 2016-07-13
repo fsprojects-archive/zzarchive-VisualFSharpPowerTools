@@ -33,22 +33,22 @@ type CallInUIContext =
                 do! Async.SwitchToContext ctx
             })
 
-type AsyncManualResetEvent() = 
+type private AsyncManualResetEvent() = 
     [<VolatileField>]
-    let mutable _tcs = new TaskCompletionSource<bool>()
+    let mutable taskCompletionSource = new TaskCompletionSource<bool>()
     
-    member __.WaitAsync() = _tcs.Task |> Async.AwaitTask |> Async.Ignore
+    member __.WaitAsync() = taskCompletionSource.Task |> Async.AwaitTask |> Async.Ignore
     
     member __.Reset() =
         let rec loop() =
-            let tcs = _tcs
+            let tcs = taskCompletionSource
             if tcs.Task.IsCompleted &&
-               Interlocked.CompareExchange(&_tcs, new TaskCompletionSource<bool>(), tcs) <> tcs then 
-                loop()
+               Interlocked.CompareExchange(&taskCompletionSource, new TaskCompletionSource<bool>(), tcs) <> tcs then 
+                  loop()
         loop()
 
     member __.Set() =
-        let tcs = _tcs
+        let tcs = taskCompletionSource
         Task.Factory.StartNew(
             (fun s -> (box s :?> TaskCompletionSource<bool>).TrySetResult true),
             tcs, 
@@ -58,7 +58,6 @@ type AsyncManualResetEvent() =
         tcs.Task.Wait()
 
 type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, update: CallInUIContext -> Async<unit>) =
-    // Start an async loop on the UI thread that will execute the update action after the delay
     do if List.isEmpty events then invalidArg "events" "Events must be a non-empty list"
     let events = events |> List.reduce Event.merge
     let triggered = AsyncManualResetEvent()
@@ -66,9 +65,6 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
     let timer = DispatcherTimer(DispatcherPriority.ApplicationIdle, Interval = TimeSpan.FromMilliseconds (float delayMillis))
     let tokenSource = new CancellationTokenSource()
     let mutable disposed = false
-
-    // This is a none or for-all option for unit testing purpose only
-    static let mutable skipTimerDelay = false
 
     let startNewTimer() = 
         timer.Stop()
@@ -95,7 +91,7 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
                   startUpdate cts
                   do! triggered.WaitAsync()
                   triggered.Reset()
-                  if not skipTimerDelay then
+                  if not DocumentEventListener.SkipTimerDelay then
                       startNewTimer()
                       do! awaitPauseAfterChange()
                   cts.Cancel()           
@@ -103,10 +99,8 @@ type DocumentEventListener (events: IEvent<unit> list, delayMillis: uint16, upda
        
        Async.StartInThreadPoolSafe (computation, tokenSource.Token)
 
-    /// Skip all timer events in order to test events instantaneously
-    static member internal SkipTimerDelay 
-        with get () = skipTimerDelay
-        and set v = skipTimerDelay <- v
+    /// This is a none or for-all option for unit testing purpose only
+    static member val SkipTimerDelay = false with get, set
 
     interface IDisposable with
         member __.Dispose() =
