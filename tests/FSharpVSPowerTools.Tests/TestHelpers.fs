@@ -69,6 +69,7 @@ let snapshotPoint (snapshot: ITextSnapshot) line (column: int) =
     SnapshotPoint(snapshot, line.Start.Position + column)
 
 let testEventTrigger event errorMessage (timeout: int<ms>) triggerEvent predicate =
+    Thread.Sleep 1000
     use ct = new CancellationTokenSource()
     let task = Async.StartAsTask (Async.AwaitEvent event, cancellationToken = ct.Token)
     try

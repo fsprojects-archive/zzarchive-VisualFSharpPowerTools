@@ -87,3 +87,6 @@ type VsTestBase() =
             // Assume that this kind of project provider doesn't have referenced projects
             x.AddProject project
         x.SetActiveDocument (filePath, content)
+
+    member __.SetActiveDocumentContent content =
+        openDocumentsTracker.SetActiveDocumentContent content

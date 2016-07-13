@@ -55,12 +55,13 @@ module SymbolClassifierTests =
     [<Test>]
     let ``should return a single operator symbol if the code doesn't contain any other symbols``() = 
         let content = "let x = 0"
-        let buffer = createMockTextBuffer content fileName
-        let view = createMockTextView buffer
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let classifier = helper.GetClassifier(buffer)
         testEventTrigger classifier.ClassificationChanged "Timed out before classification changed" timeout
-            (fun _ -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun () -> 
             helper.ClassificationSpansOf(buffer, classifier) 
             |> Seq.toList
@@ -77,12 +78,13 @@ let _ = <@ 1 = 1 @>
 module Module1 =
     let x = ()
 """
-        let buffer = createMockTextBuffer content fileName
-        let view = createMockTextView buffer
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let classifier = helper.GetClassifier(buffer)
         testEventTrigger classifier.ClassificationChanged "Timed out before classification changed" timeout 
-            (fun _ -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun _ ->
                  let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
                  let expected =
@@ -117,12 +119,13 @@ let _ = XmlProvider< "<root><value>\"1\"</value></root>">.GetSample() |> ignore
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/TypeProviderTests/TypeProviderTests.fs"
-        let buffer = createMockTextBuffer content fileName
-        let view = createMockTextView buffer
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, "")
         let classifier = helper.GetClassifier(buffer)
         testEventTrigger classifier.ClassificationChanged "Timed out before classification changed" timeout 
-            (fun _ -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun _ -> 
                  let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
                  let expected = 

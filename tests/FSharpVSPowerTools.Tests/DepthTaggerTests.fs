@@ -41,12 +41,13 @@ let f x =
 type T() =
     member x.M = ()
 """
-        let buffer = createMockTextBuffer content fileName
-        let view = createMockTextView buffer
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let tagger = helper.GetTagger(buffer)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun _ -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
                 |> Seq.toList 
@@ -67,12 +68,13 @@ namespace global
 
 type Hoge () =
 """
-        let buffer = createMockTextBuffer content fileName
-        let view = createMockTextView buffer
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let tagger = helper.GetTagger(buffer)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun _ -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
                 |> Seq.toList 

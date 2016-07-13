@@ -44,7 +44,6 @@ module UnusedSymbolClassifierTests =
     
     let helper = new UnusedSymbolClassifierHelper()
     let mutable fileName = null 
-    let mutable dummyFileName = null
 
     [<SetUp>]
     let setUp() = 
@@ -57,25 +56,25 @@ open System
 open System.Collections.Generic
 let internal f() = ()
 """
-        let buffer = createMockTextBuffer content fileName
+        let buffer = createMockTextBuffer "" fileName
         // IsSymbolUsedForProject seems to require a file to exist on disks
         // If not, type checking fails with some weird errors
-        dummyFileName <- fileName
-        File.WriteAllText(dummyFileName, "")
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let classifier = helper.GetClassifier(buffer)
         
-        testEvent classifier.ClassificationChanged "Timed out before classification changed" timeout <| fun _ ->
-            let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
-            let expected =
-                [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
-                  { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
-                  { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) } ]
-            actual |> assertEqual expected
+        testEventTrigger classifier.ClassificationChanged "Timed out before classification changed" timeout 
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
+            (fun _ ->
+                 let actual = helper.ClassificationSpansOf(buffer, classifier) |> Seq.toList
+                 let expected =
+                     [ { Classification = "FSharp.Unused"; Span = (2, 6) => (2, 11) }
+                       { Classification = "FSharp.Unused"; Span = (3, 6) => (3, 31) }
+                       { Classification = "FSharp.Unused"; Span = (4, 14) => (4, 14) } ]
+                 actual |> assertEqual expected)
         
     [<OneTimeTearDown>]
     let tearDownAll() =
-        if File.Exists dummyFileName then
-            File.Delete dummyFileName
         dispose helper
         
