@@ -4,7 +4,6 @@ open System
 open NUnit.Framework
 open FSharpVSPowerTools
 open FSharpVSPowerTools.Navigation
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
@@ -106,12 +105,13 @@ val func : int -> int
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
         let textView = createMockTextView buffer
         let command = helper.GetCommand(textView)
-
         let prefix = Path.GetFullPath(fileName)
-        textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
-        command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
-            0u, IntPtr.Zero, IntPtr.Zero) |> ignore
-        testEvent helper.ReferencesChanged "Timed out before being able to find all references" timeout
+                        
+        testEventTrigger helper.ReferencesChanged "Timed out before being able to find all references" timeout
+            (fun _ -> 
+                textView.Caret.MoveTo(snapshotPoint textView.TextSnapshot 4 6) |> ignore
+                command.Exec(ref Constants.guidOldStandardCmdSet, Constants.cmdidFindReferences, 
+                             0u, IntPtr.Zero, IntPtr.Zero) |> ignore)
             (fun () -> 
                 helper.ReferencesResults 
                 |> assertEqual 

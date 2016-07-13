@@ -55,14 +55,17 @@ type Color =
     | Green
     | Blue
 """
-        let buffer = createMockTextBuffer content fileName
+        let buffer = createMockTextBuffer "" fileName
         let view = helper.GetView(buffer)
         helper.AddProject(createVirtualProject(buffer, fileName))
-        helper.SetActiveDocument(fileName, content)
+        helper.SetActiveDocument(fileName, "")
         let tagger = helper.GetTagger(buffer, view)
 
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
-            (fun () -> 
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun _ ->
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
+            (fun _ -> 
                 helper.TagsOf(buffer, tagger)
                 |> Seq.toList
                 |> assertEqual 
