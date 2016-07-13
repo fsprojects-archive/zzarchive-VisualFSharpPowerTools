@@ -86,11 +86,6 @@ printf "%d foo %+A bar" 1 "str"
         let view = helper.GetView(buffer)
         let tagger = helper.GetTagger(buffer, view)
         let testEventTrigger = testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout 
-        // first tags changed event is raised by `onCaretMove`, but there are no data yet since
-        // `onBufferChanged` event handler has not finished gathering Printf specifiers.
-        testEventTrigger
-            ignore 
-            (fun () -> helper.TagsOf(buffer, tagger) |> Seq.toList |> assertEqual [])
 
         testEventTrigger
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 2 12) |> ignore)

@@ -48,17 +48,15 @@ let inline assertNotSame<'T when 'T : not struct> (expected : 'T) (actual : 'T) 
     Assert.AreNotSame (expected, actual)
 
 /// Asserts that a condition is true.
-let inline assertTrue condition =
-    Assert.IsTrue (condition)
+let inline assertTrue (condition: bool) = Assert.IsTrue condition
 
 /// Asserts that a condition is false.
-let inline assertFalse condition =
-    Assert.IsFalse (condition)
+let inline assertFalse (condition: bool) = Assert.IsFalse condition
 
 type [<Measure>] ms
 
 #if APPVEYOR
-let timeout = 40000<ms>
+let timeout = 60000<ms>
 #else
 let timeout = 10000<ms>
 #endif
@@ -71,6 +69,7 @@ let snapshotPoint (snapshot: ITextSnapshot) line (column: int) =
     SnapshotPoint(snapshot, line.Start.Position + column)
 
 let testEventTrigger event errorMessage (timeout: int<ms>) triggerEvent predicate =
+    Thread.Sleep 1000
     use ct = new CancellationTokenSource()
     let task = Async.StartAsTask (Async.AwaitEvent event, cancellationToken = ct.Token)
     try
@@ -86,10 +85,11 @@ let testEventTrigger event errorMessage (timeout: int<ms>) triggerEvent predicat
         | false ->
             sw.Stop()
             Console.WriteLine(sprintf "Event took: %O s" (sw.ElapsedMilliseconds/1000L))
-            Assert.Inconclusive errorMessage
+            Assert.Fail errorMessage
     finally
         ct.Cancel()
-        task.Wait (int timeout) |> ignore
+        if not task.IsCanceled then
+            task.Wait (int timeout) |> ignore
 
 let testEvent event errorMessage (timeout: int<ms>) predicate =
     testEventTrigger event errorMessage timeout id predicate

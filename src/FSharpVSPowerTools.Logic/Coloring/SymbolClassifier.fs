@@ -121,7 +121,7 @@ type SymbolClassifier
             let builtProjectFileName = Path.GetFileName p
             let referencedProjectFileNames = selfProject.GetAllReferencedProjectFileNames()
 
-            if referencedProjectFileNames |> List.exists ((=) builtProjectFileName) then
+            if referencedProjectFileNames |> List.contains builtProjectFileName then
                 debug "Referenced project %s has been built, updating classifiers..." builtProjectFileName
                 let callInUIContext = CallInUIContext.FromCurrentThread()
                 updateSyntaxConstructClassifiers true callInUIContext |> Async.StartInThreadPoolSafe

@@ -41,10 +41,13 @@ let f x =
 type T() =
     member x.M = ()
 """
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let tagger = helper.GetTagger(buffer)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
                 |> Seq.toList 
@@ -56,6 +59,7 @@ type T() =
                       (5, 0, 0, 0); 
                       (6, 0, 0, 0); (6, 0, 255, -1); 
                       (7, 0, 4, 0); (7, 4, 19, 1) ])
+        ()
 
     [<Test>]
     let ``should not fail to produce depth colorizer tags on incomplete code``() = 
@@ -64,10 +68,13 @@ namespace global
 
 type Hoge () =
 """
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, "")
         let tagger = helper.GetTagger(buffer)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
                 |> Seq.toList 

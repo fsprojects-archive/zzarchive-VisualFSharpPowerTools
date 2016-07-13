@@ -116,6 +116,8 @@ namespace TestUtilities.Mocks {
                 var newSnapshot = edit.Apply();                
                 if (Changed != null)
                     Changed(this, new TextContentChangedEventArgs(oldSnapshot, newSnapshot, EditOptions.None, null));
+                if (ChangedLowPriority != null)
+                    ChangedLowPriority(this, new TextContentChangedEventArgs(oldSnapshot, newSnapshot, EditOptions.None, null));
                 return newSnapshot;
             }
         }
@@ -153,6 +155,8 @@ namespace TestUtilities.Mocks {
             );
             if (Changed != null)
                 Changed(this, new TextContentChangedEventArgs(oldSnapshot, _snapshot, EditOptions.None, null));
+            if (ChangedLowPriority != null)
+                ChangedLowPriority(this, new TextContentChangedEventArgs(oldSnapshot, _snapshot, EditOptions.None, null));
             return _snapshot;
         }
 

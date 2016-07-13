@@ -35,7 +35,7 @@ type HighlightUsageTaggerHelper() =
                 Some ((lineStart, colStart, lineEnd, colEnd - 1), tag.IsFromDefinition)
             | _ -> None)
 
-module HighlightUsageTaggerTaggerTests =
+module HighlightUsageTaggerTests =
     open System.IO
 
     let helper = HighlightUsageTaggerHelper()
@@ -197,13 +197,16 @@ module Test =
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project2.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
-        File.WriteAllText (fileName, content)
-        let buffer = createMockTextBuffer content fileName
-        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, content)
+        File.WriteAllText (fileName, "")
+        let buffer = createMockTextBuffer "" fileName
+        helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, "")
         let view = helper.GetView(buffer)
-        view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore
         let tagger = helper.GetTagger(buffer, view)
-        testEvent tagger.TagsChanged "Timed out before tags changed" timeout
+        testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
+            (fun _ -> 
+                helper.SetActiveDocumentContent content
+                buffer.Insert(0, content) |> ignore
+                view.Caret.MoveTo(snapshotPoint view.TextSnapshot 5 22) |> ignore)
             (fun () -> 
                 helper.TagsOf(buffer, tagger)
                 |> Set.ofSeq

@@ -11,5 +11,6 @@ using System.Runtime.CompilerServices;
 namespace System {
     internal static class AssemblyVersionInformation {
         internal const string Version = "2.6.0";
+        internal const string InformationalVersion = "2.6.0";
     }
 }

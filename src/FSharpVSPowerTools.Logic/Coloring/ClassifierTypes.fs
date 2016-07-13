@@ -10,7 +10,7 @@ type internal SnapshotSpanWithLine =
       Line: int }
 
 [<Sealed>]
-type internal CategorizedSnapshotSpan (columnSpan: CategorizedColumnSpan<ITextSnapshot>, originalSnapshot: ITextSnapshot) =
+type internal CategorizedSnapshotSpan (columnSpan: CategorizedSpan, originalSnapshot: ITextSnapshot) =
     let snapshotSpan: SnapshotSpanWithLine option Atom = Atom None 
     member __.ColumnSpan = columnSpan
     member __.GetSnapshotSpan targetSnapshot = 
