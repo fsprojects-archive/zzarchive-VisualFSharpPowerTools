@@ -26,7 +26,7 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _vsLanguageService;
-        readonly IOpenDocumentsTracker _openDocumentTracker;
+        readonly IVSOpenDocumentsTracker _openDocumentTracker;
 
         [ImportingConstructor]
         public DepthColorizerTaggerProvider(
@@ -34,7 +34,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker)
+            IVSOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;

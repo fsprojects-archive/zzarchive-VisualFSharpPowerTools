@@ -26,7 +26,7 @@ namespace FSharpVSPowerTools.Outlining
         private readonly VSLanguageService _vsLanguageService;
         private readonly IProjectionBufferFactoryService _projectionBufferFactoryService;
         private readonly IOutliningManagerService _outliningManagerService;
-        private readonly IOpenDocumentsTracker _openDocumentsTracker;
+        private readonly IVSOpenDocumentsTracker _openDocumentsTracker;
 
         [ImportingConstructor]
         public OutliningTaggerProvider(
@@ -37,7 +37,7 @@ namespace FSharpVSPowerTools.Outlining
             IOutliningManagerService outliningManagerService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentsTracker)
+            IVSOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;

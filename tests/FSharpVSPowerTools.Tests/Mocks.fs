@@ -245,7 +245,7 @@ type OpenDocumentTrackerStub() =
     let documentChanged = Event<_>()
     let documentClosed = Event<_>()
     member __.SetActiveDocumentContent newContent = content <- newContent
-    interface IOpenDocumentsTracker with
+    interface IVSOpenDocumentsTracker with
         member __.RegisterView _ = ()
         member __.MapOpenDocuments _ = notimpl
         member __.TryFindOpenDocument _ = None

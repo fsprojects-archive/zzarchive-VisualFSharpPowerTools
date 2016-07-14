@@ -7,6 +7,6 @@ open Microsoft.VisualStudio.Utilities
 [<Export(typeof<IWpfTextViewCreationListener>)>]
 [<ContentType("F#")>]
 [<TextViewRole(PredefinedTextViewRoles.Interactive)>]
-type ActiveViewRegistratorListener [<ImportingConstructor>]([<Import>] openDocumentsTracker: IOpenDocumentsTracker) = 
+type ActiveViewRegistratorListener [<ImportingConstructor>]([<Import>] openDocumentsTracker: IVSOpenDocumentsTracker) = 
     interface IWpfTextViewCreationListener with
         member __.TextViewCreated view = openDocumentsTracker.RegisterView view

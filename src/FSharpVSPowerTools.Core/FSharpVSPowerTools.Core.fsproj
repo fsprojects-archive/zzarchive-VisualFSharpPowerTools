@@ -81,6 +81,8 @@
     <Compile Include="NavigableItemsCollector.fs" />
     <Compile Include="NavigateToIndex.fs" />
     <Compile Include="IdentifierUtils.fs" />
+    <Compile Include="Infrastructure\SolutionProvider.fs" />
+    <Compile Include="Infrastructure\OpenDocumentsTracker.fs" />
     <Compile Include="OpenDeclarationsGetter.fs" />
     <Compile Include="SourceCodeClassifier.fs" />
     <Compile Include="CodeGeneration.fs" />
@@ -94,7 +96,6 @@
     <Compile Include="Symbols/HighlightUsageInFile.fs" />
     <None Include="Scratchpad.fsx" />
     <Content Include="paket.references" />
-    <Compile Include="Infrastructure\SolutionProvider.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

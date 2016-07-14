@@ -24,7 +24,7 @@ namespace FSharpVSPowerTools
         private readonly ITextDocumentFactoryService _textDocumentFactoryService;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
-        private readonly IOpenDocumentsTracker _openDocumentsTracker;
+        private readonly IVSOpenDocumentsTracker _openDocumentsTracker;
         private readonly ITextUndoHistoryRegistry _undoHistoryRegistry;
         
         [ImportingConstructor]
@@ -33,8 +33,8 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ITextUndoHistoryRegistry undoHistoryRegistry,
             ProjectFactory projectFactory,
-            VSLanguageService fsharpVsLanguageService, 
-            IOpenDocumentsTracker openDocumentsTracker)
+            VSLanguageService fsharpVsLanguageService,
+            IVSOpenDocumentsTracker openDocumentsTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;
