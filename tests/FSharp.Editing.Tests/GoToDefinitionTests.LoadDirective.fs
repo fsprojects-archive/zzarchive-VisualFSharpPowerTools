@@ -1,11 +1,11 @@
-﻿module FSharpVSPowerTools.Core.Tests.GoToDefinition.LoadDirectiveTests
+﻿module FSharp.Editing.Tests.GoToDefinition.LoadDirectiveTests
 
 open System.IO
 open Microsoft.FSharp.Compiler.Range
 open NUnit.Framework
-open FSharpVSPowerTools
-open FSharpVSPowerTools.Pervasive
-open FSharpVSPowerTools.UntypedAstUtils.HashDirectiveInfo
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils.HashDirectiveInfo
+open FSharp.Editing.Tests
 
 [<Literal>]
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"

@@ -8,7 +8,6 @@ type Idents = ShortIdent[]
 type IsAutoOpen = bool
 type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 
-[<RequireQualifiedAccess>]
 type EntityKind =
     | Attribute
     | Type

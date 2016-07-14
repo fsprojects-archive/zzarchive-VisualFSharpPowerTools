@@ -13,17 +13,17 @@
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.RecordStubGeneratorTests
+module FSharp.Editing.Tests.RecordStubGeneratorTests
 #endif
 
 open NUnit.Framework
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
-open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 open TestHelpers.LanguageServiceTestHelper
+open FSharp.Editing
+open FSharp.Editing.Features.RecordStubGenerator
+open FSharp.Editing.Features
+open CodeGenerationTestInfrastructure
 
 let args = LanguageServiceTestHelper.args
 let languageService = LanguageService()

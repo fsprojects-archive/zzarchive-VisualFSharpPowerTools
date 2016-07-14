@@ -1,9 +1,10 @@
-﻿module FSharpVSPowerTools.Core.Tests.TaskListCommentExtractorTests
+﻿module FSharp.Editing.Tests.TaskListCommentExtractorTests
 
 open NUnit.Framework
-open FSharpVSPowerTools
-open FSharpVSPowerTools.TaskList
 open System
+open FSharp.Editing
+open FSharp.Editing.Features
+open FSharp.Editing.Features.CommentExtractor
 
 let newlines = [| Environment.NewLine; "\r\n"; "\r"; "\n" |]
 let defaultOptions = [| { Comment = "TODO"; Priority = 2 } |]

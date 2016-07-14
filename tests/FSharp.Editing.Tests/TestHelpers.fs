@@ -19,7 +19,7 @@ limitations under the License.
 
 /// Helper functions for implementing unit tests.
 [<AutoOpen>]
-module TestHelpers
+module FSharp.Editing.Tests.TestHelpers
 
 open System
 open NUnit.Framework

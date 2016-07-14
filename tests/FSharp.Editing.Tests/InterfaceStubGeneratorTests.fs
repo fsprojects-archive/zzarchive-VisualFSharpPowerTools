@@ -5,15 +5,15 @@
 #load "../../src/FSharpVSPowerTools.Core/InterfaceStubGenerator.fs"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.InterfaceStubGeneratorTests
+module FSharp.Editing.Tests.InterfaceStubGeneratorTests
 #endif
 
 open NUnit.Framework
 open System.IO
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing
+open FSharp.Editing.Features
 
 [<Literal>]
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"
@@ -428,7 +428,7 @@ do reg()
 
 let normalizeArgs =
     List.fold (fun (acc, namesWithIndices) arg ->
-            let arg, namesWithIndices = FSharpVSPowerTools.CodeGeneration.Utils.normalizeArgName namesWithIndices arg
+            let arg, namesWithIndices = CodeGenerationUtils.normalizeArgName namesWithIndices arg
             arg :: acc, namesWithIndices)
         ([], Map.empty)
     >> fst

@@ -5,12 +5,12 @@
 #load   "TestHelpers.fs"
         "../../src/FSharpVSPowerTools.Core/Utils.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UtilsTests
+module FSharp.Editing.Tests.UtilsTests
 #endif
 
 open NUnit.Framework
 open FsCheck
-open FSharpVSPowerTools
+open FSharp.Editing
 open System.Collections.Generic
 
 

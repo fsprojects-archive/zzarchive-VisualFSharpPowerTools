@@ -4,11 +4,11 @@
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.NavigateToIndexTests
+module FSharp.Editing.Tests.NavigateToIndexTests
 #endif
 
 open NUnit.Framework
-open FSharpVSPowerTools.Navigation
+open FSharp.Editing
 
 [<Test>]
 let ``Index should return all matching entries``() =

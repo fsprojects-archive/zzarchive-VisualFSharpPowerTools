@@ -17,22 +17,23 @@
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.GoToDefinitionTests
+module FSharp.Editing.Tests.GoToDefinitionTests
 #endif
 
 open NUnit.Framework
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.SignatureGenerator
-open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+open FSharp.Editing
+open FSharp.Editing.Features
+open CodeGenerationTestInfrastructure
+open FSharp.Editing.Features.UnionPatternMatchCaseGenerator
 open LanguageServiceTestHelper
 open System
 open System.Xml.Linq
 open System.Collections.Generic
 open System.IO
+open FSharp.Editing.Features.SignatureGenerator
 
 let languageService = LanguageService()
 let xmlFileCache = Dictionary()

@@ -4,12 +4,12 @@
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.SymbolParserTests
+module FSharp.Editing.Tests.SymbolParserTests
 #endif
 
 open NUnit.Framework
 open System.IO
-open FSharpVSPowerTools
+open FSharp.Editing
 
 [<Literal>]
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"

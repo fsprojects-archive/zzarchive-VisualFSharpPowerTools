@@ -12,10 +12,12 @@
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UnopenedNamespacesResolverTests
+module FSharp.Editing.Tests.UnopenedNamespacesResolverTests
 #endif
+
 open NUnit.Framework
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.Features
 
 // Entity.TryCreate tests
 
@@ -298,7 +300,7 @@ let ``fully qualified external entities / partially qualified name``() =
 
 // ParsedInput.getEntityKind tests
 
-open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure 
+open FSharp.Editing
 
 let file = "C:\\file.fs"
 let languageService = LanguageService()
@@ -315,6 +317,7 @@ let parseSource (source: Source) =
     | Some tree -> tree
 
 open Microsoft.FSharp.Compiler.Range
+open CodeGenerationTestInfrastructure
 
 type Line = int
 type Col = int
@@ -673,7 +676,7 @@ let forEntity (ns: LongIdent) (fullName: LongIdent) (ident: string, source: Sour
     | [|e, ctx|] -> source, e, ctx, ast
     | es -> failwithf "More than one entity: %A" es
 
-let result (expected: Source) (source: Source, entity, ctx: InsertContext, ast) = 
+let result (expected: Source) (source: Source, (entity: Entity), ctx: InsertContext, ast) = 
     let lines = srcToLineArray source
 
     let doc =
