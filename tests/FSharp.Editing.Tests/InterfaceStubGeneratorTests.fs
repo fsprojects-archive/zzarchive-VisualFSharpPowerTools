@@ -428,7 +428,7 @@ do reg()
 
 let normalizeArgs =
     List.fold (fun (acc, namesWithIndices) arg ->
-            let arg, namesWithIndices = normalizeArgName namesWithIndices arg
+            let arg, namesWithIndices = FSharpVSPowerTools.CodeGeneration.Utils.normalizeArgName namesWithIndices arg
             arg :: acc, namesWithIndices)
         ([], Map.empty)
     >> fst

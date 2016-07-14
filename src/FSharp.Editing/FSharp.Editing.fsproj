@@ -7,8 +7,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>f3d0b372-3af7-49d9-98ed-5a78e9416098</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>FSharpVSPowerTools.Core</RootNamespace>
-    <AssemblyName>FSharpVSPowerTools.Core</AssemblyName>
+    <RootNamespace>FSharp.Editing</RootNamespace>
+    <AssemblyName>FSharp.Editing</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <Name>FSharpVSPowerTools.Core</Name>

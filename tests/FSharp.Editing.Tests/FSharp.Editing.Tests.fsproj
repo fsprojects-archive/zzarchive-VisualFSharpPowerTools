@@ -7,13 +7,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>d751e684-285f-494d-b402-98772a541c31</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>FSharpVSPowerTools.Core.UnitTests</RootNamespace>
-    <AssemblyName>FSharpVSPowerTools.Core.Tests</AssemblyName>
+    <RootNamespace>FSharp.Editing.Tests</RootNamespace>
+    <AssemblyName>FSharp.Editing.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <Name>FSharpVSPowerTools.Core.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <TargetFrameworkProfile />
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,7 +24,6 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.Tests.XML</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <NoWarn>52</NoWarn>
@@ -36,7 +36,6 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.Tests.XML</DocumentationFile>
     <NoWarn>52</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
@@ -91,13 +90,15 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <ProjectReference Include="..\..\src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
-      <Name>FSharpVSPowerTools.Core</Name>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FSharp.Editing\FSharp.Editing.fsproj">
+      <Name>FSharp.Editing</Name>
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

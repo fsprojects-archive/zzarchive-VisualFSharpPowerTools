@@ -48,11 +48,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\FSharpVSPowerTools\FSharpVSPowerTools.csproj", "{73A1C2C8-FF62-4FEC-BEC5-D5C161B5E182}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core.Tests", "tests\FSharpVSPowerTools.Core.Tests\FSharpVSPowerTools.Core.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.Tests", "tests\FSharp.Editing.Tests\FSharp.Editing.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", "src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj", "{70456B75-F623-41B4-8044-ED02C265F0FF}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Core", "src\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing", "src\FSharp.Editing\FSharp.Editing.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
 EndProject

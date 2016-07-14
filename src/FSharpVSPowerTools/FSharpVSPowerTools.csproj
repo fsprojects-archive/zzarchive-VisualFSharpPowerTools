@@ -245,9 +245,9 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
+    <ProjectReference Include="..\FSharp.Editing\FSharp.Editing.fsproj">
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
-      <Name>FSharpVSPowerTools.Core</Name>
+      <Name>FSharp.Editing</Name>
     </ProjectReference>
     <ProjectReference Include="..\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj">
       <Project>{bb0c6f01-5e57-4575-a498-5de850d9fa6c}</Project>
