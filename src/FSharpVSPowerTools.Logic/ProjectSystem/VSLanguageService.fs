@@ -19,26 +19,17 @@ open FSharpVSPowerTools.AssemblyContentProvider
 open FSharpVSPowerTools.AsyncMaybe
 open FSharpPowerTools.Core.Symbols
 open FSharpPowerTools.Core
+open FSharpPowerTools.Core.Infrastructure
 
 type FilePath = string
+
+type IProjectProvider = FSharpPowerTools.Core.Infrastructure.IProjectProvider
 
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File
     /// The case where the declared symbol may be included into several projects
     | Projects of IProjectProvider list * isLocalForProject: bool
-
-and IProjectProvider =
-    abstract IsForStandaloneScript: bool
-    abstract ProjectFileName: string
-    abstract TargetFramework: FSharpTargetFramework
-    abstract CompilerVersion: FSharpCompilerVersion option
-    abstract CompilerOptions: string []
-    abstract SourceFiles: string []
-    abstract FullOutputFilePath: string option
-    abstract GetReferencedProjects: unit -> IProjectProvider list
-    abstract GetAllReferencedProjectFileNames: unit -> string list 
-    abstract GetProjectCheckerOptions: LanguageService -> Async<FSharpProjectOptions>
 
 type ShowProgress = OperationState -> unit
 
