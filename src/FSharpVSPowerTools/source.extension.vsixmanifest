@@ -22,7 +22,7 @@
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
     <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
     <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="FSharp.Editing" Path="|FSharp.Editing|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharpVSPowerTools.Logic" Path="|FSharpVSPowerTools.Logic|" />
-    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%.Logic.VS2015" Path="|FSharpVSPowerTools.Logic.VS2015|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharp.Editing.VisualStudio" Path="|FSharp.Editing.VisualStudio|" />
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="FSharp.Editing.VisualStudio.v2015" Path="|FSharp.Editing.VisualStudio.v2015|" />
   </Assets>
 </PackageManifest>

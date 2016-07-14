@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using Microsoft.VisualStudio.Shell;
 using System.Runtime.InteropServices;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

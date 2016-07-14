@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using FSharpVSPowerTools.UI;
 using Microsoft.VisualStudio.Shell;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools {
     [ClassInterface(ClassInterfaceType.AutoDual)]

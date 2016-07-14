@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE;
-using FSharpVSPowerTools.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

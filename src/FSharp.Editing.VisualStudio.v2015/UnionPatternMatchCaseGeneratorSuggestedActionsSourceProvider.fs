@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2015
+﻿namespace FSharp.Editing.VisualStudio.v2015
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Language.Intellisense
@@ -7,25 +7,25 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Threading.Tasks
-open FSharpVSPowerTools.Refactoring
 open Microsoft.VisualStudio.Shell
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.CodeGeneration
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
-[<Name "Record Stub Generator Suggested Actions">]
+[<Name "Union Pattern Match Case Generator Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
+type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>]
    (fsharpVsLanguageService: VSLanguageService,
     textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
-    openDocumentsTracker: IOpenDocumentsTracker ) =
+    openDocumentsTracker: IOpenDocumentsTracker) =
 
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
@@ -35,12 +35,12 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
-                   || not generalOptions.GenerateRecordStubEnabled then null
+                   || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
                 else
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
                         let generator =
-                            new RecordStubGenerator(
+                            new UnionPatternMatchCaseGenerator(
                                   doc, 
                                   textView,
                                   undoHistoryRegistry.RegisterHistory(buffer),
@@ -49,10 +49,10 @@ type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
                                   Setting.getDefaultMemberBody codeGenOptions,
                                   openDocumentsTracker)
 
-                        new RecordStubGeneratorSuggestedActionsSource(generator) :> _
+                        new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null
 
-and RecordStubGeneratorSuggestedActionsSource (generator: RecordStubGenerator) as self =
+and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatternMatchCaseGenerator) as self =
     let actionsChanged = Event<_,_>()
     do generator.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with

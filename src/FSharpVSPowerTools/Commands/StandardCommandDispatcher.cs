@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
 using Fantomas;
-using FSharpVSPowerTools.CodeFormatting;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
+using FSharp.Editing.VisualStudio.CodeFormatting;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

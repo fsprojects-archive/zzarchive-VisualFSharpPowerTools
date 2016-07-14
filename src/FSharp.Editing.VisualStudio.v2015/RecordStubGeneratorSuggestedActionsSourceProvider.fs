@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2015
+﻿namespace FSharp.Editing.VisualStudio.v2015
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Language.Intellisense
@@ -7,25 +7,25 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Threading.Tasks
-open FSharpVSPowerTools.Refactoring
 open Microsoft.VisualStudio.Shell
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.CodeGeneration
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
-[<Name "Implement Interface Suggested Actions">]
+[<Name "Record Stub Generator Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
+type RecordStubGeneratorSuggestedActionsSourceProvider [<ImportingConstructor>]
    (fsharpVsLanguageService: VSLanguageService,
     textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
-    editorOptionsFactory: IEditorOptionsFactoryService) =
+    openDocumentsTracker: IOpenDocumentsTracker ) =
 
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
@@ -35,29 +35,34 @@ type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
-                   || not generalOptions.ResolveUnopenedNamespacesEnabled then null
+                   || not generalOptions.GenerateRecordStubEnabled then null
                 else
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
-                        let implementInterface =
-                            new ImplementInterface(
-                                  doc, textView,
-                                  editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
-                                  fsharpVsLanguageService, serviceProvider, projectFactory,
-                                  Setting.getInterfaceMemberIdentifier codeGenOptions,
-                                  Setting.getDefaultMemberBody codeGenOptions)
+                        let generator =
+                            new RecordStubGenerator(
+                                  doc, 
+                                  textView,
+                                  undoHistoryRegistry.RegisterHistory(buffer),
+                                  fsharpVsLanguageService,
+                                  projectFactory, 
+                                  Setting.getDefaultMemberBody codeGenOptions,
+                                  openDocumentsTracker)
 
-                        new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
+                        new RecordStubGeneratorSuggestedActionsSource(generator) :> _
                     | _ -> null
 
-and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInterface) as self =
+and RecordStubGeneratorSuggestedActionsSource (generator: RecordStubGenerator) as self =
     let actionsChanged = Event<_,_>()
-    do implementInterface.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
+    do generator.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
-        member __.Dispose() = (implementInterface :> IDisposable).Dispose()
+        member __.Dispose() = (generator :> IDisposable).Dispose()
         member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) =
-            match implementInterface.CurrentWord, implementInterface.Suggestions with
-            | Some _, (_ :: _ as suggestions)  ->
+            match generator.CurrentWord, generator.Suggestions with
+            | None, _
+            | _, [] ->
+                Seq.empty
+            | Some _, suggestions ->
                 suggestions
                 |> List.map (fun s ->
                      { new ISuggestedAction with
@@ -73,12 +78,13 @@ and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInter
                            member __.Invoke _ct = s.Invoke()
                            member __.TryGetTelemetryId _telemetryId = false })
                 |> fun xs -> [ SuggestedActionSet xs ] :> _
-            | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) =
             Task.FromResult(
-                Option.isSome implementInterface.CurrentWord &&
-                not (List.isEmpty implementInterface.Suggestions))
+                Option.isSome generator.CurrentWord &&
+                generator.Suggestions
+                |> List.isEmpty
+                |> not)
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish

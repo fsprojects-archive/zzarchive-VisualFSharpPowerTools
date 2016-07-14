@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2015
+﻿namespace FSharp.Editing.VisualStudio.v2015
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Language.Intellisense
@@ -7,13 +7,13 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio.ProjectSystem
 open System.Threading.Tasks
-open FSharpVSPowerTools.Refactoring
 open Microsoft.VisualStudio.Shell
-open FSharpVSPowerTools
 open Microsoft.VisualStudio.Imaging.Interop
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.CodeGeneration
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
 [<Name "Resolve Unopened Namespaces Suggested Actions">]

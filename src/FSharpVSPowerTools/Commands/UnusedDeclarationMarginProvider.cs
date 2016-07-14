@@ -1,10 +1,11 @@
-﻿using Microsoft.VisualStudio.Shell;
+﻿using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Coloring.UnusedSymbols;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
 using System.ComponentModel.Composition;
-using FSharpVSPowerTools.SyntaxColoring.UnusedSymbols;
 
 namespace FSharpVSPowerTools
 {

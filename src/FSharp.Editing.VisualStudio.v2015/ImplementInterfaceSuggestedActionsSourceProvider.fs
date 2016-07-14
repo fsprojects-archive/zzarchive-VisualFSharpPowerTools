@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2015
+﻿namespace FSharp.Editing.VisualStudio.v2015
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Language.Intellisense
@@ -7,25 +7,25 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Threading.Tasks
-open FSharpVSPowerTools.Refactoring
 open Microsoft.VisualStudio.Shell
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.CodeGeneration
 
 [<Export(typeof<ISuggestedActionsSourceProvider>)>]
-[<Name "Union Pattern Match Case Generator Suggested Actions">]
+[<Name "Implement Interface Suggested Actions">]
 [<ContentType "F#">]
 [<TextViewRole(PredefinedTextViewRoles.Editable)>]
-type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>]
+type ImplementInterfaceSuggestedActionsSourceProvider [<ImportingConstructor>]
    (fsharpVsLanguageService: VSLanguageService,
     textDocumentFactoryService: ITextDocumentFactoryService,
     [<Import(typeof<SVsServiceProvider>)>]
     serviceProvider: IServiceProvider,
     undoHistoryRegistry: ITextUndoHistoryRegistry,
     projectFactory: ProjectFactory,
-    openDocumentsTracker: IOpenDocumentsTracker) =
+    editorOptionsFactory: IEditorOptionsFactoryService) =
 
     interface ISuggestedActionsSourceProvider with
         member __.CreateSuggestedActionsSource(textView: ITextView, buffer: ITextBuffer): ISuggestedActionsSource =
@@ -35,34 +35,29 @@ type UnionPatternMatchCaseSuggestedActionsSourceProvider [<ImportingConstructor>
                 let codeGenOptions = Setting.getCodeGenerationOptions serviceProvider
                 if generalOptions == null 
                    || codeGenOptions == null
-                   || not generalOptions.UnionPatternMatchCaseGenerationEnabled then null
+                   || not generalOptions.ResolveUnopenedNamespacesEnabled then null
                 else
                     match textDocumentFactoryService.TryGetTextDocument(buffer) with
                     | true, doc ->
-                        let generator =
-                            new UnionPatternMatchCaseGenerator(
-                                  doc, 
-                                  textView,
-                                  undoHistoryRegistry.RegisterHistory(buffer),
-                                  fsharpVsLanguageService,
-                                  projectFactory, 
-                                  Setting.getDefaultMemberBody codeGenOptions,
-                                  openDocumentsTracker)
+                        let implementInterface =
+                            new ImplementInterface(
+                                  doc, textView,
+                                  editorOptionsFactory, undoHistoryRegistry.RegisterHistory buffer,
+                                  fsharpVsLanguageService, serviceProvider, projectFactory,
+                                  Setting.getInterfaceMemberIdentifier codeGenOptions,
+                                  Setting.getDefaultMemberBody codeGenOptions)
 
-                        new UnionPatternMatchCaseGeneratorSuggestedActionsSource(generator) :> _
+                        new ImplementInterfaceSuggestedActionsSource(implementInterface) :> _
                     | _ -> null
 
-and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatternMatchCaseGenerator) as self =
+and ImplementInterfaceSuggestedActionsSource (implementInterface: ImplementInterface) as self =
     let actionsChanged = Event<_,_>()
-    do generator.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
+    do implementInterface.Changed.Add (fun _ -> actionsChanged.Trigger (self, EventArgs.Empty))
     interface ISuggestedActionsSource with
-        member __.Dispose() = (generator :> IDisposable).Dispose()
+        member __.Dispose() = (implementInterface :> IDisposable).Dispose()
         member __.GetSuggestedActions (_requestedActionCategories, _range, _ct) =
-            match generator.CurrentWord, generator.Suggestions with
-            | None, _
-            | _, [] ->
-                Seq.empty
-            | Some _, suggestions ->
+            match implementInterface.CurrentWord, implementInterface.Suggestions with
+            | Some _, (_ :: _ as suggestions)  ->
                 suggestions
                 |> List.map (fun s ->
                      { new ISuggestedAction with
@@ -78,13 +73,12 @@ and UnionPatternMatchCaseGeneratorSuggestedActionsSource (generator: UnionPatter
                            member __.Invoke _ct = s.Invoke()
                            member __.TryGetTelemetryId _telemetryId = false })
                 |> fun xs -> [ SuggestedActionSet xs ] :> _
+            | _ -> Seq.empty
 
         member __.HasSuggestedActionsAsync (_requestedCategories, _range, _ct) =
             Task.FromResult(
-                Option.isSome generator.CurrentWord &&
-                generator.Suggestions
-                |> List.isEmpty
-                |> not)
+                Option.isSome implementInterface.CurrentWord &&
+                not (List.isEmpty implementInterface.Suggestions))
 
         [<CLIEvent>]
         member __.SuggestedActionsChanged: IEvent<EventHandler<EventArgs>, EventArgs> = actionsChanged.Publish

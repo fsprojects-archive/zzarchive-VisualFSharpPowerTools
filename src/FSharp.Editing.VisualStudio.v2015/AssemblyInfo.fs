@@ -1,4 +1,5 @@
-﻿namespace System
+﻿namespace FSharp.Editing.VisualStudio.v2015
+
 open System.Reflection
 open System.Runtime.CompilerServices
 

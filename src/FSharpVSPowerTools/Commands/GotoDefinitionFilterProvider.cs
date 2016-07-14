@@ -8,14 +8,15 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.Navigation;
 using Microsoft.VisualStudio.Text;
 using System.Collections.ObjectModel;
 using System;
 using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE80;
 using EnvDTE;
+using FSharp.Editing.VisualStudio.Navigation;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Logic.VS2015
+﻿namespace FSharp.Editing.VisualStudio.v2015
 
 open System
 open System.IO
@@ -8,14 +8,14 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.Navigation
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open EnvDTE
 open Microsoft.VisualStudio.Text.Editor
+open FSharp.Editing.VisualStudio.Navigation
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 type internal DefinitionPeekableItem(peekResultFactory: IPeekResultFactory, span: SnapshotSpan, range: Range.range, isReadOnly) =
     interface IPeekableItem with

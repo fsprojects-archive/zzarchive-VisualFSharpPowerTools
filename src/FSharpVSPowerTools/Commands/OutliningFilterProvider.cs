@@ -8,9 +8,9 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.Navigation;
 using Microsoft.VisualStudio.Text;
+using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Outlining;
 
 namespace FSharpVSPowerTools.Outlining
 {

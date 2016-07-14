@@ -6,14 +6,14 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using EnvDTE;
 using EnvDTE80;
-using FSharpVSPowerTools.Navigation;
-using FSharpVSPowerTools.Folders;
-using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.TaskList;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using Microsoft.VisualStudio.ComponentModelHost;
-using FSharpVSPowerTools.Reference;
+using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Folders;
+using FSharp.Editing.VisualStudio.Reference;
+using FSharp.Editing.VisualStudio.Symbol;
+using FSharp.Editing.VisualStudio.TaskList;
 
 namespace FSharpVSPowerTools
 {
@@ -25,7 +25,7 @@ namespace FSharpVSPowerTools
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(CodeGenerationOptionsPage), Resource.vsPackageTitle, "Code Generation", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(GlobalOptionsPage), Resource.vsPackageTitle, "Configuration", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
-    [ProvideOptionPage(typeof(Linting.LintOptionsPage), Resource.vsPackageTitle, "Lint", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
+    [ProvideOptionPage(typeof(FSharp.Editing.VisualStudio.Linting.LintOptionsPage), Resource.vsPackageTitle, "Lint", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(OutliningOptionsPage), Resource.vsPackageTitle, "Outlining", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideService(typeof(IGeneralOptions))]   
     [ProvideService(typeof(IFormattingOptions))]
@@ -53,7 +53,7 @@ namespace FSharpVSPowerTools
         protected override void Initialize()
         {
             base.Initialize();
-            VSUtils.ForegroundThreadGuard.BindThread();
+            FSharp.Editing.VisualStudio.Utils.ForegroundThreadGuard.BindThread();
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(IGeneralOptions),
@@ -69,7 +69,7 @@ namespace FSharpVSPowerTools
                 delegate { return GetDialogPage(typeof(GlobalOptionsPage)); }, promote: true);
 
             serviceContainer.AddService(typeof(ILintOptions),
-                delegate { return GetDialogPage(typeof(Linting.LintOptionsPage)); }, promote: true);
+                delegate { return GetDialogPage(typeof(FSharp.Editing.VisualStudio.Linting.LintOptionsPage)); }, promote: true);
 
             serviceContainer.AddService(typeof(IOutliningOptions),
                 delegate { return GetDialogPage(typeof(OutliningOptionsPage)); }, promote: true);
@@ -77,7 +77,7 @@ namespace FSharpVSPowerTools
             var generalOptions = GetService(typeof(IGeneralOptions)) as IGeneralOptions;
             PerformRegistrations(generalOptions);
 
-            library = new FSharpLibrary(Constants.guidSymbolLibrary);
+            library = new FSharpLibrary(FSharp.Editing.VisualStudio.Constants.guidSymbolLibrary);
             library.LibraryCapabilities = (_LIB_FLAGS2)_LIB_FLAGS.LF_PROJECT;
 
             RegisterLibrary();
