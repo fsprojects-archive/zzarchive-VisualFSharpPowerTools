@@ -27,7 +27,7 @@ namespace FSharpVSPowerTools
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _fsharpVsLanguageService;
         private readonly IVsEditorAdaptersFactoryService _editorFactory;
-        private readonly IOpenDocumentsTracker _openDocumentTracker;
+        private readonly IVSOpenDocumentsTracker _openDocumentTracker;
        
         [ImportingConstructor]
         public XmlDocCommandFilterProvider(
@@ -36,7 +36,7 @@ namespace FSharpVSPowerTools
             IVsEditorAdaptersFactoryService editorFactory,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker)
+            IVSOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;

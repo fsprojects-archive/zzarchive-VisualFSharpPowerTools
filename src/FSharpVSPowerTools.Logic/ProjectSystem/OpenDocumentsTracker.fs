@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open System.Collections.Generic
 open FSharpVSPowerTools
+open FSharpPowerTools.Core.Infrastructure
 
 [<NoComparison>]
 type OpenDocument =
@@ -15,23 +16,24 @@ type OpenDocument =
       Encoding: Encoding
       LastChangeTime: DateTime
       ViewCount: int }
-    member x.Text = lazy (x.Snapshot.GetText())
     static member Create document snapshot encoding lastChangeTime = 
         { Document = document
           Snapshot = snapshot
           Encoding = encoding
           LastChangeTime = lastChangeTime
           ViewCount = 1 }
+    member private x.text = lazy (x.Snapshot.GetText())
+    member x.Text = x.text
+    interface IOpenDocument with
+        member x.Text = x.text
 
-type IOpenDocumentsTracker =
+type IVSOpenDocumentsTracker =
+    inherit IOpenDocumentsTracker<OpenDocument>
     abstract RegisterView: IWpfTextView -> unit
-    abstract MapOpenDocuments: (KeyValuePair<string, OpenDocument> -> 'a) -> seq<'a>
-    abstract TryFindOpenDocument: string -> OpenDocument option
-    abstract TryGetDocumentText: string -> string option
-    abstract DocumentChanged: IEvent<string>
-    abstract DocumentClosed: IEvent<string>
 
-[<Export(typeof<IOpenDocumentsTracker>)>]
+type IOpenDocumentsTracker = IOpenDocumentsTracker<OpenDocument>
+
+[<Export(typeof<IVSOpenDocumentsTracker>); Export(typeof<IOpenDocumentsTracker<OpenDocument>>)>]
 type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: ITextDocumentFactoryService) =
     [<VolatileField>]
     let mutable openDocs = Map.empty
@@ -50,7 +52,7 @@ type OpenDocumentsTracker [<ImportingConstructor>](textDocumentFactoryService: I
         | true, doc -> Some doc
         | _ -> None
 
-    interface IOpenDocumentsTracker with
+    interface IVSOpenDocumentsTracker with
         member __.RegisterView (view: IWpfTextView) = 
             ForegroundThreadGuard.CheckThread()
             maybe {

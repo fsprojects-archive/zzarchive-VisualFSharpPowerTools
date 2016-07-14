@@ -21,14 +21,14 @@ namespace FSharpVSPowerTools
         readonly System.IServiceProvider _serviceProvider;
         readonly IVsEditorAdaptersFactoryService _editorFactory;
         readonly TaskListManager _taskListManager;
-        readonly IOpenDocumentsTracker _openDocumentTracker;
+        readonly IVSOpenDocumentsTracker _openDocumentTracker;
 
         [ImportingConstructor]
         public TaskListCommentFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
             IVsEditorAdaptersFactoryService editorFactory,
             TaskListManager taskListManager,
-            IOpenDocumentsTracker openDocumentTracker)
+            IVSOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _editorFactory = editorFactory;

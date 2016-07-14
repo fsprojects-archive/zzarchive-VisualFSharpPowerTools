@@ -46,7 +46,7 @@ namespace FSharpVSPowerTools
         readonly ITextDocumentFactoryService _textDocumentFactoryService;
         readonly ProjectFactory _projectFactory;
         readonly VSLanguageService _fsharpVsLanguageService;
-        readonly IOpenDocumentsTracker _openDocumentTracker;
+        readonly IVSOpenDocumentsTracker _openDocumentTracker;
     
         [ImportingConstructor]
         public LintTaggerProvider(
@@ -54,7 +54,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService fsharpVsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker)
+            IVSOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _textDocumentFactoryService = textDocumentFactoryService;

@@ -25,7 +25,7 @@ namespace FSharpVSPowerTools
         private readonly IServiceProvider _serviceProvider;
         private readonly ProjectFactory _projectFactory;
         private readonly VSLanguageService _vsLanguageService;
-        private readonly IOpenDocumentsTracker _openDocumentTracker;
+        private readonly IVSOpenDocumentsTracker _openDocumentTracker;
 
         [ImportingConstructor]
         public CodeFormattingHookHelper(
@@ -37,7 +37,7 @@ namespace FSharpVSPowerTools
             ITextDocumentFactoryService textDocumentFactoryService,
             ProjectFactory projectFactory,
             VSLanguageService vsLanguageService,
-            IOpenDocumentsTracker openDocumentTracker)
+            IVSOpenDocumentsTracker openDocumentTracker)
         {
             _serviceProvider = serviceProvider;
             _adaptersFactory = adaptersFactory;
