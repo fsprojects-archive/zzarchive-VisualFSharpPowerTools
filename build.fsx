@@ -70,8 +70,8 @@ Target "AssemblyInfo" (fun _ ->
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
-  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Core/AssemblyInfo.fs"
-      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Core.Tests" :: Attribute.Title "FSharpVSPowerTools.Core" :: shared)
+  CreateFSharpAssemblyInfo "src/FSharp.Editing/AssemblyInfo.fs"
+      (Attribute.InternalsVisibleTo "FSharp.Editing.Tests" :: Attribute.Title "FSharp.Editing" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
       (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
@@ -140,7 +140,7 @@ Target "RunStatistics" (fun _ ->
 // Run the unit tests using test runner
 
 Target "UnitTests" (fun _ ->
-    [@"tests/FSharpVSPowerTools.Core.Tests\bin\Release\FSharpVSPowerTools.Core.Tests.dll"]
+    [@"tests/FSharp.Editing.Tests\bin\Release\FSharp.Editing.Tests.dll"]
     |> NUnit3 (fun p ->
          let param =
              { p with

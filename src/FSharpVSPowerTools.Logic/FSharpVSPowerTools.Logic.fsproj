@@ -220,8 +220,8 @@
     <Reference Include="mscorlib" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FSharpVSPowerTools.Core\FSharpVSPowerTools.Core.fsproj">
-      <Name>FSharpVSPowerTools.Core</Name>
+    <ProjectReference Include="..\FSharp.Editing\FSharp.Editing.fsproj">
+      <Name>FSharp.Editing</Name>
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Private>True</Private>
     </ProjectReference>
