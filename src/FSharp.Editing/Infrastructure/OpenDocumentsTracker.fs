@@ -1,4 +1,4 @@
-﻿namespace FSharpPowerTools.Core.Infrastructure
+﻿namespace FSharp.Editing.Infrastructure
 
 open System.Collections.Generic
 

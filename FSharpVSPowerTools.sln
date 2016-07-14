@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{A6A6AF7D-D6E3-442D-9B1E-58CC91879BE1}"
 EndProject
@@ -50,8 +50,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpVSPowerTools", "src\F
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.Tests", "tests\FSharp.Editing.Tests\FSharp.Editing.Tests.fsproj", "{D751E684-285F-494D-B402-98772A541C31}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic", "src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj", "{70456B75-F623-41B4-8044-ED02C265F0FF}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing", "src\FSharp.Editing\FSharp.Editing.fsproj", "{F3D0B372-3AF7-49D9-98ED-5A78E9416098}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestUtilities", "tests\TestUtilities\TestUtilities.csproj", "{C6800510-FCD0-4301-9890-36E41DFB29BB}"
@@ -59,6 +57,8 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Tests", "tests\FSharpVSPowerTools.Tests\FSharpVSPowerTools.Tests.fsproj", "{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpVSPowerTools.Logic.VS2015", "src\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj", "{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.VisualStudio", "src\FSharp.Editing.VisualStudio\FSharp.Editing.VisualStudio.fsproj", "{70456B75-F623-41B4-8044-ED02C265F0FF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -74,10 +74,6 @@ Global
 		{D751E684-285F-494D-B402-98772A541C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D751E684-285F-494D-B402-98772A541C31}.Release|Any CPU.Build.0 = Release|Any CPU
-		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3D0B372-3AF7-49D9-98ED-5A78E9416098}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -94,6 +90,10 @@ Global
 		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70456B75-F623-41B4-8044-ED02C265F0FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

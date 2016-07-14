@@ -1,5 +1,6 @@
-﻿namespace FSharpVSPowerTools
-open FSharpPowerTools.Core
+﻿namespace FSharp.Editing
+
+open FSharp.Editing
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 

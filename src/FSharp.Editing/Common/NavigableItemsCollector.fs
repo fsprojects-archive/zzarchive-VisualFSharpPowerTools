@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Navigation
+﻿namespace FSharp.Editing
 
 open System
 open Microsoft.FSharp.Compiler

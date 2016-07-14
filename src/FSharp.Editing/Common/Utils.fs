@@ -1,4 +1,7 @@
-﻿namespace FSharpPowerTools.Core
+﻿namespace FSharp.Editing
+
+open System
+open System.Diagnostics
 
 type FileName = string
 
@@ -13,33 +16,28 @@ module Point =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Range =
-
     let make startLine startColumn endLine endColumn : Range<'t> =
-        {
-          Start = Point.make startLine startColumn
-          End = Point.make endLine endColumn 
-        }
+        { Start = Point.make startLine startColumn
+          End = Point.make endLine endColumn }
     
-type CurrentLine<[<Measure>]'t> = { Line: string; File: FileName; Range: Range<'t> }
-    with
-        member x.EndLine = x.Range.End.Line 
+type CurrentLine<[<Measure>]'t> = 
+    { Line: string
+      File: FileName; Range: Range<'t> }
+    member x.EndLine = x.Range.End.Line 
 
 [<NoComparison>]
-type PointInDocument<[<Measure>]'t> = {
-  Point    : Point<'t>
-  Line     : string
-  Document : string
-  File     : FileName
-}
-    with
-        member x.LineIndex = x.Point.Line
-        member x.ColumnIndex = x.Point.Column
-        member x.CurrentLine : Lazy<CurrentLine<'t>> = lazy({Line = x.Line; File = x.File; Range = Range.make x.LineIndex x.ColumnIndex x.LineIndex x.Line.Length })
-
-namespace FSharpVSPowerTools
-
-open System
-open System.Diagnostics
+type PointInDocument<[<Measure>]'t> = 
+    { Point: Point<'t>
+      Line: string
+      Document: string
+      File: FileName }
+    member x.LineIndex = x.Point.Line
+    member x.ColumnIndex = x.Point.Column
+    member x.CurrentLine : Lazy<CurrentLine<'t>> = 
+        lazy
+          { Line = x.Line
+            File = x.File
+            Range = Range.make x.LineIndex x.ColumnIndex x.LineIndex x.Line.Length }
 
 [<AutoOpen>]
 module Prelude =

@@ -1,10 +1,9 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 open System
 open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
 open AsyncMaybe
 
 // --------------------------------------------------------------------------------------
@@ -384,7 +383,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                           else 
                               match func.EnclosingEntity with
                               // C# extension method
-                              | Entity Class ->
+                              | FSharpEntity Class ->
                                   let fullName = symbolUse.Symbol.FullName.Split '.'
                                   if fullName.Length > 2 then
                                       (* For C# extension methods FCS returns full name including the class name, like:
@@ -417,7 +416,7 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                                       | Some idents -> yield String.concat "." idents
                                       | None -> ()
                                    |]
-                      | Entity e ->
+                      | FSharpEntity e ->
                           match e with
                           | e, TypedAstPatterns.Attribute, _ ->
                               e.TryGetFullName()

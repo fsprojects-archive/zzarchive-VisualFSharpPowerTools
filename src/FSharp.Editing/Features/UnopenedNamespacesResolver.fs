@@ -1,6 +1,7 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing.Features
 
-open FSharpVSPowerTools.UntypedAstUtils
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils
 
 type LongIdent = string
 
@@ -82,10 +83,6 @@ module Entity =
                             Namespace = ns
                             Name = match restIdents with [|_|] -> "" | _ -> String.concat "." restIdents }) 
 
-type Pos = 
-    { Line: int
-      Col: int }
-       
 type ScopeKind =
     | Namespace
     | TopModule
@@ -96,7 +93,7 @@ type ScopeKind =
 
 type InsertContext =
     { ScopeKind: ScopeKind
-      Pos: Pos }
+      Pos: Point<FCS> }
 
 module ParsedInput =
     open Microsoft.FSharp.Compiler
@@ -209,12 +206,12 @@ module ParsedInput =
         and walkExprWithKind (parentKind: EntityKind option) = function
             | SynExpr.LongIdent (_, LongIdentWithDots(_, dotRanges), _, r) ->
                 match dotRanges with
-                | [] when isPosInRange r -> parentKind |> Option.orElse (Some (FunctionOrValue false)) 
+                | [] when isPosInRange r -> parentKind |> Option.orElse (Some (EntityKind.FunctionOrValue false)) 
                 | firstDotRange :: _  ->
                     let firstPartRange = 
                         Range.mkRange "" r.Start (Range.mkPos firstDotRange.StartLine (firstDotRange.StartColumn - 1))
                     if isPosInRange firstPartRange then
-                        parentKind |> Option.orElse (Some (FunctionOrValue false))
+                        parentKind |> Option.orElse (Some (EntityKind.FunctionOrValue false))
                     else None
                 | _ -> None
             | SynExpr.Paren (e, _, _, _) -> walkExprWithKind parentKind e
@@ -384,7 +381,7 @@ module ParsedInput =
           Kind: ScopeKind }
 
     let tryFindInsertionContext (currentLine: int) (ast: ParsedInput) = 
-        let result: (Scope * Pos) option ref = ref None
+        let result: (Scope * Point<FCS>) option ref = ref None
         let ns: string[] option ref = ref None
         let modules = ResizeArray<Idents * EndLine * Col>()  
 
@@ -397,8 +394,7 @@ module ParsedInput =
             if line <= currentLine then
                 match !result with
                 | None -> 
-                    result := Some ({ Idents = longIdentToIdents scope; Kind = kind },
-                                    { Line = line; Col = col })
+                    result := Some ({ Idents = longIdentToIdents scope; Kind = kind }, Point.make line col)
                 | Some (oldScope, oldPos) ->
                     match kind, oldScope.Kind with
                     | (Namespace | NestedModule | TopModule), OpenDeclaration
@@ -409,7 +405,7 @@ module ParsedInput =
                                         | [] -> oldScope.Idents 
                                         | _ -> longIdentToIdents scope
                                     Kind = kind },
-                                  { Line = line; Col = col })
+                                  Point.make line col)
                     | _ -> ()
 
         let getMinColumn (decls: SynModuleDecls) =
@@ -506,7 +502,7 @@ module ParsedInput =
                             match scope.Kind with
                             | TopModule -> NestedModule
                             | x -> x
-                        { ScopeKind = scopeKind; Pos = { Line = endLine + 1; Col = startCol } })
+                        { ScopeKind = scopeKind; Pos = Point.make (endLine + 1) startCol })
 
 type IInsertContextDocument<'T> =
     abstract GetLineStr: 'T * line:int -> string
@@ -554,7 +550,7 @@ module InsertContext =
     let insertOpenDeclaration<'T> state (doc: IInsertContextDocument<'T>) (ctx: InsertContext) (ns: string) =
         let pos = adjustInsertionPoint state doc ctx
         let docLine = pos.Line - 1
-        let lineStr = (String.replicate pos.Col " ") + "open " + ns
+        let lineStr = (String.replicate pos.Column " ") + "open " + ns
         let state1 = doc.Insert (state, docLine, lineStr)
         // if there's no a blank line between open declaration block and the rest of the code, we add one
         let state2 = 
@@ -562,7 +558,7 @@ module InsertContext =
                 doc.Insert (state1, docLine + 1, "")
             else state1
         // for top level module we add a blank line between the module declaration and first open statement
-        if (pos.Col = 0 || ctx.ScopeKind = ScopeKind.Namespace) && docLine > 0
+        if (pos.Column = 0 || ctx.ScopeKind = ScopeKind.Namespace) && docLine > 0
             && not (doc.GetLineStr(state2, docLine - 1).Trim().StartsWith "open") then
                 doc.Insert (state2, docLine, "")
         else state2

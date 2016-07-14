@@ -1,9 +1,9 @@
-﻿module FSharpVSPowerTools.CodeGeneration.SignatureGenerator
+﻿module FSharp.Editing.Features.SignatureGenerator
 
 open System
 open System.Diagnostics
 open System.Collections.Generic
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.PrettyNaming
 open System.IO
@@ -871,7 +871,7 @@ let formatSymbol getXmlDocBySignature indentation displayContext openDeclaration
     
     let rec writeSymbol (symbol: FSharpSymbol) =
         match symbol with
-        | TypedAstPatterns.Entity(entity, _, _) ->
+        | FSharpEntity(entity, _, _) ->
             match entity with
             | FSharpModule -> writeModule true ctx entity
             | AbbreviatedType abbreviatedType -> writeTypeAbbrev false ctx entity abbreviatedType

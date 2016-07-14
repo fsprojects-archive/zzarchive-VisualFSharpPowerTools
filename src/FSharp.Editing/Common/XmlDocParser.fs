@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 /// Represent an Xml documentation block in source code
 type XmlDocable =

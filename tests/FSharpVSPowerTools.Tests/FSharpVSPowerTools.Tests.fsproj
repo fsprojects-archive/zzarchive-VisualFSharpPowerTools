@@ -196,11 +196,6 @@
       <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
-      <Name>FSharpVSPowerTools.Logic</Name>
-      <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\..\src\FSharpVSPowerTools\FSharpVSPowerTools.csproj">
       <Name>FSharpVSPowerTools</Name>
       <Project>{73a1c2c8-ff62-4fec-bec5-d5c161b5e182}</Project>

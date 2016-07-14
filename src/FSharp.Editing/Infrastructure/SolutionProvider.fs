@@ -1,7 +1,7 @@
-﻿namespace FSharpPowerTools.Core.Infrastructure
+﻿namespace FSharp.Editing.Infrastructure
 
-open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing
 
 type IProjectProvider =
     abstract IsForStandaloneScript: bool

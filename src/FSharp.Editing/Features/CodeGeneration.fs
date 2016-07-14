@@ -1,9 +1,9 @@
-﻿namespace FSharpVSPowerTools.CodeGeneration
+﻿namespace FSharp.Editing.Features
 
 open System
 open System.IO
 open System.CodeDom.Compiler
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -32,9 +32,8 @@ type ICodeGenerationService<'Project, 'Pos, 'Range> =
     // TODO: enhance this clumsy design
     abstract ExtractFSharpPos: 'Pos -> pos
 
-
 [<AutoOpen>]
-module internal Utils =
+module internal CodeGenerationUtils =
     open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 
     type ColumnIndentedTextWriter() =

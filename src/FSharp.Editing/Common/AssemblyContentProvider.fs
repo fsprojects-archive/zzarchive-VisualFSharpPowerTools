@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -8,6 +8,7 @@ type Idents = ShortIdent[]
 type IsAutoOpen = bool
 type ModuleKind = { IsAutoOpen: bool; HasModuleSuffix: bool }
 
+[<RequireQualifiedAccess>]
 type EntityKind =
     | Attribute
     | Type
@@ -86,7 +87,6 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
-    open FSharpVSPowerTools
 
     type AssemblyContentCacheEntry =
         { FileWriteTime: DateTime 

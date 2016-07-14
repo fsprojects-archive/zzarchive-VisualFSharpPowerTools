@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 open System
 open System.Text.RegularExpressions
@@ -242,7 +242,7 @@ module TypedAstPatterns =
         if isMutable then Some() else None
 
     /// Entity (originalEntity, abbreviatedEntity, abbreviatedType)
-    let (|Entity|_|) (symbol: FSharpSymbol) =
+    let (|FSharpEntity|_|) (symbol: FSharpSymbol) =
         match symbol with
         | :? FSharpEntity as entity -> 
             let abbreviatedEntity, abbreviatedType = getEntityAbbreviatedType entity
@@ -319,7 +319,7 @@ module UnusedDeclarations =
             // Determining that a record, DU or module is used anywhere requires
             // inspecting all their enclosed entities (fields, cases and func / vals)
             // for usefulness, which is too expensive to do. Hence we never gray them out.
-            | Entity ((Record | UnionType | Interface | FSharpModule), _, _ | Class) -> None
+            | FSharpEntity ((Record | UnionType | Interface | FSharpModule), _, _ | Class) -> None
             // FCS returns inconsistent results for override members; we're skipping these symbols.
             | MemberFunctionOrValue func when func.IsOverrideOrExplicitInterfaceImplementation -> None
             // Usage of DU case parameters does not give any meaningful feedback; we never gray them out.
