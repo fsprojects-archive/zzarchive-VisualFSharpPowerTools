@@ -8,11 +8,11 @@
     <ProjectGuid>ca2902e0-5e1c-46ee-963d-d72bc3b6efaa</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>FSharpVSPowerTools.Tests</RootNamespace>
-    <AssemblyName>FSharpVSPowerTools.Tests</AssemblyName>
+    <AssemblyName>FSharp.Editing.VisualStudio.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
-    <Name>FSharpVSPowerTools.Tests</Name>
+    <Name>FSharp.Editing.VisualStudio.Tests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
