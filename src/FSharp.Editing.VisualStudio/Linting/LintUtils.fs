@@ -6,10 +6,10 @@ open System.IO
 open FSharpLint.Framework.Configuration
 open IgnoreFiles
 open Management
-open FSharpVSPowerTools
+open FSharp.Editing
 
 module LintUtils =
-    open FSharpVSPowerTools.ProjectSystem
+    open FSharp.Editing.VisualStudio
 
     let getProjectPaths (dte: EnvDTE.DTE) =
         listFSharpProjectsInSolution dte

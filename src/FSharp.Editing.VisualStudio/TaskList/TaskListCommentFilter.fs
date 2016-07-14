@@ -3,14 +3,20 @@
 open System
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.AsyncMaybe
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.Features
 
-type TaskListCommentFilter(view: IWpfTextView,
-                           serviceProvider: IServiceProvider,
-                           taskListManager: TaskListManager,
-                           openDocumentTracker: IOpenDocumentsTracker) =
+type TaskListCommentFilter
+    (
+        view: IWpfTextView,
+        serviceProvider: IServiceProvider,
+        taskListManager: TaskListManager,
+        openDocumentTracker: IOpenDocumentsTracker
+    ) =
+    
     let optionsReader = OptionsReader(serviceProvider)
 
     let onTextChanged (CallInUIContext callInUIContext) =
@@ -22,7 +28,7 @@ type TaskListCommentFilter(view: IWpfTextView,
                     let filePath = textDocument.FilePath
                     let! source = openDocumentTracker.TryGetDocumentText textDocument.FilePath
                     let lines = String.getLines source
-                    let comments = getComments (optionsReader.GetOptions()) filePath lines
+                    let comments = CommentExtractor.getComments (optionsReader.GetOptions()) filePath lines
                     do! callInUIContext <| fun _ -> taskListManager.MergeTaskListComments(filePath, comments) 
                         |> liftAsync
                 | _ -> ()

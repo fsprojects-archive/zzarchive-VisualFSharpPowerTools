@@ -7,7 +7,7 @@ open System.Runtime.InteropServices
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio
 
 type ErrorHandler = Microsoft.VisualStudio.ErrorHandler
 type VSConstants = Microsoft.VisualStudio.VSConstants

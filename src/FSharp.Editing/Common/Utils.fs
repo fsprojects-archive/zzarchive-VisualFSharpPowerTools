@@ -4,6 +4,7 @@ open System
 open System.Diagnostics
 
 type FileName = string
+type FilePath = string
 
 [<Measure>] type FCS
 

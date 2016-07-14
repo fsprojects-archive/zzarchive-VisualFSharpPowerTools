@@ -8,8 +8,8 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 
 type FSharpLibraryNode(name: string, serviceProvider: System.IServiceProvider, fileSystem: IFileSystem, ?symbolUse: FSharpSymbolUse) =

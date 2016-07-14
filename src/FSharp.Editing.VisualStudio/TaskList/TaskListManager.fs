@@ -3,8 +3,10 @@
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio
 open System
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open System.ComponentModel.Composition
+open FSharp.Editing.Features
 
 [<Export>]
 type TaskListManager [<ImportingConstructor>]

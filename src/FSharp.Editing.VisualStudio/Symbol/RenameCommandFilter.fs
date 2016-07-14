@@ -8,10 +8,11 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Range
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 [<NoEquality; NoComparison>]
 type private DocumentState =

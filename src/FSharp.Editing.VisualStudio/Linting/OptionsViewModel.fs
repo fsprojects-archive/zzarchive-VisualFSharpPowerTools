@@ -2,7 +2,7 @@
 
 open System
 open System.Collections.ObjectModel
-open FSharpVSPowerTools
+open FSharp.Editing
 open FSharpLint.Framework
 open Configuration
 open FParsec

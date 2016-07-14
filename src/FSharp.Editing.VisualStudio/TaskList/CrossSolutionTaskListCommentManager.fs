@@ -1,8 +1,8 @@
 ﻿namespace FSharp.Editing.VisualStudio.TaskList
 
 open System
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
 open System.IO
@@ -11,6 +11,8 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Features
 
 type internal FilesChangedEventArgs(files: string []) =
     inherit EventArgs()
@@ -75,7 +77,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
             |> Array.map preferOpenDocOverDiskContent
 
         sources
-        |> Array.map (fun (file, lines) -> (file, getComments options file lines))
+        |> Array.map (fun (file, lines) -> (file, CommentExtractor.getComments options file lines))
 
     let populateTaskList = getTaskListCommentsFromFiles
                            >> Array.iter taskListManager.MergeTaskListComments
@@ -86,7 +88,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
     let handleFilesChanged files =
         files
-        |> Array.map (fun file -> (file, getComments options file (readAllLinesSafe(file))))
+        |> Array.map (fun file -> (file, CommentExtractor.getComments options file (readAllLinesSafe(file))))
         |> Array.iter taskListManager.MergeTaskListComments
                 
     let onSolutionClosed () =
@@ -130,7 +132,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
         if isFSharpProject proj then
             projectFactory.CreateForProject(proj).SourceFiles
             |> Array.iter (fun file -> 
-                taskListManager.MergeTaskListComments(file, getComments options file (readAllLinesSafe(file)))
+                taskListManager.MergeTaskListComments(file, CommentExtractor.getComments options file (readAllLinesSafe(file)))
                 let cookie = ref 0u
                 fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
                 fileChangeCookies.[file] <- !cookie)
@@ -152,7 +154,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
     let onProjectItemAdded (projItem: ProjectItem) =
         if isCompiledFSharpProjectItem projItem then
             let filePath = projItem.GetProperty("FullPath")
-            let comments = getComments options filePath (readAllLinesSafe(filePath))
+            let comments = CommentExtractor.getComments options filePath (readAllLinesSafe(filePath))
             taskListManager.AddToTaskList(comments)
 
             let cookie = ref 0u
@@ -172,7 +174,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
                 let dirName = Path.GetDirectoryName(newFilePath)
                 Path.Combine(dirName, oldName)
 
-            let comments = getComments options newFilePath (readAllLinesSafe(newFilePath))
+            let comments = CommentExtractor.getComments options newFilePath (readAllLinesSafe(newFilePath))
             taskListManager.AddToTaskList(comments)
             taskListManager.MergeTaskListComments(oldFilePath, [||])
 

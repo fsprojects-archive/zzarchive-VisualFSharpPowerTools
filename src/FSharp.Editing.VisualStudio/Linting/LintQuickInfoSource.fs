@@ -4,12 +4,11 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Language.Intellisense
 open System.Collections.Generic
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
-open FSharpVSPowerTools.Common
+open FSharp.Editing
 open System.Windows.Controls
 open System.Windows.Documents
 open System.Windows
+open FSharp.Editing.VisualStudio
 
 type LintQuickInfoSource(buffer: ITextBuffer, viewTagAggregatorFactoryService: IViewTagAggregatorFactoryService) =
     let createInfoText (tooltips: string list) : UIElement =

@@ -1,7 +1,7 @@
 ﻿namespace FSharp.Editing.VisualStudio.Folders
 
 open System.IO
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio
 open FSharp.ViewModule
 open FSharp.ViewModule.Validation
 

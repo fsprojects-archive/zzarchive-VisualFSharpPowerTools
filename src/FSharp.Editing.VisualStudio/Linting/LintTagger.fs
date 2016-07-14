@@ -4,11 +4,12 @@ open System
 open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open FSharpLint.Application
 open FSharpLint.Framework.Configuration
 open Microsoft.FSharp.Compiler
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 type LintTag(tooltip) = 
     inherit ErrorTag(Constants.LintTagErrorType, tooltip)

@@ -21,8 +21,6 @@ open FSharp.Editing.Infrastructure
 open FSharp.Editing.Features
 open FSharp.Editing.Features.Symbols
 
-type FilePath = string
-
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File

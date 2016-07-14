@@ -4,12 +4,13 @@ open System
 open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.StringBuilder
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.StringBuilder
 
 type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml">
 

@@ -3,17 +3,19 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.UntypedAstUtils.Outlining
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils.Outlining
 open Microsoft.VisualStudio.Text.Projection
 open Microsoft.VisualStudio.Text.Editor
 open System.Windows
 open System.Windows.Media
 open System.Windows.Controls
 open Microsoft.FSharp.Compiler.Ast
-open FSharpVSPowerTools.UntypedAstUtils
-open AsyncMaybe
+open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.AsyncMaybe
 
 [<AutoOpen>]
 module OutliningImpl =
@@ -91,7 +93,7 @@ type OutliningTagger
     /// convert the FSharp compiler range in SRanges into a snapshot span and tuple it with its Scope tag
     let fromScopeRange (snapshot: ITextSnapshot) (sr: ScopeRange) : ScopeSpan option =
         let r = sr.Range
-        match VSUtils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
+        match Utils.fromRange snapshot (r.StartLine, r.StartColumn, r.EndLine, r.EndColumn) with
         | Some sshot -> ScopeSpan (sr.Scope, sr.Collapse, sshot) |> Some
         | None       -> None
 

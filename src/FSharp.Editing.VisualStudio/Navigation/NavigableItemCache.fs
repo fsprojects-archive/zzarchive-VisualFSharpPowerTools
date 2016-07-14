@@ -12,9 +12,9 @@ open System.Text
 open Nessos.FsPickler
 open System.IO
 open System.Threading
+open FSharp.Editing
 
 type Source = string
-type FilePath = string
 
 type FileDescriptor =
     { Path: FilePath

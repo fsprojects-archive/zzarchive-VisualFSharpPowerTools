@@ -3,9 +3,10 @@
 open System
 open EnvDTE
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open System.Windows.Threading
-open FSharpVSPowerTools
+open FSharp.Editing.Features
 
 type internal OptionsReader(serviceProvider: IServiceProvider) =
     let dte = serviceProvider.GetService<DTE, SDTE>()

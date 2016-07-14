@@ -10,9 +10,11 @@ open System
 open System.IO
 open System.ComponentModel.Composition
 open System.ComponentModel.Design
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open Reflection
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.Reflection
+open FSharp.Editing.VisualStudio.ProjectSystem
+open System.Reflection
+open FSharp.Editing
 
 [<RequireQualifiedAccess>]
 type VerticalMoveAction = 
@@ -195,7 +197,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
         match folderExists, destination with
         | true, Some destination ->
             for item in info.Items do
-                let filePath = VSUtils.filePath item
+                let filePath = Utils.filePath item
                 let buildAction = item.TryGetProperty("ItemType")
                 let newItem = destination.AddFromFileCopy(filePath)
                 // The new item may lose ItemType; we try to recover it.
@@ -221,7 +223,7 @@ type FolderMenuCommands(dte: DTE2, mcs: OleMenuCommandService, shell: IVsUIShell
             | [ item ] -> item.ProjectItems
             | _ -> info.Project.ProjectItems
         let folder = items.AddFolder name
-        let folderFilename = VSUtils.filePath folder
+        let folderFilename = Utils.filePath folder
         if Directory.Exists(folderFilename) then
             // We tolerate that folder might already exist
             Logging.messageBoxInfo Resource.validationExistingFolderOnDisk

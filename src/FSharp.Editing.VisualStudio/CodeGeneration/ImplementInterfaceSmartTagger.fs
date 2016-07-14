@@ -7,14 +7,15 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing
+open FSharp.Editing.Features
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler
 open System.Threading
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Infrastructure
 
 type ImplementInterfaceSmartTag(actionSets) = 
     inherit SmartTag(SmartTagType.Factoid, actionSets)

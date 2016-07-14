@@ -1,8 +1,9 @@
 ﻿namespace FSharp.Editing.VisualStudio.Outlining
 
 open Microsoft.VisualStudio.OLE.Interop
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.VisualStudio
+open FSharp.Editing.VisualStudio
 
 type OutliningFilter() =
     interface IMenuCommand with

@@ -6,12 +6,13 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Text
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 
 type FindReferencesFilter

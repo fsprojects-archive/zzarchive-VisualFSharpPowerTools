@@ -3,15 +3,13 @@
 open System.IO
 open FSharpLint.Framework.Configuration
 open FSharpLint.Framework.Configuration.Management
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 
 type FileViewModel(name:string, path:Path, files:FileViewModel seq, hasConfigFile:bool) =
     member __.Name = name
-
     member __.Path = path
-
     member __.Files = files
-
     member __.HasConfigFile = hasConfigFile
 
     member __.GetDirectory() =

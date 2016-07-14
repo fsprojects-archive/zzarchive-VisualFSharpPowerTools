@@ -138,8 +138,6 @@ module private Utils =
         let tokenizerState = 0L
         Seq.unfold (nextTaskListCommentPos tasks) (lines, 0, sourceTok.CreateLineTokenizer(lines.[0]), tokenizerState)
 
-
-[<AutoOpen>]
 module CommentExtractor =
     let private getPriorityByTask options =
         options

@@ -1,7 +1,7 @@
 ﻿namespace FSharp.Editing.VisualStudio.Linting
 
 open System
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
@@ -11,7 +11,7 @@ open System.Windows
 open FSharpLint.Framework.Configuration
 open Management
 open LintUtils
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing.VisualStudio
 
 [<ClassInterface(ClassInterfaceType.AutoDual)>]
 [<Guid("f0bb4785-e75a-485f-86e8-e382dd5934a4")>]
