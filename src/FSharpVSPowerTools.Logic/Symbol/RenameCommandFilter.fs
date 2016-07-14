@@ -8,6 +8,7 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Range
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharp.ViewModule.Progress

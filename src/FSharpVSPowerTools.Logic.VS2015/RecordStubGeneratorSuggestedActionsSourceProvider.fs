@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Utilities
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading.Tasks
 open FSharpVSPowerTools.Refactoring

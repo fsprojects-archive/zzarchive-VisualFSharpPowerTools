@@ -23,8 +23,6 @@ open FSharpPowerTools.Core.Infrastructure
 
 type FilePath = string
 
-type IProjectProvider = FSharpPowerTools.Core.Infrastructure.IProjectProvider
-
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
     | File

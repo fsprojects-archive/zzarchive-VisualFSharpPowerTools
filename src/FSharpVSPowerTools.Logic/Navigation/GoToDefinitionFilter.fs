@@ -3,21 +3,22 @@
 open System
 open System.IO
 open System.Threading
-open Microsoft.VisualStudio.Text.Editor
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.OLE.Interop
-open Microsoft.VisualStudio.Shell.Interop
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open Microsoft.VisualStudio.Text
-open SourceLink.SymbolStore
 open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
-open FSharpVSPowerTools.AsyncMaybe
+open Microsoft.VisualStudio
+open Microsoft.VisualStudio.Text
+open Microsoft.VisualStudio.Text.Editor
+open Microsoft.VisualStudio.OLE.Interop
+open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Ast
+open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharpPowerTools.Core
+open FSharpPowerTools.Core.Infrastructure
+open FSharpVSPowerTools
+open FSharpVSPowerTools.ProjectSystem
+open SourceLink.SymbolStore
+open FSharpVSPowerTools.AsyncMaybe
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =

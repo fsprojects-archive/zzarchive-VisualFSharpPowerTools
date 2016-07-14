@@ -1,5 +1,6 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.SourceCodeServices

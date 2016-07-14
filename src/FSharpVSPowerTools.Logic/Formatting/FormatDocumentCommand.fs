@@ -5,6 +5,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
 open Fantomas
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =

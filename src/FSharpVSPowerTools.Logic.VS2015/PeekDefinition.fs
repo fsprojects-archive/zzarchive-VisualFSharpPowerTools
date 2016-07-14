@@ -8,6 +8,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell.Interop
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.Navigation

@@ -5,6 +5,7 @@ open EnvDTE80
 open Microsoft.VisualStudio.Shell
 open System
 open EnvDTE
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open System.IO
 open VSLangProj

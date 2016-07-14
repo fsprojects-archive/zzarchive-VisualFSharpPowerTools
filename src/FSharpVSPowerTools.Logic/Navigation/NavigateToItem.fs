@@ -5,19 +5,20 @@ open System.Drawing
 open System.Collections.Generic
 open System.ComponentModel.Composition
 open System.Threading
+open System.Collections.Concurrent
+open System.IO
+open System.Windows.Media.Imaging
 open Microsoft.VisualStudio.Language.NavigateTo.Interfaces
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open EnvDTE
-open FSharpVSPowerTools
-open FSharpVSPowerTools.Navigation
-open System.Collections.Concurrent
-open System.IO
-open FSharpVSPowerTools.AsyncMaybe
-open System.Windows.Media.Imaging
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
+open EnvDTE
+open FSharpPowerTools.Core.Infrastructure
+open FSharpVSPowerTools
+open FSharpVSPowerTools.Navigation
+open FSharpVSPowerTools.AsyncMaybe
 
 module Constants = 
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])

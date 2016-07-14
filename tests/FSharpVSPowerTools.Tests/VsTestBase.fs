@@ -1,6 +1,7 @@
 ﻿namespace FSharpVSPowerTools.Tests
 
 open TestUtilities.Mocks
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Shell.Interop

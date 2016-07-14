@@ -4,6 +4,7 @@ open System
 open System.IO
 open EnvDTE
 open System.Collections
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open System.Collections.Generic
