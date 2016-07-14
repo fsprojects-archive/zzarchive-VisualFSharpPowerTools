@@ -6,6 +6,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
 open System
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator

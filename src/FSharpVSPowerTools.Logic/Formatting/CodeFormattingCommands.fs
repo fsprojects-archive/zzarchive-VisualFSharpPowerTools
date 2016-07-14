@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Text.Formatting
 open Microsoft.VisualStudio.Shell.Interop
 open Fantomas
 open Fantomas.FormatConfig
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools.AsyncMaybe

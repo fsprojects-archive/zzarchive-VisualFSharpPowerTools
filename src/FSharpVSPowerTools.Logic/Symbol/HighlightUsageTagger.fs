@@ -5,6 +5,7 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
+open FSharpPowerTools.Core.Infrastructure
 open FSharpPowerTools.Core.HighlightUsageInFile
 open FSharpVSPowerTools
 open FSharpVSPowerTools.AsyncMaybe

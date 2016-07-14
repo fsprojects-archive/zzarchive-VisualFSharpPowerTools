@@ -3,6 +3,7 @@
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.CodeGeneration
 open FSharpVSPowerTools.ProjectSystem
 

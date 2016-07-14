@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Diagnostics
 open EnvDTE
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices

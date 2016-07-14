@@ -4,9 +4,10 @@ open System
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
-open Fantomas.FormatConfig
-open FSharpVSPowerTools.ProjectSystem
 open Fantomas
+open Fantomas.FormatConfig
+open FSharpPowerTools.Core.Infrastructure
+open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =

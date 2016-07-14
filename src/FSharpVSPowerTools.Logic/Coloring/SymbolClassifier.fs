@@ -4,6 +4,7 @@ open System
 open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools
 open FSharpVSPowerTools.SourceCodeClassifier
 open FSharpVSPowerTools.ProjectSystem

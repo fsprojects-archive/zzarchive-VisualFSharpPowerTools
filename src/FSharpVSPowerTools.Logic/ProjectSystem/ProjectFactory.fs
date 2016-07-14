@@ -1,19 +1,19 @@
 ﻿namespace FSharpVSPowerTools.ProjectSystem
 
 open System
-open Microsoft.FSharp.Compiler.SourceCodeServices
-open Microsoft.VisualStudio.Shell.Interop
-open System.ComponentModel.Composition
-open Microsoft.VisualStudio
-open Microsoft.VisualStudio.Shell
-open EnvDTE
-open FSharpVSPowerTools
 open System.IO
 open System.Diagnostics
 open System.Collections.Generic
-open Microsoft.VisualStudio.Text
 open System.Collections.Concurrent
+open System.ComponentModel.Composition
 open System.Runtime.InteropServices
+open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.VisualStudio.Shell.Interop
+open Microsoft.VisualStudio.Shell
+open Microsoft.VisualStudio.Text
+open EnvDTE
+open FSharpPowerTools.Core.Infrastructure
+open FSharpVSPowerTools
 
 type private Cache<'K, 'V when 'K: comparison>() =
     let cache = ConcurrentDictionary<'K, 'V>()

@@ -94,6 +94,7 @@
     <Compile Include="Symbols/HighlightUsageInFile.fs" />
     <None Include="Scratchpad.fsx" />
     <Content Include="paket.references" />
+    <Compile Include="Infrastructure\SolutionProvider.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

@@ -7,6 +7,7 @@ open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
 open Microsoft.VisualStudio.Shell.Interop
 open System
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open FSharpVSPowerTools
 open FSharpVSPowerTools.CodeGeneration

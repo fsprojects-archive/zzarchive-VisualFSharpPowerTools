@@ -6,6 +6,7 @@ open NUnit.Framework
 open System.IO
 open System
 open Microsoft.VisualStudio.Text
+open FSharpPowerTools.Core.Infrastructure
 open FSharpVSPowerTools.ProjectSystem
 open System.Threading
 
