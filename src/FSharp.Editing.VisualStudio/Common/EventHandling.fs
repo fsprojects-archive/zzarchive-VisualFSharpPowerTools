@@ -5,7 +5,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open System.Threading
 open System.Windows.Threading
-open FSharpVSPowerTools
+open FSharp.Editing
 open System.Threading.Tasks
 
 [<RequireQualifiedAccess>]

@@ -6,8 +6,9 @@ open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open System.Collections.Generic
-open FSharpVSPowerTools
-open FSharpPowerTools.Core.Infrastructure
+open FSharp.Editing
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio
 
 [<NoComparison>]
 type OpenDocument =

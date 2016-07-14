@@ -1,8 +1,8 @@
-﻿namespace FSharp.Editing.VisualStudio
+﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
 
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.IO
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.ComponentModel.Composition
 
 type Version = int

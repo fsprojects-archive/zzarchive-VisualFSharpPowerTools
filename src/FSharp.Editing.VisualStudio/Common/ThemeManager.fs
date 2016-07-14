@@ -4,8 +4,7 @@ open System
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Drawing
 open Microsoft.Win32
 open EnvDTE

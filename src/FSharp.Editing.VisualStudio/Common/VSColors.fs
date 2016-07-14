@@ -2,7 +2,7 @@
 
 open System.Reflection
 open Microsoft.VisualStudio.Shell
-open FSharpVSPowerTools
+open FSharp.Editing
 open System.Windows.Controls
 
 // A port of https://github.com/tomasr/viasfora/blob/master/Viasfora/Util/VsColors.cs

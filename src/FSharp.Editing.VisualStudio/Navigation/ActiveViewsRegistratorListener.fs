@@ -1,8 +1,9 @@
-﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
+﻿namespace FSharp.Editing.VisualStudio.Navigation
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Utilities
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 [<Export(typeof<IWpfTextViewCreationListener>)>]
 [<ContentType("F#")>]

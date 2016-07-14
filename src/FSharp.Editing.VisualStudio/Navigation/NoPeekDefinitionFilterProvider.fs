@@ -2,8 +2,7 @@
 
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.OLE.Interop
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.Editor
@@ -11,6 +10,7 @@ open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell
 open EnvDTE
+open FSharp.Editing.VisualStudio
 
 type NoPeekDefinitionFilter() =
     interface IMenuCommand with

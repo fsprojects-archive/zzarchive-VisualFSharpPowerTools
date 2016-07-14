@@ -4,12 +4,14 @@ open System
 open System.ComponentModel
 open System.Threading
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
-open FSharpVSPowerTools.IdentifierUtils
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 open FSharp.ViewModule
 open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
+open FSharp.Editing.IdentifierUtils
+open FSharp.Editing.Features
 
 type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
 

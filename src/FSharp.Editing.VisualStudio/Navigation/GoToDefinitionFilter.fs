@@ -13,12 +13,12 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpPowerTools.Core
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio.ProjectSystem
 open SourceLink.SymbolStore
-open FSharpVSPowerTools.AsyncMaybe
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio
 
 [<RequireQualifiedAccess>]
 type NavigationPreference =
@@ -76,10 +76,10 @@ type GoToDefinitionFilter
 
     let shouldGenerateDefinition (fsSymbol: FSharpSymbol) =
         match fsSymbol with
-        | Entity(TypedAstPatterns.Namespace, _, _)
-        | Entity(ProvidedAndErasedType, _, _)
-        | Entity(ByRef, _, _) -> false
-        | Entity(Enum as e, _, _) when not e.IsFSharp -> false
+        | FSharpEntity(TypedAstPatterns.Namespace, _, _)
+        | FSharpEntity(ProvidedAndErasedType, _, _)
+        | FSharpEntity(ByRef, _, _) -> false
+        | FSharpEntity(Enum as e, _, _) when not e.IsFSharp -> false
         | _ -> true
 
     let replace (oldValue: string) newValue (str: string) = str.Replace(oldValue, newValue)

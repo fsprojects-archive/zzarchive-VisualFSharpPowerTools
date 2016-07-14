@@ -1,8 +1,10 @@
 namespace FSharp.Editing.VisualStudio.Coloring
 
 open Microsoft.VisualStudio.Text
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler
+open FSharp.Editing.Features
 
 [<NoComparison>]
 type internal SnapshotSpanWithLine =

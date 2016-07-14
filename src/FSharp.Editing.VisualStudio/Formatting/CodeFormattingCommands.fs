@@ -7,12 +7,12 @@ open Microsoft.VisualStudio.Text.Formatting
 open Microsoft.VisualStudio.Shell.Interop
 open Fantomas
 open Fantomas.FormatConfig
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.AsyncMaybe
+open FSharp.Editing
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Threading
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.AsyncMaybe
 
 [<NoComparison>]
 type FormattingResult = 

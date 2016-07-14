@@ -9,11 +9,11 @@ open System.Windows.Media
 open System.Windows
 open System.Windows.Controls
 open Microsoft.Win32
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open Microsoft.VisualStudio.PlatformUI
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Shell.Settings
+open FSharp.Editing.VisualStudio
 
 // An inexpensive-to-render rectangular adornment
 type RectangleAdornment(fillBrush: Brush, geometry: Geometry) as self = 

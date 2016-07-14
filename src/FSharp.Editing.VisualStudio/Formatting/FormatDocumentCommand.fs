@@ -5,8 +5,8 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas.FormatConfig
 open Fantomas
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 
 type FormatDocumentCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)

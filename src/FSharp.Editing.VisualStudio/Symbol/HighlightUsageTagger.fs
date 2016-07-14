@@ -5,12 +5,13 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpPowerTools.Core.Infrastructure
-open FSharpPowerTools.Core.HighlightUsageInFile
-open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.Features.HighlightUsageInFile
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx
 

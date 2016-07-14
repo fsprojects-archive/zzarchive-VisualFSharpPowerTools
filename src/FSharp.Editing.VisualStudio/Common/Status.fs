@@ -2,8 +2,7 @@
 
 open System
 open Microsoft.VisualStudio.Shell.Interop
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open FSharp.ViewModule.Progress
 
 /// Union of the available Visual Studio icons used for animation in the status bar

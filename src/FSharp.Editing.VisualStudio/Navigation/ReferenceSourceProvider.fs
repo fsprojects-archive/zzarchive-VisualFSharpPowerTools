@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Navigation
+﻿namespace FSharp.Editing.VisualStudio.Navigation
 
 open System
 open System.IO
@@ -6,10 +6,10 @@ open System.Net.Http
 open System.Net.NetworkInformation
 open System.Windows.Threading
 open System.Security.Cryptography
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Text
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing.VisualStudio
 
 // Reference https://github.com/SLaks/Ref12/blob/master/Ref12/Services/ReferenceSourceProvider.cs
 
@@ -60,7 +60,7 @@ type ReferenceSourceProvider(baseUrl: string) =
             match symbol with
             | MemberFunctionOrValue mem ->
                 Some mem.XmlDocSig
-            | TypedAstPatterns.Entity(entity, _, _) ->
+            | TypedAstPatterns.FSharpEntity(entity, _, _) ->
                 Some entity.XmlDocSig
             | _ -> None
         xmlDocSig

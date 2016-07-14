@@ -3,11 +3,11 @@
 open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
 open System.Diagnostics
-open FSharpVSPowerTools.AsyncMaybe
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 // The tag that carries metadata about F# color-regions.
 type DepthRegionTag(info: int * int * int * int) = 

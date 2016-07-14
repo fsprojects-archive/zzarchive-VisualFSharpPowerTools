@@ -1,6 +1,6 @@
 ﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
 
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Editor
 open System.ComponentModel.Composition
@@ -14,11 +14,12 @@ open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open FSharpVSPowerTools.AssemblyContentProvider
-open FSharpVSPowerTools.AsyncMaybe
-open FSharpPowerTools.Core.Symbols
-open FSharpPowerTools.Core
-open FSharpPowerTools.Core.Infrastructure
+open FSharp.Editing.AssemblyContentProvider
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.Features
+open FSharp.Editing.Features.Symbols
 
 type FilePath = string
 

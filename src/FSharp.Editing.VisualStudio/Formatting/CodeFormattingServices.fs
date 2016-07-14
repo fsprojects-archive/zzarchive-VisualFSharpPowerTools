@@ -5,17 +5,20 @@ open Microsoft.FSharp.Compiler
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Operations
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 [<AllowNullLiteral>]
-type CodeFormattingServices(editorOptionsFactory: IEditorOptionsFactoryService, 
-                            editorOperationsFactoryService: IEditorOperationsFactoryService,
-                            textBufferUndoManagerProvider: ITextBufferUndoManagerProvider, 
-                            textDocumentFactoryService: ITextDocumentFactoryService,
-                            projectFactory: ProjectFactory,
-                            languageService: VSLanguageService,
-                            openDocTracker: IOpenDocumentsTracker,
-                            serviceProvider: IServiceProvider) = 
+type CodeFormattingServices
+    (
+        editorOptionsFactory: IEditorOptionsFactoryService, 
+        editorOperationsFactoryService: IEditorOperationsFactoryService,
+        textBufferUndoManagerProvider: ITextBufferUndoManagerProvider, 
+        textDocumentFactoryService: ITextDocumentFactoryService,
+        projectFactory: ProjectFactory,
+        languageService: VSLanguageService,
+        openDocTracker: IOpenDocumentsTracker,
+        serviceProvider: IServiceProvider
+    ) = 
     member val EditorOptionsFactory = editorOptionsFactory
     member val TextBufferUndoManagerProvider = textBufferUndoManagerProvider
     member val EditorOperationsFactoryService = editorOperationsFactoryService

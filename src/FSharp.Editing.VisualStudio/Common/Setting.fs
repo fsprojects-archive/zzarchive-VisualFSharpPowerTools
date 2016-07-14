@@ -1,5 +1,7 @@
 ﻿namespace FSharp.Editing.VisualStudio
 
+open FSharp.Editing
+
 type IGeneralOptions =
     abstract XmlDocEnabled: bool with get, set
     abstract FormattingEnabled: bool with get, set

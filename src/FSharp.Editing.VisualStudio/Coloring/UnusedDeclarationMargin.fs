@@ -1,4 +1,4 @@
-﻿namespace FSharp.Editing.VisualStudio.Coloring
+﻿namespace FSharp.Editing.VisualStudio.Coloring.UnusedSymbols
 
 open System
 open System.Windows
@@ -10,8 +10,9 @@ open System.Windows.Controls
 open Microsoft.VisualStudio.Text
 open System.Windows.Input
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.SyntaxColoring.UnusedSymbols
+open FSharp.Editing
+open FSharp.Editing.Features.SourceCodeClassifier
+open FSharp.Editing.VisualStudio
 
 [<Name(Constants.fsharpUnusedDeclarationMargin)>]
 type UnusedDeclarationMargin(textView: IWpfTextView, 

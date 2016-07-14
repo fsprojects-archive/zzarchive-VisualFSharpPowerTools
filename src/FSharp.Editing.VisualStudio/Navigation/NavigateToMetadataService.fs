@@ -11,9 +11,7 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 open SourceLink.SymbolStore
@@ -23,6 +21,9 @@ open Microsoft.Win32
 open System.Text
 open System.ComponentModel.Composition
 open System
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Features
 
 [<Export>]
 type NavigateToMetadataService [<ImportingConstructor>] 
@@ -103,7 +104,7 @@ type NavigateToMetadataService [<ImportingConstructor>]
             let rec tryGetFullyQualifiedName (symbol: FSharpSymbol) = 
                 Option.attempt (fun _ -> 
                     match symbol with
-                    | TypedAstPatterns.Entity (entity, _, _) ->
+                    | FSharpEntity (entity, _, _) ->
                         Some (sprintf "%s.%s" entity.AccessPath entity.DisplayName)
                     | MemberFunctionOrValue mem ->
                         tryGetFullyQualifiedName mem.EnclosingEntity
@@ -148,7 +149,7 @@ type NavigateToMetadataService [<ImportingConstructor>]
                 |> Seq.collect (fun (_, uses) -> Seq.truncate 1 uses)
                 |> Seq.choose (fun { SymbolUse = symbolUse } -> 
                     match symbolUse.Symbol with
-                    | TypedAstPatterns.Entity _
+                    | FSharpEntity _
                     | MemberFunctionOrValue _
                     | ActivePatternCase _                   
                     | UnionCase _

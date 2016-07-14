@@ -1,9 +1,8 @@
 ﻿[<AutoOpen>]
-module FSharp.Editing.VisualStudio.VSUtils
+module FSharp.Editing.VisualStudio.Utils
 
 open System
-open FSharpPowerTools.Core
-open FSharpVSPowerTools
+open FSharp.Editing
 
 type String with
     /// Splits a string into lines for all platform's linebreaks.

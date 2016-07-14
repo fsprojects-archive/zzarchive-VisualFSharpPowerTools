@@ -4,17 +4,19 @@ open System
 open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
-open FSharpVSPowerTools
-open FSharpVSPowerTools.SourceCodeClassifier
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.Features
+open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools.AsyncMaybe
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
 open System.Diagnostics
-open FSharpVSPowerTools.SyntaxColoring
+open FSharp.Editing.VisualStudio.Coloring
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Features.SourceCodeClassifier
 
 [<NoComparison>]
 type private CheckingProject =

@@ -84,7 +84,7 @@
     <Compile Include="Common/Constants.fs" />
     <Compile Include="Common/Setting.fs" />
     <Compile Include="Common/Logger.fs" />
-    <Compile Include="Common/VSUtils.fs" />
+    <Compile Include="Common\Utils.fs" />
     <Compile Include="Common/EventHandling.fs" />
     <Compile Include="Common/VSColors.fs" />
     <Compile Include="Common/VisualStudioVersion.fs" />

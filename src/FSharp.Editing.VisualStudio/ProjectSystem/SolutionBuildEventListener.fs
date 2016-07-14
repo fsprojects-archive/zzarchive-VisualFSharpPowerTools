@@ -1,6 +1,6 @@
 ﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
 
-open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open System

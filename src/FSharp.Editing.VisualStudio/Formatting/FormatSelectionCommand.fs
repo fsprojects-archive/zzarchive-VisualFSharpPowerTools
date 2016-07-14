@@ -6,9 +6,10 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Fantomas
 open Fantomas.FormatConfig
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Infrastructure
 
 type FormatSelectionCommand(getConfig: Func<FormatConfig>) =
     inherit FormatCommand(getConfig)

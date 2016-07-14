@@ -3,7 +3,8 @@
 open System
 open System.Reflection
 open Microsoft.FSharp.Reflection
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Shell

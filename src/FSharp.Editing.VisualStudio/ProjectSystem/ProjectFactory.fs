@@ -12,8 +12,9 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Text
 open EnvDTE
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio
 
 type private Cache<'K, 'V when 'K: comparison>() =
     let cache = ConcurrentDictionary<'K, 'V>()

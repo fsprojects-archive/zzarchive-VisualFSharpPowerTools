@@ -5,13 +5,13 @@ open System.Collections.Concurrent
 open EnvDTE80
 open Microsoft.VisualStudio.Shell.Interop
 open EnvDTE
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open System.Security.Cryptography
 open System.Text
 open Nessos.FsPickler
 open System.IO
 open System.Threading
-open FSharpVSPowerTools.ProjectSystem
 
 type Source = string
 type FilePath = string

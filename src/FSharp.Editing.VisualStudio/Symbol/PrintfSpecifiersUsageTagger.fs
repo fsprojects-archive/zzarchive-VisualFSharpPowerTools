@@ -4,10 +4,12 @@ open System
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text.Tagging
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools.PrintfSpecifiersUsageGetter
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.Features.PrintfSpecifiersUsageGetter
 open Microsoft.FSharp.Compiler
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.Features
 
 type PrintfSpecifiersUsageTag() = 
     inherit TextMarkerTag(Constants.fsharpPrintfTagType) 

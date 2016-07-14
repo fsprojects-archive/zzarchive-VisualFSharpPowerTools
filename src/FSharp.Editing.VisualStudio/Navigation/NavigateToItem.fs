@@ -1,4 +1,4 @@
-﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
+﻿namespace FSharp.Editing.VisualStudio.Navigation
 
 open System
 open System.Drawing
@@ -15,10 +15,11 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.Navigation
-open FSharpVSPowerTools.AsyncMaybe
+open FSharp.Editing.Infrastructure
+open FSharp.Editing
+open FSharp.Editing.AsyncMaybe
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 module Constants = 
     let EmptyReadOnlyCollection = System.Collections.ObjectModel.ReadOnlyCollection([||])
@@ -145,7 +146,7 @@ type NavigateToItemProvider
             cachedItems |> Array.iter processNavigableItems
 
             let processAst (file: FileDescriptor) ast =
-                let items = Navigation.NavigableItemsCollector.collect file.Path ast |> Seq.toArray
+                let items = NavigableItemsCollector.collect file.Path ast |> Seq.toArray
                 navigableItemCache.Add (file, items)
                 processNavigableItems items
 

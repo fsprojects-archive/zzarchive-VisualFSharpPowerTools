@@ -4,8 +4,8 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 open Microsoft.VisualStudio.Text.Tagging
 
 [<RequireQualifiedAccess>]
