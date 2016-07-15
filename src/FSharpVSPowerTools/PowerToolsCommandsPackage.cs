@@ -14,6 +14,7 @@ using FSharp.Editing.VisualStudio.Folders;
 using FSharp.Editing.VisualStudio.Reference;
 using FSharp.Editing.VisualStudio.Symbol;
 using FSharp.Editing.VisualStudio.TaskList;
+using static FSharp.Editing.VisualStudio.Utils;
 
 namespace FSharpVSPowerTools
 {
@@ -53,7 +54,7 @@ namespace FSharpVSPowerTools
         protected override void Initialize()
         {
             base.Initialize();
-            FSharp.Editing.VisualStudio.Utils.ForegroundThreadGuard.BindThread();
+            ForegroundThreadGuard.BindThread();
 
             IServiceContainer serviceContainer = this;
             serviceContainer.AddService(typeof(IGeneralOptions),

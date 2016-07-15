@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using FSharp.Editing.VisualStudio.CodeFormatting;
+using FSharp.Editing.VisualStudio.Formatting;
 using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools

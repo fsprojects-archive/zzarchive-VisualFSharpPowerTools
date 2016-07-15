@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Shell;
 using FSharp.Editing.VisualStudio.ProjectSystem;
-using FSharp.Editing.VisualStudio.CodeFormatting;
+using FSharp.Editing.VisualStudio.Formatting;
 
 namespace FSharpVSPowerTools
 {

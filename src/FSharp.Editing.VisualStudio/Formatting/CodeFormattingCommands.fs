@@ -1,4 +1,4 @@
-﻿namespace FSharp.Editing.VisualStudio.CodeFormatting
+﻿namespace FSharp.Editing.VisualStudio.Formatting
 
 open System
 open Microsoft.VisualStudio.Text
