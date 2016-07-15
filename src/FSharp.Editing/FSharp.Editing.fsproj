@@ -23,7 +23,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Debug\FSharpVSPowerTools.Core.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\FSharp.Editing.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -36,7 +36,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Core.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FSharp.Editing.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

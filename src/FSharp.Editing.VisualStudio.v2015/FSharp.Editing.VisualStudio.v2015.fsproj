@@ -25,7 +25,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Debug\FSharpVSPowerTools.Logic.VS2015.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\FSharp.Editing.VisualStudio.v2015.XML</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <NoWarn>52</NoWarn>
@@ -38,7 +38,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Logic.VS2015.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FSharp.Editing.VisualStudio.v2015.XML</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>

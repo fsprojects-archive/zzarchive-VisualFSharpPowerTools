@@ -25,7 +25,8 @@
     <DefineConstants Condition="'$(AppVeyor)' != ''">APPVEYOR</DefineConstants>
     <WarningLevel>5</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Debug\FSharpVSPowerTools.Tests.XML</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
     <NoWarn>52</NoWarn>
     <OtherFlags>--warnon:1182</OtherFlags>
@@ -41,7 +42,8 @@
     <DefineConstants Condition="'$(AppVeyor)' != ''">APPVEYOR</DefineConstants>
     <WarningLevel>5</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DocumentationFile>bin\Release\FSharpVSPowerTools.Tests.XML</DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
     <NoWarn>52</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

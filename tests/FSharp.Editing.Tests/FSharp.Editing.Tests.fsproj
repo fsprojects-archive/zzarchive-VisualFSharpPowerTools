@@ -28,6 +28,7 @@
     <WarningsAsErrors />
     <NoWarn>52</NoWarn>
     <OtherFlags>--warnon:1182</OtherFlags>
+    <DocumentationFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,6 +40,7 @@
     <NoWarn>52</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
+    <DocumentationFile />
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
