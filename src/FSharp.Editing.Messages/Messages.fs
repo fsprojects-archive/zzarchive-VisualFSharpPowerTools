@@ -1,7 +1,6 @@
 ﻿namespace FSharp.Editing.Messages
 
-type [<Measure>] requestId
-type RequestId = int64<requestId>
+type RequestId = Guid
 type FilePath = string
 type DocumentContent = string
 
