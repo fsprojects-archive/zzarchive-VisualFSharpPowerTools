@@ -10,19 +10,15 @@ type Project =
       ReferencedProjects: FilePath list
       CompilerOptions: string list }
 
+[<RequireQualifiedAccess>]
 type ServerCapability =
     | SyntaxHighlighting
     | HighlighIdentifier
     | ImplementInterface
 
-type SyntaxHighlightingInfo = 
-    { ClassificationRanges: unit list }
-
-type ServerNotification =
-    | SyntaxHighlightingChanged of file: FilePath * SyntaxHighlightingInfo
-
 type ClientCallbackAddress = string
 
+[<RequireQualifiedAccess>]
 type ClientNotification =
       /// Reset all server state.
     | Reset
@@ -46,3 +42,20 @@ type ClientRequest =
 
 type ServerResponse = 
     { RequestId: RequestId }
+
+[<RequireQualifiedAccess>]
+type ClientMessage =
+    | Request of ClientRequest
+    | Notification of ClientNotification
+
+type SyntaxHighlightingInfo = 
+    { ClassificationRanges: unit list }
+
+[<RequireQualifiedAccess>]
+type ServerNotification =
+    | SyntaxHighlightingChanged of file: FilePath * SyntaxHighlightingInfo
+
+[<RequireQualifiedAccess>]
+type ServerMessage =
+    | Response of ServerResponse
+    | Notification of ServerNotification
