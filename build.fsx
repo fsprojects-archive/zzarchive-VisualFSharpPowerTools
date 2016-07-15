@@ -68,16 +68,16 @@ Target "AssemblyInfo" (fun _ ->
         Attribute.FileVersion release.AssemblyVersion ] 
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
-      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
+      (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharp.Editing/AssemblyInfo.fs"
       (Attribute.InternalsVisibleTo "FSharp.Editing.Tests" :: Attribute.Title "FSharp.Editing" :: shared)
 
-  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic/AssemblyInfo.fs"
-      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic" :: shared)
+  CreateFSharpAssemblyInfo "src/FSharp.Editing.VisualStudio/AssemblyInfo.fs"
+      (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharp.Editing.VisualStudio" :: shared)
 
-  CreateFSharpAssemblyInfo "src/FSharpVSPowerTools.Logic.VS2015/AssemblyInfo.fs"
-      (Attribute.InternalsVisibleTo "FSharpVSPowerTools.Tests" :: Attribute.Title "FSharpVSPowerTools.Logic.VS2015" :: shared) 
+  CreateFSharpAssemblyInfo "src/FSharp.Editing.VisualStudio.Tests.v2015/AssemblyInfo.fs"
+      (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharp.Editing.VisualStudio.v2015" :: shared) 
 )
 
 Target "VsixManifest" (fun _ ->
@@ -140,7 +140,7 @@ Target "RunStatistics" (fun _ ->
 // Run the unit tests using test runner
 
 Target "UnitTests" (fun _ ->
-    [@"tests/FSharp.Editing.Tests\bin\Release\FSharp.Editing.Tests.dll"]
+    [@"tests\FSharp.Editing.Tests\bin\Release\FSharp.Editing.Tests.dll"]
     |> NUnit3 (fun p ->
          let param =
              { p with
@@ -154,7 +154,7 @@ Target "UnitTests" (fun _ ->
 )
 
 Target "IntegrationTests" (fun _ ->
-    [@"tests/FSharpVSPowerTools.Tests\bin\Release\FSharpVSPowerTools.Tests.dll"]
+    [@"tests\FSharp.Editing.VisualStudio.Tests\bin\Release\FSharp.Editing.VisualStudio.Tests.dll"]
     |> NUnit3 (fun p ->
          let param =
              { p with
