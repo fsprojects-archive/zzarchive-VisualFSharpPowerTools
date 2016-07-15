@@ -1,12 +1,11 @@
-﻿module FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
+﻿module FSharp.Editing.Tests.CodeGenerationTestInfrastructure
 
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpPowerTools.Core
-open FSharpVSPowerTools
-open FSharpVSPowerTools.AsyncMaybe
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing.Features
+open FSharp.Editing
+open FSharp.Editing.AsyncMaybe
 
 type pos with
     member x.Line0: int<Line0> = LanguagePrimitives.Int32WithMeasure(x.Line - 1)

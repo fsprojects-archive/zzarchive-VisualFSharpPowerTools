@@ -4,12 +4,13 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
 using System;
-using FSharpVSPowerTools.PrintfSpecifiersHighlightUsage;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.PlatformUI;
+using FSharp.Editing.VisualStudio.Symbol;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

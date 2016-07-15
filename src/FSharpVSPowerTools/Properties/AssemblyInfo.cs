@@ -2,7 +2,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleToAttribute("FSharpVSPowerTools.Tests")]
+[assembly: InternalsVisibleToAttribute("FSharp.Editing.VisualStudio.Tests")]
 [assembly: AssemblyTitleAttribute("FSharpVSPowerTools")]
 [assembly: AssemblyProductAttribute("FSharpVSPowerTools")]
 [assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")]

@@ -1,7 +1,6 @@
-﻿module FSharpVSPowerTools.IdentifierUtils
+﻿module FSharp.Editing.IdentifierUtils
 
 open System
-open FSharpVSPowerTools
 open Microsoft.FSharp.Compiler.PrettyNaming
 open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 

@@ -1,4 +1,5 @@
-﻿using FSharpVSPowerTools.Linting;
+﻿using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Linting;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;

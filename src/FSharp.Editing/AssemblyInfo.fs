@@ -4,8 +4,8 @@ open System.Runtime.CompilerServices
 
 [<assembly: InternalsVisibleToAttribute("FSharp.Editing.Tests")>]
 [<assembly: AssemblyTitleAttribute("FSharp.Editing")>]
-[<assembly: AssemblyProductAttribute("FSharp.Editing")>]
-[<assembly: AssemblyDescriptionAttribute("Support for F# tooling")>]
+[<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
+[<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
 [<assembly: AssemblyVersionAttribute("2.6.0")>]
 [<assembly: AssemblyFileVersionAttribute("2.6.0")>]
 do ()

@@ -4,13 +4,13 @@
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.GetUsesOfSymbolInFileTests
+module FSharp.Editing.Tests.GetUsesOfSymbolInFileTests
 #endif
 
 open NUnit.Framework
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
+open FSharp.Editing
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

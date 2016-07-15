@@ -1,5 +1,7 @@
-namespace FSharpPowerTools.Core
-open FSharpVSPowerTools
+namespace FSharp.Editing.Features
+
+open FSharp.Editing
+
 module Symbols = 
     open System.IO
     
@@ -18,7 +20,6 @@ module Symbols =
 type GetCheckResults = FileName -> Async<ParseAndCheckResults option>
 
 module HighlightUsageInFile =
-    open FSharpVSPowerTools
     open Microsoft.FSharp.Compiler.SourceCodeServices
     
     [<NoComparisonAttribute(* due to FSharpSymbol *)>]

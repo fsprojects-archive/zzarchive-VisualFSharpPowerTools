@@ -2,10 +2,11 @@
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.TaskList;
 using Microsoft.VisualStudio.Editor;
-using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.TextManager.Interop;
+using FSharp.Editing.VisualStudio.TaskList;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

@@ -12,14 +12,15 @@
       "../../src/FSharpVSPowerTools.Core/OpenDeclarationsGetter.fs"      
       "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.OpenDeclarationsGetterTests
+module FSharp.Editing.Tests.OpenDeclarationsGetterTests
 #endif
 
 open System.IO
 open NUnit.Framework
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
+open FSharp.Editing.Features
 
 let openDeclWithAutoOpens decls =
     { Declarations = 

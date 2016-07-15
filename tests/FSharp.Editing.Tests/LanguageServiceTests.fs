@@ -1,9 +1,9 @@
-﻿module FSharpVSPowerTools.Core.Tests.LanguageServiceTests
+﻿module FSharp.Editing.Tests.LanguageServiceTests
 
 open NUnit.Framework
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
+open FSharp.Editing
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

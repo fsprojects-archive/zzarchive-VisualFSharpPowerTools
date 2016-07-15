@@ -245,19 +245,21 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FSharp.Editing\FSharp.Editing.fsproj">
-      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
-      <Name>FSharp.Editing</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\FSharpVSPowerTools.Logic.VS2015\FSharpVSPowerTools.Logic.VS2015.fsproj">
-      <Project>{bb0c6f01-5e57-4575-a498-5de850d9fa6c}</Project>
-      <Name>FSharpVSPowerTools.Logic.VS2015</Name>
+    <ProjectReference Include="..\FSharp.Editing.VisualStudio.v2015\FSharp.Editing.VisualStudio.v2015.fsproj">
+      <Project>{BB0C6F01-5E57-4575-A498-5DE850D9FA6C}</Project>
+      <Name>FSharp.Editing.VisualStudio.v2015</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
-    <ProjectReference Include="..\FSharpVSPowerTools.Logic\FSharpVSPowerTools.Logic.fsproj">
+    <ProjectReference Include="..\FSharp.Editing.VisualStudio\FSharp.Editing.VisualStudio.fsproj">
       <Project>{70456b75-f623-41b4-8044-ed02c265f0ff}</Project>
-      <Name>FSharpVSPowerTools.Logic</Name>
+      <Name>FSharp.Editing.VisualStudio</Name>
+      <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
+      <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
+    </ProjectReference>
+    <ProjectReference Include="..\FSharp.Editing\FSharp.Editing.fsproj">
+      <Project>{f3d0b372-3af7-49d9-98ed-5a78e9416098}</Project>
+      <Name>FSharp.Editing</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

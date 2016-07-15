@@ -1,8 +1,7 @@
-﻿module FSharpVSPowerTools.Core.Tests.IdentifierDetectionTest
+﻿module FSharp.Editing.Tests.IdentifierDetectionTest
 
-open FSharpVSPowerTools
-open FSharpVSPowerTools.IdentifierUtils
 open NUnit.Framework
+open FSharp.Editing.IdentifierUtils
 
 [<Test>]
 let ``should be able to detect backticked identifiers``() = 

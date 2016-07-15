@@ -14,7 +14,7 @@
       "TestHelpers.fs"
       "CodeGenerationTestInfrastructure.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UnionPatternMatchCaseGeneratorTests
+module FSharp.Editing.Tests.UnionPatternMatchCaseGeneratorTests
 #endif
 
 open NUnit.Framework
@@ -22,11 +22,11 @@ open System
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
-open FSharpVSPowerTools.CodeGeneration
-open FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
-open FSharpVSPowerTools.Core.Tests.CodeGenerationTestInfrastructure
 open TestHelpers.LanguageServiceTestHelper
+open FSharp.Editing
+open FSharp.Editing.Features
+open CodeGenerationTestInfrastructure
+open FSharp.Editing.Features.UnionPatternMatchCaseGenerator
 
 let languageService = LanguageService()
 

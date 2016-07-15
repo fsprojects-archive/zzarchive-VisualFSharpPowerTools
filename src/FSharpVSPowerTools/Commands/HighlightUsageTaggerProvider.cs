@@ -7,9 +7,10 @@ using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
 using EnvDTE;
-using FSharpVSPowerTools.HighlightUsage;
-using FSharpVSPowerTools.ProjectSystem;
 using System;
+using FSharp.Editing.VisualStudio.Symbol;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

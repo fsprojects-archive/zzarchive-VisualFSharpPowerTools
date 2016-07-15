@@ -11,13 +11,14 @@
       "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
       "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.UntypedAstUtils.Outlining
+module FSharp.Editing.Tests.UntypedAstUtils.Outlining
 #endif
 
 open System.IO
-open FSharpVSPowerTools
-open FSharpVSPowerTools.UntypedAstUtils.Outlining
 open NUnit.Framework
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils.Outlining
+open FSharp.Editing.Tests
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

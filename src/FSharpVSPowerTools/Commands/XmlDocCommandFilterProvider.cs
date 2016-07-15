@@ -10,8 +10,9 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Text;
-using FSharpVSPowerTools.XmlDoc;
-using FSharpVSPowerTools.ProjectSystem;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.CodeGeneration;
 
 // Useful reference: http://msdn.microsoft.com/en-us/library/dd885243.aspx
 namespace FSharpVSPowerTools

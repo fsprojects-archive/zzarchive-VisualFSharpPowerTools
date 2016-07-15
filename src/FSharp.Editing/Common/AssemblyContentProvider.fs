@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -86,7 +86,6 @@ type Parent =
 
 module AssemblyContentProvider =
     open System.IO
-    open FSharpVSPowerTools
 
     type AssemblyContentCacheEntry =
         { FileWriteTime: DateTime 

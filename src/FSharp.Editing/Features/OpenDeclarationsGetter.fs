@@ -1,9 +1,10 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing.Features
 
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
+open FSharp.Editing
 
 type RawOpenDeclaration =
     { Idents: Idents
@@ -45,14 +46,14 @@ module OpenDeclarationGetter =
     open System.Diagnostics
 
     let private getAutoOpenModules entities =
-        List.foldBack( fun e acc -> 
+        List.foldBack( fun (e: RawEntity) acc -> 
              match e.Kind with
-             | EntityKind.Module { IsAutoOpen = true } -> e.CleanedIdents::acc
+             | EntityKind.Module { IsAutoOpen = true } -> e.CleanedIdents :: acc
              | _ -> acc) entities []
 
 
-    let private getActivePatterns entities =
-        List.foldBack( fun e acc -> 
+    let private getActivePatterns (entities: RawEntity list) =
+        List.foldBack( fun (e: RawEntity) acc -> 
              match e.Kind with
              | EntityKind.FunctionOrValue true -> e.CleanedIdents::acc
              | _ -> acc) entities  []
@@ -345,7 +346,6 @@ module OpenDeclarationGetter =
                 { symbolUse with FullNames = fullNames })
         | None -> symbolUses
 
-    open FSharpVSPowerTools.TypedAstPatterns
     open System.Collections.Generic
 
     let private getSymbolUsesPotentiallyRequireOpenDecls symbolsUses =
@@ -354,8 +354,8 @@ module OpenDeclarationGetter =
             let res = 
                 match symbolUse.SymbolUse.Symbol with
                 | Pattern | RecordField _
-                | Entity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
-                | Entity (_, _, Tuple)
+                | FSharpEntity (Class | (AbbreviatedType _ | FSharpType | ValueType | FSharpModule | Array), _, _)
+                | FSharpEntity (_, _, Tuple)
                 | MemberFunctionOrValue (Constructor _ | ExtensionMember) -> true
                 | MemberFunctionOrValue func -> not func.IsMember
                 | _ -> false

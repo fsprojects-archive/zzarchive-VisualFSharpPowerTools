@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing
 
 open System
 open System.Diagnostics

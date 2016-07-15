@@ -1,9 +1,9 @@
-﻿namespace FSharpVSPowerTools.CodeGeneration
+﻿namespace FSharp.Editing.Features
 
 open System
 open System.Diagnostics
-open FSharpVSPowerTools
-open FSharpVSPowerTools.UntypedAstUtils
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices

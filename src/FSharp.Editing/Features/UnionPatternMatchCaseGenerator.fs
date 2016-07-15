@@ -1,10 +1,9 @@
-﻿module FSharpVSPowerTools.CodeGeneration.UnionPatternMatchCaseGenerator
+﻿module FSharp.Editing.Features.UnionPatternMatchCaseGenerator
 
 open System
 open System.Diagnostics
-open FSharpVSPowerTools
-open FSharpVSPowerTools.UntypedAstUtils
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -579,7 +578,7 @@ let tryFindUnionDefinitionFromPos (codeGenService: ICodeGenerationService<'Proje
             match symbolUse.Symbol with
             | TypedAstPatterns.UnionCase(case) when case.ReturnType.HasTypeDefinition ->
                 Some case.ReturnType.TypeDefinition
-            | TypedAstPatterns.Entity(entity, _, _) -> Some entity
+            | TypedAstPatterns.FSharpEntity(entity, _, _) -> Some entity
             | _ -> None
 
         let! realTypeDefinition =

@@ -1,7 +1,8 @@
-﻿module FSharpVSPowerTools.PrintfSpecifiersUsageGetter
+﻿module FSharp.Editing.Features.PrintfSpecifiersUsageGetter
 
 open Microsoft.FSharp.Compiler
-open FSharpVSPowerTools.UntypedAstUtils
+open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing
 
 [<NoComparison>]
 type PrintfSpecifierUse =

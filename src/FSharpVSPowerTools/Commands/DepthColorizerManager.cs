@@ -9,10 +9,11 @@ using System.Windows.Media;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using FSharpVSPowerTools.DepthColorizer;
 using Microsoft.VisualStudio.Shell;
 using System.Diagnostics;
-using FSharpVSPowerTools.ProjectSystem;
+using FSharp.Editing.VisualStudio.Coloring;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {

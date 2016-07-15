@@ -1,36 +1,27 @@
-﻿namespace FSharpVSPowerTools.TaskList
+﻿namespace FSharp.Editing.Features
 
 open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing
 
 [<NoComparison>]
 type Comment =
-    {
-        Text: string
-        File: string
-        Line: int
-        Column: int
-        Priority : int
-    }
+    { Text: string
+      File: string
+      Line: int
+      Column: int
+      Priority : int }
     override x.ToString() = sprintf "%A" x
 
-
 [<NoComparison>]
-type CommentOption = { Comment : string; Priority : int } with
+type CommentOption = 
+    { Comment: string
+      Priority: int }
     static member Default = { Comment = "TODO"; Priority = 2 }
 
-
-type private Pos =
-    {
-        Line: int
-        Column: int
-    }
-
-
 type private TaskListCommentPos =
-    | OnelineTaskListCommentPos of string * Pos
-    | MultilineTaskListCommentPos of string * Pos * Pos
-
+    | OnelineTaskListCommentPos of string * Point<FCS>
+    | MultilineTaskListCommentPos of string * Point<FCS> * Point<FCS>
 
 [<AutoOpen>]
 module private Utils =
@@ -68,7 +59,7 @@ module private Utils =
                 match tryTokenizeFirstToken trimmedTokText with
                 | Some (tok2, tokenizedText) ->
                     if isFirstToken tokenizedText && tasks |> Array.exists ((=) tokenizedText) then
-                        let pos = { Line = lineNumber; Column = tok.LeftColumn + tok2.LeftColumn + (tokText.Length - trimmedTokText.Length) }
+                        let pos = Point.make lineNumber (tok.LeftColumn + tok2.LeftColumn + (tokText.Length - trimmedTokText.Length))
                         (Some (tokenizedText, pos), state)
                     elif tok2.CharClass = FSharpTokenCharKind.Identifier then
                         None, state
@@ -104,8 +95,8 @@ module private Utils =
             let tokText = tok.Text(lines, lineNum)
             let trimmedTokText = tokText.TrimStart(trimChars).ToLowerInvariant()
             if tasks |> Array.exists ((=) trimmedTokText) then
-                let beginPos = { Line = lineNum; Column = tok.LeftColumn + (tokText.Length - trimmedTokText.Length) }
-                let endPos = { Line = nextLineNumber; Column = (lineNumAndTokens |> List.head |> snd).RightColumn }
+                let beginPos = Point.make lineNum (tok.LeftColumn + (tokText.Length - trimmedTokText.Length))
+                let endPos = Point.make nextLineNumber ((lineNumAndTokens |> List.head |> snd).RightColumn)
                 (Some (trimmedTokText, beginPos, endPos)), nextLineNumber, tokenizer, state
             else
                 tryFindMultilineCommentTaskToken tasks (lines, nextLineNumber, tokenizer, state)
@@ -147,24 +138,20 @@ module private Utils =
         let tokenizerState = 0L
         Seq.unfold (nextTaskListCommentPos tasks) (lines, 0, sourceTok.CreateLineTokenizer(lines.[0]), tokenizerState)
 
-
-[<AutoOpen>]
 module CommentExtractor =
     let private getPriorityByTask options =
         options
         |> Array.map (fun o -> (o.Comment.ToLowerInvariant(), o.Priority))
         |> Map.ofArray
 
-    let inline private toTaskListComment filePath pos comment priority =
-        { 
-            Text = comment
-            File = filePath
-            Line = pos.Line
-            Column = pos.Column
-            Priority = priority
-        }
+    let inline private toTaskListComment filePath (pos: Point<FCS>) comment priority =
+        { Text = comment
+          File = filePath
+          Line = pos.Line
+          Column = pos.Column
+          Priority = priority }
 
-    let private extractMultilineComment beginPos endPos (lines: string[]) =
+    let private extractMultilineComment (beginPos: Point<FCS>) (endPos: Point<FCS>) (lines: string[]) =
         if beginPos.Line = endPos.Line then
             lines.[beginPos.Line].Substring(beginPos.Column, endPos.Column - beginPos.Column + 1)
         else

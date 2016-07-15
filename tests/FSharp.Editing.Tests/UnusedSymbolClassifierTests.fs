@@ -1,8 +1,9 @@
-﻿module FSharpVSPowerTools.Core.Tests.UnusedSymbolClassifierTests
+﻿module FSharp.Editing.Tests.UnusedSymbolClassifierTests
 
 open System.IO
 open NUnit.Framework
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.Features
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

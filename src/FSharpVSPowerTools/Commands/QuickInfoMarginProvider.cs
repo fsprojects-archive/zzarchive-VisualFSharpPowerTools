@@ -1,5 +1,6 @@
-﻿using FSharpVSPowerTools;
-using FSharpVSPowerTools.ProjectSystem;
+﻿using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio.Symbol;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;

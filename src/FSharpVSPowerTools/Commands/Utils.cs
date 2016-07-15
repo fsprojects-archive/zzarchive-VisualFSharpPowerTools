@@ -6,12 +6,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static FSharp.Editing.VisualStudio.Utils;
 
 namespace FSharpVSPowerTools
 {
     public class Utils
     {
-        public static void AddCommandFilter(IVsTextView viewAdapter, VSUtils.IMenuCommand commandFilter)
+    public static object ForegroundThreadGuard { get; internal set; }
+
+    public static void AddCommandFilter(IVsTextView viewAdapter, IMenuCommand commandFilter)
         {
             if (!commandFilter.IsAdded)
             {

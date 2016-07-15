@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.Composition;
-using FSharpVSPowerTools.ProjectSystem;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
@@ -8,6 +7,9 @@ using System;
 using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Outlining;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Outlining;
 
 namespace FSharpVSPowerTools.Outlining
 {

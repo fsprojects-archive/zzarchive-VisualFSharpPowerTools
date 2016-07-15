@@ -8,10 +8,10 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.ProjectSystem;
-using FSharpVSPowerTools.HighlightUsage;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
+using FSharp.Editing.VisualStudio;
+using FSharp.Editing.VisualStudio.Symbol;
 
 namespace FSharpVSPowerTools
 {

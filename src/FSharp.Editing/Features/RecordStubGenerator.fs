@@ -1,8 +1,7 @@
-﻿module FSharpVSPowerTools.CodeGeneration.RecordStubGenerator
+﻿module FSharp.Editing.Features.RecordStubGenerator
 
-open FSharpVSPowerTools
-open FSharpVSPowerTools.UntypedAstUtils
-open FSharpVSPowerTools.CodeGeneration
+open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices

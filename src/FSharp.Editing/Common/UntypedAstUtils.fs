@@ -1,4 +1,4 @@
-﻿module FSharpVSPowerTools.UntypedAstUtils
+﻿module FSharp.Editing.UntypedAstUtils
 
 open Microsoft.FSharp.Compiler.Ast
 open System.Collections.Generic
@@ -627,6 +627,7 @@ let getModuleOrNamespacePath (pos: pos) (ast: ParsedInput) =
 
 module HashDirectiveInfo =
     open System.IO
+
     type IncludeDirective =
         | ResolvedDirectory of string
 

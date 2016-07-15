@@ -1,8 +1,8 @@
-﻿namespace FSharpVSPowerTools
+﻿namespace FSharp.Editing.Features
 
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharpVSPowerTools
+open FSharp.Editing
 
 type WordSpan = 
     { SymbolKind: SymbolKind
@@ -188,7 +188,7 @@ module SourceCodeClassifier =
     open System.Collections.Generic
 
     let getIdentifierCategory = function
-        | Entity e ->
+        | FSharpEntity e ->
             match e with
             | _, ValueType, _ -> Category.ValueType
             | Class -> Category.ReferenceType
@@ -203,7 +203,7 @@ module SourceCodeClassifier =
         | Field (MutableVar, _)
         | Field (_, RefCell) -> Category.MutableVar
         | Pattern -> Category.PatternCase
-        | Entity e ->
+        | FSharpEntity e ->
             match e with
             | (_, ValueType, _) -> Category.ValueType
             | Class -> Category.ReferenceType

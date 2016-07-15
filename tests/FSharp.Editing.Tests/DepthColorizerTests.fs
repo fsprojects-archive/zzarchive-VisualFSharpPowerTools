@@ -4,13 +4,13 @@
 #r "../../packages/NUnit/lib/nunit.framework.dll"
 #load "TestHelpers.fs"
 #else
-module FSharpVSPowerTools.Core.Tests.DepthColorizerTests
+module FSharp.Editing.Tests.DepthColorizerTests
 #endif
 
 open System.IO
-open FSharpVSPowerTools
 open NUnit.Framework
 open TestHelpers.LanguageServiceTestHelper
+open FSharp.Editing
 
 [<Literal>]
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"

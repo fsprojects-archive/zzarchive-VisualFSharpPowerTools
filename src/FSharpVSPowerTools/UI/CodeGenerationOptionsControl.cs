@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FSharp.Editing.VisualStudio;
+using System;
 using System.Windows.Forms;
 
 namespace FSharpVSPowerTools

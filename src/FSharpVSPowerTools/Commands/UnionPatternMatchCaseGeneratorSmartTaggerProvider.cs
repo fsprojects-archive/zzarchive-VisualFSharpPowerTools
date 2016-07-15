@@ -6,10 +6,11 @@ using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell;
-using FSharpVSPowerTools.Refactoring;
-using FSharpVSPowerTools.ProjectSystem;
 using System.Diagnostics;
 using Microsoft.VisualStudio.Shell.Interop;
+using FSharp.Editing.VisualStudio.CodeGeneration;
+using FSharp.Editing.VisualStudio.ProjectSystem;
+using FSharp.Editing.VisualStudio;
 
 namespace FSharpVSPowerTools
 {
