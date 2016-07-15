@@ -3,7 +3,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:fsxaml="http://github.com/fsprojects/FsXaml"
-             xmlns:local="clr-namespace:FSharp.Editing.VisualStudio.Refactoring;assembly=FSharp.Editing.VisualStudio"              
+             xmlns:local="clr-namespace:FSharp.Editing.VisualStudio.Symbol;assembly=FSharp.Editing.VisualStudio"              
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
         MinHeight="250"
