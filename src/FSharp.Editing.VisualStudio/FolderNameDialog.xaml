@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-        xmlns:local="clr-namespace:FSharpVSPowerTools.Folders;assembly=FSharpVSPowerTools.Logic" 
+        xmlns:local="clr-namespace:FSharp.Editing.VisualStudio.Folders;assembly=FSharp.Editing.VisualStudio" 
         xmlns:fsxaml="http://github.com/fsprojects/FsXaml"        
         mc:Ignorable="d" 
         WindowStyle="ToolWindow"
@@ -16,7 +16,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/CommonResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         <Style TargetType="HeaderedContentControl">
             <Setter Property="Focusable" Value="False"/>

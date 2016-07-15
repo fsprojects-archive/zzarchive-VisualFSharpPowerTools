@@ -3,7 +3,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:fsxaml="http://github.com/fsprojects/FsXaml"
-             xmlns:local="clr-namespace:FSharpVSPowerTools.Refactoring;assembly=FSharpVSPowerTools.Logic"              
+             xmlns:local="clr-namespace:FSharp.Editing.VisualStudio.Refactoring;assembly=FSharp.Editing.VisualStudio"              
              mc:Ignorable="d" 
         WindowStyle="ToolWindow"
         MinHeight="250"
@@ -20,7 +20,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/FSharpVSPowerTools.Logic;component/CommonResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/CommonResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <fsxaml:BooleanToVisibilityConverter x:Key="BoolToVis" />
