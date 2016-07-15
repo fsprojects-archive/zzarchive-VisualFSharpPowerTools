@@ -1,23 +1,27 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Outlining
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
+open FSharp.Editing.VisualStudio.Outlining
+open FSharpVSPowerTools.Outlining
 
 type OutliningTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = OutliningTaggerProvider(
-                            vsLanguageService = base.VsLanguageService,
-                            serviceProvider = base.ServiceProvider,
-                            projectFactory = base.ProjectFactory,
-                            textDocumentFactoryService = base.DocumentFactoryService,
-                            textEditorFactoryService = null,
-                            projectionBufferFactoryService = null,
-                            outliningManagerService = null,
-                            openDocumentsTracker = base.OpenDocumentsTracker)
+    let taggerProvider = 
+        OutliningTaggerProvider
+            (
+                vsLanguageService = base.VsLanguageService,
+                serviceProvider = base.ServiceProvider,
+                projectFactory = base.ProjectFactory,
+                textDocumentFactoryService = base.DocumentFactoryService,
+                textEditorFactoryService = null,
+                projectionBufferFactoryService = null,
+                outliningManagerService = null,
+                openDocumentsTracker = base.OpenDocumentsTracker
+            )
 
     member __.GetView(buffer) =
         createMockTextView buffer

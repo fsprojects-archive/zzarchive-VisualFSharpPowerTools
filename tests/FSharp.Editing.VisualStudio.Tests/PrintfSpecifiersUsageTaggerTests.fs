@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text.Tagging

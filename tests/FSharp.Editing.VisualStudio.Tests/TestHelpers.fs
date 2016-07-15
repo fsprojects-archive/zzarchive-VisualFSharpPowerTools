@@ -1,14 +1,16 @@
 ﻿[<AutoOpen>]
-module FSharpVSPowerTools.Tests.TestHelpers
+module FSharp.Editing.VisualStudio.Tests.Helpers
 
 open TestUtilities.Mocks
 open NUnit.Framework
 open System.IO
 open System
 open Microsoft.VisualStudio.Text
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.VisualStudio.ProjectSystem
 open System.Threading
+open FSharp.Editing.Infrastructure
+open FSharp.Editing.VisualStudio
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"
 

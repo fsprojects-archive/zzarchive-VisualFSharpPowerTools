@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
 open NUnit.Framework
@@ -9,22 +9,26 @@ open Microsoft.VisualStudio.Text.Editor
 type FormattingCommandHelper() =
     inherit VsTestBase()
 
-    let command = CodeFormattingHookHelper(
-                            adaptersFactory = base.VsEditorAdaptersFactoryService,
-                            editorOptionsFactory = base.EditorOptionsFactoryService,
-                            editorOperationsFactoryService = base.EditorOperationsFactoryService,
-                            textBufferUndoManagerProvider = base.TextBufferUndoManagerProvider,
-                            textDocumentFactoryService = base.DocumentFactoryService,
-                            serviceProvider = base.ServiceProvider,
-                            projectFactory = base.ProjectFactory,
-                            vsLanguageService = base.VsLanguageService,
-                            openDocumentTracker = base.OpenDocumentsTracker)
+    let command = 
+        CodeFormattingHookHelper
+            (
+                adaptersFactory = base.VsEditorAdaptersFactoryService,
+                editorOptionsFactory = base.EditorOptionsFactoryService,
+                editorOperationsFactoryService = base.EditorOperationsFactoryService,
+                textBufferUndoManagerProvider = base.TextBufferUndoManagerProvider,
+                textDocumentFactoryService = base.DocumentFactoryService,
+                serviceProvider = base.ServiceProvider,
+                projectFactory = base.ProjectFactory,
+                vsLanguageService = base.VsLanguageService,
+                openDocumentTracker = base.OpenDocumentsTracker
+            )
 
     member __.GetCommand(wpfTextView: IWpfTextView) =
         command.RegisterCommandDispatcher(wpfTextView)
 
 module FormattingCommandTests =
     open System.Threading
+    open FSharp.Editing.VisualStudio
 
     let helper = FormattingCommandHelper()
     let fileName = getTempFileName ".fs"

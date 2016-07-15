@@ -1,26 +1,28 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Navigation
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
+open FSharp.Editing.VisualStudio
  
 type GoToDefinitionCommandHelper() =    
     inherit VsTestBase()
-    let command = new GoToDefinitionFilterProvider(
-                        editorFactory = base.VsEditorAdaptersFactoryService,
-                        editorOptionsFactory = base.EditorOptionsFactoryService,
-                        textDocumentFactoryService = base.DocumentFactoryService,                            
-                        languageService = base.VsLanguageService,
-                        serviceProvider = base.ServiceProvider,
-                        projectFactory = base.ProjectFactory,
-                        referenceSourceProvider = base.ReferenceSourceProvider,
-                        metadataService = Unchecked.defaultof<_>)
+    let command = 
+        new GoToDefinitionFilterProvider
+            (
+                editorFactory = base.VsEditorAdaptersFactoryService,
+                editorOptionsFactory = base.EditorOptionsFactoryService,
+                textDocumentFactoryService = base.DocumentFactoryService,                            
+                languageService = base.VsLanguageService,
+                serviceProvider = base.ServiceProvider,
+                projectFactory = base.ProjectFactory,
+                referenceSourceProvider = base.ReferenceSourceProvider,
+                metadataService = Unchecked.defaultof<_>
+            )
 
     member __.GetCommandFilter(wpfTextView) =
         command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)

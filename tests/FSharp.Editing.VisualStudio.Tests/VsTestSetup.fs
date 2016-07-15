@@ -1,9 +1,7 @@
-﻿
-namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open NUnit.Framework
+open FSharp.Editing.VisualStudio
 
 [<SetUpFixture>]
 type VsTestSetup() =

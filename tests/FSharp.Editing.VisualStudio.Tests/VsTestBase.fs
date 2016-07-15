@@ -1,11 +1,11 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open TestUtilities.Mocks
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Shell.Interop
-open EnvDTE
+open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.VisualStudio
+open FSharpVSPowerTools
+open FSharp.Editing.Infrastructure
 
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =

@@ -1,7 +1,6 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
-open System.IO
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -10,13 +9,16 @@ open Microsoft.VisualStudio.Text.Classification
 type UnusedSymbolClassifierHelper() =
     inherit VsTestBase()
     
-    let classifierProvider = new UnusedSymbolClassifierProvider(
-                                    serviceProvider = base.ServiceProvider, 
-                                    classificationColorManager = null,
-                                    projectFactory = base.ProjectFactory,
-                                    fsharpVsLanguageService = base.VsLanguageService,
-                                    classificationRegistry = base.ClassificationTypeRegistryService,
-                                    textDocumentFactoryService = base.DocumentFactoryService)
+    let classifierProvider = 
+        new UnusedSymbolClassifierProvider
+            (
+                serviceProvider = base.ServiceProvider, 
+                classificationColorManager = null,
+                projectFactory = base.ProjectFactory,
+                fsharpVsLanguageService = base.VsLanguageService,
+                classificationRegistry = base.ClassificationTypeRegistryService,
+                textDocumentFactoryService = base.DocumentFactoryService
+            )
 
     member __.GetClassifier(buffer) = classifierProvider.GetClassifier(buffer)
 
@@ -41,6 +43,7 @@ type UnusedSymbolClassifierHelper() =
             classifierProvider.Dispose()
 
 module UnusedSymbolClassifierTests =
+    open FSharp.Editing
     
     let helper = new UnusedSymbolClassifierHelper()
     let mutable fileName = null 
@@ -75,6 +78,5 @@ let internal f() = ()
                  actual |> assertEqual expected)
         
     [<OneTimeTearDown>]
-    let tearDownAll() =
-        dispose helper
+    let tearDownAll() = dispose helper
         

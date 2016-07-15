@@ -1,13 +1,14 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
 open System.IO
 open EnvDTE
 open System.Collections
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
 open System.Collections.Generic
+open FSharp.Editing.Infrastructure
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+
 
 /// Create a simple mock DTE for an F#-only solution
 type MockDTE() =

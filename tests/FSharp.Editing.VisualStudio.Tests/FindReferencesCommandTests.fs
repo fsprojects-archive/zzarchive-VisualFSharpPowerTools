@@ -1,13 +1,15 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
 open NUnit.Framework
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Navigation
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
+open FSharp.Editing.VisualStudio.Symbol
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
 
 type FindReferencesCommandHelper() =    
     inherit VsTestBase()

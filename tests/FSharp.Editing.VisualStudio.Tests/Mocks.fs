@@ -1,5 +1,5 @@
 ﻿[<RequireQualifiedAccess>]
-module FSharpVSPowerTools.Tests.Mocks
+module FSharp.Editing.VisualStudio.Tests.Mocks
 
 open System
 open Foq
@@ -8,14 +8,15 @@ open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
-open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Editor
 open Microsoft.VisualStudio.Text.Classification
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.OLE.Interop
 open EnvDTE
+open FSharp.Editing
+open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 
 let createGeneralOptionsPage() =
     Mock<IGeneralOptions>.With(fun page ->

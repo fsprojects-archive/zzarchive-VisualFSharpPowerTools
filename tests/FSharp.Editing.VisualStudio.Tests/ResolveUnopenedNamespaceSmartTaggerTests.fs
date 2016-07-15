@@ -1,7 +1,6 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.ProjectSystem
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
@@ -10,12 +9,15 @@ open Microsoft.VisualStudio.Language.Intellisense
 type ResolveUnopenedNamespaceSmartTaggerHelper() =    
     inherit VsTestBase()
 
-    let taggerProvider = ResolveUnopenedNamespaceSmartTaggerProvider(
-                            fsharpVsLanguageService = base.VsLanguageService,
-                            serviceProvider = base.ServiceProvider,
-                            undoHistoryRegistry = base.UndoHistoryRegistry,
-                            projectFactory = base.ProjectFactory,
-                            textDocumentFactoryService = base.DocumentFactoryService)
+    let taggerProvider = 
+        ResolveUnopenedNamespaceSmartTaggerProvider
+            (
+                fsharpVsLanguageService = base.VsLanguageService,
+                serviceProvider = base.ServiceProvider,
+                undoHistoryRegistry = base.UndoHistoryRegistry,
+                projectFactory = base.ProjectFactory,
+                textDocumentFactoryService = base.DocumentFactoryService
+            )
 
     member __.GetView(buffer) =
         createMockTextView buffer

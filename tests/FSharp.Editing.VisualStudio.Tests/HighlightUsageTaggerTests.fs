@@ -1,19 +1,22 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
-open FSharpVSPowerTools
-open FSharpVSPowerTools.HighlightUsage
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
+open FSharpVSPowerTools
+open FSharp.Editing.VisualStudio.Symbol
 
 type HighlightUsageTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = HighlightUsageTaggerProvider(
-                            fsharpVsLanguageService = base.VsLanguageService,
-                            serviceProvider = base.ServiceProvider,
-                            projectFactory = base.ProjectFactory,
-                            textDocumentFactoryService = base.DocumentFactoryService)
+    let taggerProvider = 
+        HighlightUsageTaggerProvider
+            (
+                fsharpVsLanguageService = base.VsLanguageService,
+                serviceProvider = base.ServiceProvider,
+                projectFactory = base.ProjectFactory,
+                textDocumentFactoryService = base.DocumentFactoryService
+            )
 
     member __.GetView(buffer) = createMockTextView buffer
     member __.GetTagger(buffer, view) = taggerProvider.CreateTagger<_>(view, buffer)

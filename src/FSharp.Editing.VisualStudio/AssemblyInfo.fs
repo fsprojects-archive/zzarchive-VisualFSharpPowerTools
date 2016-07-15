@@ -2,8 +2,8 @@
 open System.Reflection
 open System.Runtime.CompilerServices
 
-[<assembly: InternalsVisibleToAttribute("FSharpVSPowerTools.Tests")>]
-[<assembly: AssemblyTitleAttribute("FSharpVSPowerTools.Logic")>]
+[<assembly: InternalsVisibleToAttribute("FSharp.Editing.VisualStudio.Tests")>]
+[<assembly: AssemblyTitleAttribute("FSharp.Editing.VisualStudio")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
 [<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
 [<assembly: AssemblyVersionAttribute("2.6.0")>]

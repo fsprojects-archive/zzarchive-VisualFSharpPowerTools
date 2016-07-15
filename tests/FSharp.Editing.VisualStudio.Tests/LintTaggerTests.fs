@@ -1,20 +1,23 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
-open FSharpVSPowerTools.Linting
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
+open FSharp.Editing.VisualStudio.Linting
 
 type LintTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = LintTaggerProvider(
-                            fsharpVsLanguageService = base.VsLanguageService,
-                            serviceProvider = base.ServiceProvider,
-                            projectFactory = base.ProjectFactory,
-                            textDocumentFactoryService = base.DocumentFactoryService,
-                            openDocumentTracker = base.OpenDocumentsTracker)
+    let taggerProvider = 
+        LintTaggerProvider
+            (
+                fsharpVsLanguageService = base.VsLanguageService,
+                serviceProvider = base.ServiceProvider,
+                projectFactory = base.ProjectFactory,
+                textDocumentFactoryService = base.DocumentFactoryService,
+                openDocumentTracker = base.OpenDocumentsTracker
+            )
 
     member __.GetView(buffer) =
         createMockTextView buffer

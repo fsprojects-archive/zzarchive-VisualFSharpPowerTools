@@ -10,9 +10,13 @@ open FSharp.Editing.VisualStudio
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
-type internal ProjectProvider(project: Project, 
-                              getProjectProvider: Project -> IProjectProvider option, 
-                              onChanged: Project -> unit) =
+type internal ProjectProvider
+    (
+        project: Project, 
+        getProjectProvider: Project -> IProjectProvider option, 
+        onChanged: Project -> unit
+    ) =
+    
     static let mutable getField = None
     do Debug.Assert(isNotNull project, "Input project should be well-formed.")
     let refAdded = _dispReferencesEvents_ReferenceAddedEventHandler (fun _ -> onChanged project)

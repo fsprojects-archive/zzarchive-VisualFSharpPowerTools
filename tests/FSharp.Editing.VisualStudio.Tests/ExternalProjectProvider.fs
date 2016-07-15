@@ -1,9 +1,8 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
-open FSharpPowerTools.Core.Infrastructure
-open FSharpVSPowerTools.ProjectSystem
-open FSharpVSPowerTools
+open FSharp.Editing
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing.Infrastructure
 
 type ExternalProjectProvider(projectFileName) =    
     // We use Debug mode since test assemblies are created in Debug mode in BuildTests target

@@ -1,4 +1,4 @@
-﻿namespace FSharpVSPowerTools.Tests
+﻿namespace FSharp.Editing.VisualStudio.Tests
 
 open System
 open FSharpVSPowerTools
@@ -45,6 +45,8 @@ type SymbolClassifierHelper() =
             classifierProvider.Dispose()
 
 module SymbolClassifierTests =
+    open FSharp.Editing
+
     let helper = new SymbolClassifierHelper()
     let mutable fileName = null 
 
