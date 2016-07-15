@@ -60,6 +60,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.VisualStudio
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.VisualStudio.Tests", "tests\FSharp.Editing.VisualStudio.Tests\FSharp.Editing.VisualStudio.Tests.fsproj", "{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Editing.Messages", "src\FSharp.Editing.Messages\FSharp.Editing.Messages.fsproj", "{90B29F03-2CD0-4265-B06D-851DC045D62B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,6 +96,10 @@ Global
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA2902E0-5E1C-46EE-963D-D72BC3B6EFAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90B29F03-2CD0-4265-B06D-851DC045D62B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90B29F03-2CD0-4265-B06D-851DC045D62B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90B29F03-2CD0-4265-B06D-851DC045D62B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90B29F03-2CD0-4265-B06D-851DC045D62B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
