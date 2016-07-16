@@ -12,6 +12,8 @@ nuget FsPickler
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 
+github fsharp/FAKE modules/Octokit/Octokit.fsx
+
 group vssdklegacy
     source http://nuget.org/api/v2
     framework >= net40
@@ -46,7 +48,6 @@ group vssdk12
     nuget Microsoft.VisualStudio.Threading < 14
     nuget Microsoft.VisualStudio.Shell.Interop.12.0
     nuget VSSDK.Shell.12
-    #nuget Microsoft.VisualStudio.Shell.Interop = 7.10.6071
 
 group vssdk14
     source http://nuget.org/api/v2
@@ -74,5 +75,3 @@ group Build
     nuget FSharp.Formatting
     nuget Nuget.CommandLine
     nuget Selenium.WebDriver.ChromeDriver
-
-github fsharp/FAKE modules/Octokit/Octokit.fsx
