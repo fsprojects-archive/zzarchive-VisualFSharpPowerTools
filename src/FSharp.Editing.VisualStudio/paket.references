@@ -12,11 +12,9 @@ group vssdklegacy
   VSSDK.DTE.10
   VSSDK.NavigateTo
   VSSDK.VSLangProj
-
-group vssdk11
   VSSDK.ComponentModelHost.11
-    
-group vssdk12
+  
+group vssdk
   Microsoft.VisualStudio.Editor
   Microsoft.VisualStudio.Language.Intellisense
   Microsoft.VisualStudio.Text.UI.Wpf

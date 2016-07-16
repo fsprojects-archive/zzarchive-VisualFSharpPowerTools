@@ -34,13 +34,6 @@
   <ItemGroup>
     <Reference Include="Accessibility" />
     <Reference Include="Microsoft.Build, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.TC.RemoteTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=aa09a9889eb008f7, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\lib\vs2013\Microsoft.TC.RemoteTest.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.TC.TestHostAdapters">
-      <HintPath>..\..\lib\vs2013\Microsoft.TC.TestHostAdapters.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="Microsoft.VisualStudio.QualityTools.Common, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.VisualStudio.QualityTools.ExecutionCommon, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
@@ -140,8 +133,6 @@
     <Compile Include="TestData.cs" />
     <Compile Include="TestExtensions.cs" />
     <Compile Include="TestMethod.cs" />
-    <Compile Include="VsIdeHostAdapter.cs" />
-    <Compile Include="VSUtility.cs" />
     <Compile Include="WebDownloadUtility.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -156,19 +147,8 @@
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
-        <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
-          <HintPath>..\..\packages\vssdk11\VSSDK.ComponentModelHost\lib\net45\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
-          <Private>True</Private>
-          <Paket>True</Paket>
-        </Reference>
-      </ItemGroup>
-    </When>
-  </Choose>
-  <Choose>
-    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
-      <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.CoreUtility">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.CoreUtility\lib\net45\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.CoreUtility\lib\net45\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -179,7 +159,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Editor">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Editor\lib\net45\Microsoft.VisualStudio.Editor.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Editor\lib\net45\Microsoft.VisualStudio.Editor.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -190,7 +170,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Language.Intellisense\lib\net45\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Language.Intellisense\lib\net45\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -201,7 +181,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Text.Data">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Text.Data\lib\net45\Microsoft.VisualStudio.Text.Data.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Text.Data\lib\net45\Microsoft.VisualStudio.Text.Data.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -212,7 +192,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Text.Logic">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Text.Logic\lib\net45\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Text.Logic\lib\net45\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -223,7 +203,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Text.UI">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Text.UI\lib\net45\Microsoft.VisualStudio.Text.UI.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Text.UI\lib\net45\Microsoft.VisualStudio.Text.UI.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -234,7 +214,7 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.Text.UI.Wpf\lib\net45\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.Text.UI.Wpf\lib\net45\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
@@ -245,7 +225,18 @@
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.TextManager.Interop.8.0">
-          <HintPath>..\..\packages\vssdk12\Microsoft.VisualStudio.TextManager.Interop.8.0\lib\Microsoft.VisualStudio.TextManager.Interop.8.0.dll</HintPath>
+          <HintPath>..\..\packages\vssdk\Microsoft.VisualStudio.TextManager.Interop.8.0\lib\Microsoft.VisualStudio.TextManager.Interop.8.0.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.ComponentModelHost">
+          <HintPath>..\..\packages\vssdklegacy\VSSDK.ComponentModelHost\lib\net45\Microsoft.VisualStudio.ComponentModelHost.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
