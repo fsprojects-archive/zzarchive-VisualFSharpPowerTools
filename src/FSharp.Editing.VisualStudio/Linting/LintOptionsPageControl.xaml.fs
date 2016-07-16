@@ -5,7 +5,7 @@ open System.Windows.Controls
 open FsXaml
 open FSharpLint.Framework.Configuration
 
-type LintOptionsControlProviderBase = XAML<"LintOptionsPageControl.xaml">
+type LintOptionsControlProviderBase = XAML< @"Gui/LintOptionsPageControl.xaml">
        
 type LintOptionsControlProvider() as control =
     inherit LintOptionsControlProviderBase()

@@ -68,34 +68,34 @@
   -->
   <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <ItemGroup>
+    <None Include="Scratchpad.fsx" />
+    <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common\Utils.fs" />
     <Compile Include="Common\CompilerLocationUtils.fs" />
     <Compile Include="Common\UntypedAstUtils.fs" />
     <Compile Include="Common\TypedAstUtils.fs" />
     <Compile Include="Common\Lexer.fs" />
-    <Compile Include="Common\AssemblyContentProvider.fs" />
-    <Compile Include="Common\LanguageService.fs" />
     <Compile Include="Common\XmlDocParser.fs" />
-    <Compile Include="Common\DepthParser.fs" />
-    <Compile Include="Common\NavigableItemsCollector.fs" />
-    <Compile Include="Common\NavigateToIndex.fs" />
     <Compile Include="Common\IdentifierUtils.fs" />
-    <Compile Include="Infrastructure\SolutionProvider.fs" />
-    <Compile Include="Infrastructure\OpenDocumentsTracker.fs" />
-    <Compile Include="Features\OpenDeclarationsGetter.fs" />
-    <Compile Include="Features\SourceCodeClassifier.fs" />
-    <Compile Include="Features\CodeGeneration.fs" />
-    <Compile Include="Features\InterfaceStubGenerator.fs" />
-    <Compile Include="Features\RecordStubGenerator.fs" />
-    <Compile Include="Features\UnionPatternMatchCaseGenerator.fs" />
-    <Compile Include="Features\UnopenedNamespacesResolver.fs" />
-    <Compile Include="Features\SignatureGenerator.fs" />
-    <Compile Include="Features\TaskListCommentExtractor.fs" />
-    <Compile Include="Features\PrintfSpecifiersUsageGetter.fs" />
-    <Compile Include="Features\HighlightUsageInFile.fs" />
-    <None Include="Scratchpad.fsx" />
-    <Content Include="paket.references" />
+    <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
+    <Compile Include="ProjectSystem\OpenDocumentsTracker.fs" />
+    <Compile Include="ProjectSystem\LanguageService.fs" />
+    <Compile Include="ProjectSystem\SolutionProvider.fs" />
+    <Compile Include="Navigation\NavigableItemsCollector.fs" />
+    <Compile Include="Navigation\NavigateToIndex.fs" />
+    <Compile Include="Coloring\DepthParser.fs" />
+    <Compile Include="Coloring\OpenDeclarationsGetter.fs" />
+    <Compile Include="Coloring\UnopenedNamespacesResolver.fs" />
+    <Compile Include="Coloring\HighlightUsageInFile.fs" />
+    <Compile Include="Coloring\PrintfSpecifiersUsageGetter.fs" />
+    <Compile Include="Symbols\SourceCodeClassifier.fs" />
+    <Compile Include="CodeGeneration\CodeGeneration.fs" />
+    <Compile Include="CodeGeneration\SignatureGenerator.fs" />
+    <Compile Include="CodeGeneration\UnionPatternMatchCaseGenerator.fs" />
+    <Compile Include="CodeGeneration\InterfaceStubGenerator.fs" />
+    <Compile Include="CodeGeneration\RecordStubGenerator.fs" />
+    <Compile Include="TaskListCommentExtractor.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

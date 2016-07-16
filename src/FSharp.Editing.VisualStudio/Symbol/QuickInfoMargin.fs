@@ -12,7 +12,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing.VisualStudio.ProjectSystem
 open FSharp.Editing.StringBuilder
 
-type QuickInfoVisual = FsXaml.XAML<"QuickInfoMargin.xaml">
+type QuickInfoVisual = FsXaml.XAML< @"Gui/QuickInfoMargin.xaml">
 
 type QuickInfoViewModel() as self = 
     inherit ViewModelBase()
