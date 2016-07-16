@@ -12,7 +12,7 @@ nuget FsPickler
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
 
-github fsharp/FAKE modules/Octokit/Octokit.fsx
+
 
 group vssdklegacy
     source http://nuget.org/api/v2
@@ -57,6 +57,7 @@ group vssdk14
     nuget Microsoft.VisualStudio.Language.Intellisense < 15
     nuget Microsoft.VisualStudio.Text.UI.Wpf < 15
     nuget Microsoft.VisualStudio.Threading < 15
+    nuget VSSDK.IDE.Deploy.14
     
 group Test
     source http://nuget.org/api/v2
@@ -75,3 +76,4 @@ group Build
     nuget FSharp.Formatting
     nuget Nuget.CommandLine
     nuget Selenium.WebDriver.ChromeDriver
+    github fsharp/FAKE modules/Octokit/Octokit.fsx
