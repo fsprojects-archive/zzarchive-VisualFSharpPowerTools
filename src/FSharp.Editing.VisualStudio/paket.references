@@ -1,8 +1,22 @@
 Fantomas
 FSharp.Compiler.Service
+FSharp.Core
 FSharp.ViewModule.Core
-FsXaml.Wpf
-SourceLink.SymbolStore
 FSharpLint.Core
 FsPickler
-FSharp.Core
+FsXaml.Wpf
+SourceLink.SymbolStore
+
+group vssdklegacy
+  VSSDK.DTE
+  VSSDK.DTE.10
+  VSSDK.NavigateTo
+  VSSDK.VSLangProj
+  VSSDK.ComponentModelHost.11
+  
+group vssdk
+  Microsoft.VisualStudio.Editor
+  Microsoft.VisualStudio.Language.Intellisense
+  Microsoft.VisualStudio.Text.UI.Wpf
+  Microsoft.VisualStudio.Threading
+  VSSDK.Shell.12
