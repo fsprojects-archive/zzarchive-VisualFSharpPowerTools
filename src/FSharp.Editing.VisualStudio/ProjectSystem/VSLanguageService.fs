@@ -88,14 +88,11 @@ type VSLanguageService
     let getSymbolUsing kind (point: SnapshotPoint) fileName (projectProvider: IProjectProvider) =
         maybe {
             let! source = openDocumentsTracker.TryGetDocumentText fileName
-            let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let col = point.Position - point.GetContainingLine().Start.Position
-            let lineStr = point.GetContainingLine().GetText()
             let args = projectProvider.CompilerOptions
 
             let queryLexState = buildQueryLexState point.Snapshot.TextBuffer
 
-            let! symbol = Lexer.getSymbol source line col lineStr kind args queryLexState
+            let! symbol = Lexer.getSymbol source point.Line point.Column point.LineText kind args queryLexState
             return SnapshotSpan.MakeFromRange point.Snapshot symbol.Range, symbol
         }
 

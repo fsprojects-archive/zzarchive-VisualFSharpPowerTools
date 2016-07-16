@@ -344,7 +344,7 @@ type OutliningTagger
                 lastLine <- snapshot.GetLineFromLineNumber (firstLine.LineNumber + MaxTooltipLines - 1)
 
             let missingLinesCount = max (nHintLines - MaxTooltipLines) 0
-            let hintSnapshotSpan = SnapshotSpan (firstLine.Start, lastLine.End)
+            let hintSnapshotSpan = VS.Snapshot.mkSpan firstLine.Start lastLine.End
 
             let collapseText, collapseSpan =
                 /// Determine the text that will be displayed in the collapse box and the contents of the hint tooltip
@@ -353,10 +353,10 @@ type OutliningTagger
                     | Collapse.Same, -1 -> ((getHintText snapshotSpan) + "...", snapshotSpan)
                     | _ (* Collapse.Below *) , -1 ->  ("...", snapshotSpan)
                     | Collapse.Same, idx  ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        let modSpan = VS.Snapshot.mkSpan (firstLine.Start + idx + token.Length + md) snapshotSpan.End
                         ((getHintText modSpan) + "...", modSpan)
                     | _ (*Collapse.Below*), idx ->
-                        let modSpan = SnapshotSpan (SnapshotPoint (snapshot, firstLine.Start.Position + idx + token.Length + md), snapshotSpan.End)
+                        let modSpan = VS.Snapshot.mkSpan (firstLine.Start + idx + token.Length + md) snapshotSpan.End
                         ( "...", modSpan)
 
                 let (|OutliningPair|_|) (collapse:Collapse) (_:Scope) =
