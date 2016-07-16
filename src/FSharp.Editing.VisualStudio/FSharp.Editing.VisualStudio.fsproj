@@ -38,7 +38,7 @@
     <WarningLevel>5</WarningLevel>
     <DocumentationFile>bin\Release\FSharp.Editing.VisualStudio.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
-    <NoWarn>52</NoWarn>
+    <NoWarn>52,44</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
