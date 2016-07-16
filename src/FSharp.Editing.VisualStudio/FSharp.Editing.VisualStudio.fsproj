@@ -70,16 +70,13 @@
     <None Include="paket.references" />
     <Compile Include="AssemblyInfo.fs">
     </Compile>
-    <Resource Include="CommonResources.xaml">
-    </Resource>
-    <Resource Include="RenameDialog.xaml">
-    </Resource>
-    <Resource Include="FolderNameDialog.xaml">
-    </Resource>
-    <Resource Include="MoveToFolderDialog.xaml">
-    </Resource>
-    <Resource Include="QuickInfoMargin.xaml" />
-    <Resource Include="LintOptionsPageControl.xaml" />
+    <Resource Include="Gui\CommonResources.xaml" />
+    <Compile Include="Gui\CommonResources.xaml.fs" />
+    <Resource Include="Gui\RenameDialog.xaml" />
+    <Resource Include="Gui\FolderNameDialog.xaml" />
+    <Resource Include="Gui\MoveToFolderDialog.xaml" />
+    <Resource Include="Gui\QuickInfoMargin.xaml" />
+    <Resource Include="Gui\LintOptionsPageControl.xaml" />
     <Compile Include="Common/Resource.fs" />
     <Compile Include="Common/Constants.fs" />
     <Compile Include="Common/Setting.fs" />
@@ -90,7 +87,6 @@
     <Compile Include="Common/VisualStudioVersion.fs" />
     <Compile Include="Common/ThemeManager.fs" />
     <Compile Include="Common/Status.fs" />
-    <Compile Include="Common/CommonResources.xaml.fs" />
     <Compile Include="ProjectSystem/ProjectSystem.fs" />
     <Compile Include="ProjectSystem/OpenDocumentsTracker.fs" />
     <Compile Include="ProjectSystem/FileSystem.fs" />

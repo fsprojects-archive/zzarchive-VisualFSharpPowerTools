@@ -13,7 +13,7 @@ open FSharp.ViewModule.Validation
 open FSharp.Editing.IdentifierUtils
 open FSharp.Editing.Features
 
-type RenameDialog = FsXaml.XAML<"RenameDialog.xaml">
+type RenameDialog = FsXaml.XAML< @"Gui/RenameDialog.xaml">
 
 [<NoComparison>]
 type RenameContext =
