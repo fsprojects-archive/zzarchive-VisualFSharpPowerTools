@@ -140,7 +140,7 @@ Target "RunStatistics" (fun _ ->
 // Run the unit tests using test runner
 
 Target "UnitTests" (fun _ ->
-    [@"tests\FSharp.Editing.Tests\bin\Release\FSharp.Editing.Tests.dll"]
+    [@"tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
     |> NUnit3 (fun p ->
          let param =
              { p with
@@ -154,7 +154,7 @@ Target "UnitTests" (fun _ ->
 )
 
 Target "IntegrationTests" (fun _ ->
-    [@"tests\FSharp.Editing.VisualStudio.Tests\bin\Release\FSharp.Editing.VisualStudio.Tests.dll"]
+    [@"tests/FSharp.Editing.VisualStudio.Tests/bin/Release/FSharp.Editing.VisualStudio.Tests.dll"]
     |> NUnit3 (fun p ->
          let param =
              { p with
@@ -300,6 +300,26 @@ Target "Main" DoNothing
 
 Target "All" DoNothing
 
+Target "TravisCI" (fun _ -> 
+  [ "src/FSharp.Editing/FSharp.Editing.fsproj"
+    "tests/FSharp.Editing.Tests/FSharp.Editing.Tests.fsproj"
+  ]
+  |> MSBuildRelease "" "Rebuild"
+  |> ignore
+
+  ["tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
+  |> NUnit3 (fun p ->
+    { p with
+        ShadowCopy = false
+        TimeOut = TimeSpan.FromMinutes 20.
+        Framework = NUnit3Runtime.Mono40
+        Domain = NUnit3DomainModel.MultipleDomainModel 
+        Workers = Some 1
+        ResultSpecs = ["TestResults.xml"]      
+    }
+  )
+)
+
 "Clean"
   =?> ("BuildVersion", isAppVeyorBuild)
   ==> "AssemblyInfo"
@@ -311,7 +331,11 @@ Target "All" DoNothing
   ==> "Main"
 
 "Clean"
- ==> "RunStatistics"
+  ==> "RunStatistics"
+
+"Clean"
+  ==> "AssemblyInfo"
+  ==> "TravisCI"
 
 "Release"
   ==> "UploadToGallery"
