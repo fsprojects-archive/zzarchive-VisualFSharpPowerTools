@@ -17,3 +17,7 @@ group vssdk12
   Microsoft.VisualStudio.Text.UI.Wpf
   Microsoft.VisualStudio.Shell.Interop.12.0
   VSSDK.Shell.12
+
+group vssdk14
+  
+  VSSDK.IDE.Deploy.14

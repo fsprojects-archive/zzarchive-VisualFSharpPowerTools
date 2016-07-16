@@ -243,6 +243,15 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">$(MSBuildThisFileDirectory)</SolutionDir>
   </PropertyGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
+      <PropertyGroup>
+        <__paket__VSSDK_IDE_Deploy_14_props>VSSDK.IDE.Deploy.14</__paket__VSSDK_IDE_Deploy_14_props>
+        <__paket__VSSDK_IDE_Deploy_14_targets>VSSDK.IDE.Deploy.14</__paket__VSSDK_IDE_Deploy_14_targets>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  <Import Project="..\..\packages\vssdk14\VSSDK.IDE.Deploy.14\build\$(__paket__VSSDK_IDE_Deploy_14_props).props" Condition="Exists('..\..\packages\vssdk14\VSSDK.IDE.Deploy.14\build\$(__paket__VSSDK_IDE_Deploy_14_props).props')" Label="Paket" />
   <Import Condition="Exists($(VsSdkTargets))" Project="$(VsSdkTargets)" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -681,4 +690,5 @@
       </ItemGroup>
     </When>
   </Choose>
+  <Import Project="..\..\packages\vssdk14\VSSDK.IDE.Deploy.14\build\$(__paket__VSSDK_IDE_Deploy_14_targets).targets" Condition="Exists('..\..\packages\vssdk14\VSSDK.IDE.Deploy.14\build\$(__paket__VSSDK_IDE_Deploy_14_targets).targets')" Label="Paket" />
 </Project>
