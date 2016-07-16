@@ -1,35 +1,78 @@
 source http://nuget.org/api/v2
+redirects: on
+strategy: max
 
-nuget FSharp.Compiler.Service
 nuget Fantomas
+nuget FSharp.Compiler.Service
+nuget FSharp.Core
+nuget FSharp.Management
 nuget FSharp.ViewModule.Core
+nuget FSharpLint.Core prerelease
+nuget FsPickler
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
-nuget FSharpLint.Core prerelease
-nuget VSSDK.IDE.Deploy.14
-nuget FSharp.Management
-nuget FsPickler
-nuget FSharp.Core redirects:on
 
+group vssdklegacy
+    source http://nuget.org/api/v2
+    framework >= net40
+    
+    nuget Microsoft.VisualStudio.Shell.Interop.8.0
+    nuget VSSDK.DTE
+    nuget VSSDK.DTE.8
+    nuget VSSDK.DTE.10
+    nuget VSSDK.NavigateTo
+    nuget VSSDK.VSLangProj
+
+group vssdk10
+    source http://nuget.org/api/v2
+    framework >= net40
+
+    nuget Microsoft.VisualStudio.Shell.Immutable.10.0
+
+group vssdk11
+    source http://nuget.org/api/v2
+    framework >= net45
+    
+    nuget VSSDK.ComponentModelHost.11
+    
+group vssdk12
+    source http://nuget.org/api/v2
+    framework >= net45
+
+    nuget Microsoft.VisualStudio.Editor < 14
+    nuget Microsoft.VisualStudio.Language.Intellisense < 14
+    nuget Microsoft.VisualStudio.Language.StandardClassification < 14
+    nuget Microsoft.VisualStudio.Text.UI.Wpf < 14
+    nuget Microsoft.VisualStudio.Threading < 14
+    nuget Microsoft.VisualStudio.Shell.Interop.12.0
+    nuget VSSDK.Shell.12
+    #nuget Microsoft.VisualStudio.Shell.Interop = 7.10.6071
+
+group vssdk14
+    source http://nuget.org/api/v2
+    framework >= net45
+    
+    nuget Microsoft.VisualStudio.Editor < 15
+    nuget Microsoft.VisualStudio.Language.Intellisense < 15
+    nuget Microsoft.VisualStudio.Text.UI.Wpf < 15
+    nuget Microsoft.VisualStudio.Threading < 15
+    
 group Test
-source http://nuget.org/api/v2
+    source http://nuget.org/api/v2
 
-nuget FSharp.Compiler.Service.ProjectCracker
-nuget NUnit.Runners
-nuget NUnit
-nuget Foq
-nuget FsCheck
-nuget FAKE
-nuget FSharp.Core redirects:on
+    nuget Foq
+    nuget FsCheck
+    nuget FSharp.Compiler.Service.ProjectCracker
+    nuget NUnit
+    nuget NUnit.Runners
 
 group Build
-source http://nuget.org/api/v2
-
-nuget FSharp.Formatting
-nuget FAKE
-nuget Nuget.CommandLine
-nuget canopy
-nuget Selenium.WebDriver.ChromeDriver
-nuget FSharp.Core redirects:on
+    source http://nuget.org/api/v2
+    
+    nuget canopy
+    nuget FAKE
+    nuget FSharp.Formatting
+    nuget Nuget.CommandLine
+    nuget Selenium.WebDriver.ChromeDriver
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

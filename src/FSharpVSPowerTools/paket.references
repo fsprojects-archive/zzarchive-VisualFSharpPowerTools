@@ -1,4 +1,19 @@
 Fantomas
 FSharp.Compiler.Service
-VSSDK.IDE.Deploy.14
 FSharp.Core
+
+group vssdklegacy
+  VSSDK.DTE.8
+  
+group vssdk11
+
+  VSSDK.ComponentModelHost.11
+  
+group vssdk12
+  
+  Microsoft.VisualStudio.Editor
+  Microsoft.VisualStudio.Language.Intellisense
+  Microsoft.VisualStudio.Language.StandardClassification
+  Microsoft.VisualStudio.Text.UI.Wpf
+  Microsoft.VisualStudio.Shell.Interop.12.0
+  VSSDK.Shell.12

@@ -2,3 +2,17 @@ FSharp.Compiler.Service
 FSharp.ViewModule.Core
 FsXaml.Wpf
 FSharp.Core
+
+group vssdklegacy
+  Microsoft.VisualStudio.Shell.Interop.8.0
+  VSSDK.DTE
+  VSSDK.NavigateTo
+  VSSDK.VSLangProj
+  
+group vssdk10
+  Microsoft.VisualStudio.Shell.Immutable.10.0
+  
+group vssdk14
+  Microsoft.VisualStudio.Editor
+  Microsoft.VisualStudio.Text.UI.Wpf
+  Microsoft.VisualStudio.Threading
