@@ -3,21 +3,27 @@ FSharp.Compiler.Service
 FSharp.Core
 
 group vssdklegacy
+  Microsoft.VisualStudio.Shell.Interop.8.0
+  VSSDK.DTE
   VSSDK.DTE.8
+  VSSDK.DTE.10
+  VSSDK.NavigateTo
+  VSSDK.VSLangProj
+  
+group vssdk10
+  Microsoft.VisualStudio.Shell.Immutable.10.0
   
 group vssdk11
-
   VSSDK.ComponentModelHost.11
   
 group vssdk12
-  
-  Microsoft.VisualStudio.Editor
-  Microsoft.VisualStudio.Language.Intellisense
   Microsoft.VisualStudio.Language.StandardClassification
-  Microsoft.VisualStudio.Text.UI.Wpf
   Microsoft.VisualStudio.Shell.Interop.12.0
   VSSDK.Shell.12
 
 group vssdk14
-  
+  Microsoft.VisualStudio.Editor
+  Microsoft.VisualStudio.Language.Intellisense
+  Microsoft.VisualStudio.Text.UI.Wpf
+  Microsoft.VisualStudio.Threading
   VSSDK.IDE.Deploy.14

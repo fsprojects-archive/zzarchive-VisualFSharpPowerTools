@@ -68,10 +68,6 @@
     <Compile Include="PeekDefinition.fs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
-      <HintPath>..\..\lib\vs2015\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
@@ -242,6 +238,17 @@
       <ItemGroup>
         <Reference Include="Microsoft.VisualStudio.Editor">
           <HintPath>..\..\packages\vssdk14\Microsoft.VisualStudio.Editor\lib\net45\Microsoft.VisualStudio.Editor.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
+      <ItemGroup>
+        <Reference Include="Microsoft.VisualStudio.Language.Intellisense">
+          <HintPath>..\..\packages\vssdk14\Microsoft.VisualStudio.Language.Intellisense\lib\net45\Microsoft.VisualStudio.Language.Intellisense.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

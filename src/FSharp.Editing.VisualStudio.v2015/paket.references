@@ -14,5 +14,7 @@ group vssdk10
   
 group vssdk14
   Microsoft.VisualStudio.Editor
+  Microsoft.VisualStudio.Language.Intellisense
   Microsoft.VisualStudio.Text.UI.Wpf
   Microsoft.VisualStudio.Threading
+  
