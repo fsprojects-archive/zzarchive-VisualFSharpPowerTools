@@ -75,17 +75,20 @@ let isGenericTypeParameter = isTypeParameter '''
 let isStaticallyResolvedTypeParameter = isTypeParameter '^'
 
 type SnapshotPoint with
+    member inline x.Line = x.Snapshot.GetLineNumberFromPosition x.Position
+    member inline x.Column = x.Position - x.GetContainingLine().Start.Position
+    member inline x.LineText = x.GetContainingLine().GetText()
     member x.InSpan (span: SnapshotSpan) = 
         // The old snapshot might not be available anymore, we compare on updated snapshot
         let point = x.TranslateTo(span.Snapshot, PointTrackingMode.Positive)
         point.CompareTo span.Start >= 0 && point.CompareTo span.End <= 0
     member x.ToPoint =
-        x.Snapshot.GetLineNumberFromPosition x.Position, x.Position - x.GetContainingLine().Start.Position
+        x.Line, x.Column
     
     member x.MakePointInDocument filename source : PointInDocument<FCS> =
-        let line = x.Snapshot.GetLineNumberFromPosition x.Position
-        let col = x.Position - x.GetContainingLine().Start.Position
-        let lineStr = x.GetContainingLine().GetText()
+        let line = x.Line
+        let col = x.Column
+        let lineStr = x.LineText
         { Point = Point.make line col; Line = lineStr; File = filename; Document = source }
 
 type ITextSnapshot with
@@ -111,12 +114,9 @@ type SnapshotSpan with
     member inline x.EndLineNum  = x.Snapshot.GetLineNumberFromPosition x.End.Position
     member inline x.EndColumn = x.End.Position - x.EndLine.Start.Position
 
-    member x.ModStart (num) = SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + num), x.End)
-    member x.ModEnd (num) = SnapshotSpan(x.Start, (SnapshotPoint (x.Snapshot,x.End.Position + num)))
-
-    member x.ModBoth m1 m2 =
-        SnapshotSpan(SnapshotPoint (x.Snapshot, x.Start.Position + m1),
-                     SnapshotPoint (x.Snapshot, x.End.Position + m2))
+    member x.ModStart num = VS.Snapshot.mkSpan (x.Start + num) x.End 
+    member x.ModEnd num = VS.Snapshot.mkSpan x.Start (x.End + num)
+    member x.ModBoth m1 m2 = VS.Snapshot.mkSpan (x.Start + m1) (x.End + m2)
 
     /// get the position of the token found at (line,.col) if token was not found then -1,-1
     member x.PositionOf (token:string) =

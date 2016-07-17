@@ -45,8 +45,8 @@ type ImplementInterface
 
     let queryInterfaceState (point: SnapshotPoint) (project: IProjectProvider) =
         asyncMaybe {
-            let line = point.Snapshot.GetLineNumberFromPosition point.Position
-            let column = point.Position - point.GetContainingLine().Start.Position
+            let line = point.Line
+            let column = point.Column
             let! ast = vsLanguageService.ParseFileInProject(doc.FilePath, project)
             let pos = Pos.fromZ line column
             let! input = ast.ParseTree

@@ -43,10 +43,7 @@ type CodeGenerationService(languageService: VSLanguageService, textBuffer: IText
 
         member __.ParseFileInProject(document, project) = languageService.ParseFileInProject(document.FullName, project)
         
-        member __.ExtractFSharpPos(pos) =
-            let line = pos.Snapshot.GetLineNumberFromPosition pos.Position
-            let caretColumn = pos.Position - pos.GetContainingLine().Start.Position
-            Pos.fromZ line caretColumn
+        member __.ExtractFSharpPos(pos) = Pos.fromZ pos.Line pos.Column
 
 type RefactoringIconKind =
     | ExtractMethod = 0

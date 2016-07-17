@@ -37,8 +37,8 @@ type PrintfSpecifiersUsageTagger
     
     let findUsagesAtPoint (point: SnapshotPoint) (usages: PrintfSpecifierUse[]): PrintfSpecifierUse option =
         let pos = 
-            Range.mkPos ((point.Snapshot.GetLineNumberFromPosition point.Position) + 1) 
-                        (point.Position - point.GetContainingLine().Start.Position)
+            Range.mkPos ((point.Line) + 1) 
+                        (point.Column)
         usages 
         |> Array.filter (fun x -> 
             Range.rangeContainsPos x.SpecifierRange pos 
