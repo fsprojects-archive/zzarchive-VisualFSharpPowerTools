@@ -303,6 +303,11 @@ Target "TravisCI" (fun _ ->
   ]
   |> MSBuildRelease "" "Rebuild"
   |> ignore
+  
+  let additionalFiles = 
+    ["./packages/FSharp.Core/lib/net40/FSharp.Core.sigdata";
+     "./packages/FSharp.Core/lib/net40/FSharp.Core.optdata"]
+  CopyTo "tests/FSharp.Editing.Tests/bin/Release" additionalFiles
 
   ["tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
   |> NUnit3 (fun p ->
