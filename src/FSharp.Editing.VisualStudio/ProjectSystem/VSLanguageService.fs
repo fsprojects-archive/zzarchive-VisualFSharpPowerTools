@@ -20,6 +20,8 @@ open FSharp.Editing
 open FSharp.Editing.Infrastructure
 open FSharp.Editing.Features
 open FSharp.Editing.Features.Symbols
+open FSharp.Editing.VisualStudio
+open Microsoft.VisualStudio.Text.Editor
 
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
@@ -342,3 +344,15 @@ type VSLanguageService
 
     member __.GetCompleteTextForDocument filename =
         openDocumentsTracker.TryGetDocumentText filename
+
+    member this.MakePointInDocument (textDocument: ITextDocument, snapshotPoint: SnapshotPoint) =
+        maybe {
+            let! source = this.GetCompleteTextForDocument textDocument.FilePath
+            return snapshotPoint.MakePointInDocument textDocument.FilePath source
+        }
+
+    member this.MakePointInDocument (textDocument: ITextDocument, view: IWpfTextView) =
+        maybe {
+          let! snapshotPoint = view.SnapshotPointAtCaret
+          return this.MakePointInDocument(textDocument, snapshotPoint)
+        }
