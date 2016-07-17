@@ -36,6 +36,7 @@ type ClientNotification =
     | DocumentChanged of FilePath * DocumentContent
       /// Client subscribing on a set of server notifications, passing an address to which them should be sent.
     | Subscribe of Set<ServerCapability> * ClientCallbackAddress
+    | CancelRequest of RequestId
 
 type ClientRequest = 
     { RequestId: RequestId }

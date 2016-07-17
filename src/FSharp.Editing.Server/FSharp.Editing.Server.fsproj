@@ -59,6 +59,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Utilites.fs" />
     <Compile Include="ProjectSystem.fs" />
+    <Compile Include="Context.fs" />
     <Compile Include="MessageRouter.fs" />
     <None Include="paket.references" />
   </ItemGroup>
