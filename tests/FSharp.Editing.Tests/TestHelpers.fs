@@ -93,9 +93,14 @@ module LanguageServiceTestHelper =
         ]
         
     let args =
-        [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
+        [|
+          yield "--noframework"
+          yield "--debug-"
+          yield "--optimize-"
+          yield "--tailcalls-"
           for r in references do
-            yield "-r:" + r|]
+            yield "-r:" + r
+        |]
 
     let argsDotNET451 = args
     
@@ -103,7 +108,7 @@ module LanguageServiceTestHelper =
         let counter = ref 0
         fun fileName ->
             incr counter
-            { ProjectFileName = sprintf @"/Project%i.fsproj" !counter
+            { ProjectFileName = sprintf "/Project%i.fsproj" !counter
               ProjectFileNames = [| fileName |]
               OtherOptions = args
               ReferencedProjects = Array.empty
