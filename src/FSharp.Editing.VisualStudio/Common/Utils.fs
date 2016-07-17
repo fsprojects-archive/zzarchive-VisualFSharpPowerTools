@@ -155,7 +155,7 @@ type SnapshotSpan with
 type ITextBuffer with
     member x.GetSnapshotPoint (position: CaretPosition) = 
         Option.ofNullable <| position.Point.GetPoint(x, position.Affinity)
-    
+
     member x.TriggerTagsChanged (sender: obj) (event: Event<_,_>) =
         let span = x.CurrentSnapshot.FullSpan
         event.Trigger(sender, SnapshotSpanEventArgs(span))
@@ -179,6 +179,8 @@ type ITextView with
           let! line, col = x.GetCaretPosition()
           return Microsoft.FSharp.Compiler.Range.mkPos (line + 1) (col + 1)
         }
+    
+    member x.SnapshotPointAtCaret = x.TextBuffer.GetSnapshotPoint x.Caret.Position
 
 open System.Runtime.InteropServices
 open Microsoft.VisualStudio

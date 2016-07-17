@@ -213,36 +213,39 @@ type GoToDefinitionFilter
     }
 
     let gotoDefinition continueCommandChain =
+        let uiContext = SynchronizationContext.Current
+        let doFallbackContinuation () = async {
+              // Run the operation on UI thread since continueCommandChain may access UI components.
+              do! Async.SwitchToContext uiContext
+              // Declaration location might exist so let Visual F# Tools handle it. 
+              return continueCommandChain()
+          }
+
         let cancelToken = new CancellationTokenSource() 
         cancellationToken.Swap (fun _ -> Some (cancelToken))
         |> Option.iter (fun oldToken -> 
             oldToken.Cancel()
             oldToken.Dispose())
-        let uiContext = SynchronizationContext.Current
+
         let worker =
             async {
                 let getLexerState = vsLanguageService.GetQueryLexState textBuffer
-                match textBuffer.GetSnapshotPoint view.Caret.Position, vsLanguageService.GetCompleteTextForDocument doc.FilePath with
-                | Some snapshotPoint, Some source ->
-                    let pointInDocument = snapshotPoint.MakePointInDocument doc.FilePath source
-                    let! symbolResult = getDocumentState pointInDocument getLexerState
-                    match symbolResult with
-                    | Some FoundInternal
-                    | None ->
-                        // Run the operation on UI thread since continueCommandChain may access UI components.
-                        do! Async.SwitchToContext uiContext
-                        // Declaration location might exist so let Visual F# Tools handle it. 
-                        return continueCommandChain()
-                    | Some (FoundLoadDirective fileToOpen) -> 
-                        // directive found, navigate to the file at first line
-                        serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
-                    | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
-                        return! handleFoundExternal project parseTree symbol fsSymbolUse snapshotPoint
-                | _ -> 
-                    // Run the operation on UI thread since continueCommandChain may access UI components.
-                    do! Async.SwitchToContext uiContext
-                    // Declaration location might exist so let Visual F# Tools handle it. 
-                    return continueCommandChain()
+                let snapshotPoint = view.SnapshotPointAtCaret
+                match snapshotPoint with
+                | Some snapshotPoint ->
+                    match vsLanguageService.MakePointInDocument(doc, snapshotPoint) with
+                    | Some pointInDocument ->
+                        let! symbolResult = getDocumentState pointInDocument getLexerState
+                        match symbolResult with
+                        | Some FoundInternal
+                        | None -> return! doFallbackContinuation ()
+                        | Some (FoundLoadDirective fileToOpen) -> 
+                            // directive found, navigate to the file at first line
+                            serviceProvider.NavigateTo(fileToOpen, startRow=0, startCol=0, endRow=0, endCol=0)
+                        | Some (FoundExternal (project, parseTree, symbol, fsSymbolUse)) ->
+                            return! handleFoundExternal project parseTree symbol fsSymbolUse snapshotPoint
+                    | None -> return! doFallbackContinuation ()
+                | None -> return! doFallbackContinuation ()
             }
         Async.StartInThreadPoolSafe (worker, cancelToken.Token)
 
