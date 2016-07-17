@@ -21,8 +21,7 @@ type IProjectProvider =
 [<AutoOpen>]
 module TypeExtensions =
   // this is to avoid unneeded code churn while we figure out further changes to IProjectProvider
-  type IProjectProvider
-    with
+  type IProjectProvider with
       member inline x.IsForStandaloneScript = x.Project.IsForStandaloneScript
       member inline x.ProjectFileName       = x.Project.ProjectFile
       member inline x.TargetFramework       = x.Project.TargetFramework
