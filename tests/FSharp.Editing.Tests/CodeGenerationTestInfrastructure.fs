@@ -81,7 +81,7 @@ type MockDocument(src: string) =
         ResizeArray<_>(String.getLines src)
 
     interface IDocument with
-        member __.FullName = sprintf @"C:\file.fs"
+        member __.FullName = "/File.fs"
         member __.LineCount = lines.Count
         member __.GetText() = src
         member __.GetLineText0(line0: int<Line0>) = lines.[int line0]
