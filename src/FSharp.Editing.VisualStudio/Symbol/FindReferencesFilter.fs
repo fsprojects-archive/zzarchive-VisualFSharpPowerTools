@@ -62,9 +62,9 @@ type FindReferencesFilter
                                         projectFactory.ListFSharpProjectsInSolution dte  
                                         |> List.map projectFactory.CreateForProject
                                     
-                                    Debug.Assert(allProjects |> List.exists (fun p -> p.ProjectFileName = project.ProjectFileName),
-                                        sprintf "Project '%O' should appear in the list of checked projects '%A'." project.ProjectFileName 
-                                            (allProjects |> List.map (fun p -> p.ProjectFileName)))
+                                    Debug.Assert(allProjects |> List.exists (fun p -> p.Project.ProjectFile = project.Project.ProjectFile),
+                                        sprintf "Project '%O' should appear in the list of checked projects '%A'." project.Project.ProjectFile
+                                            (allProjects |> List.map (fun p -> p.Project.ProjectFile)))
                                     allProjects
                             progress(OperationState.Reporting(Resource.findAllReferencesFindInProjectsMessage))
                             vsLanguageService.FindUsages (span, textDocument.FilePath, project, projectsToCheck, progress) 

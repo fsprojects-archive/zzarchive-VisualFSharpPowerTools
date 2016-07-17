@@ -73,7 +73,7 @@ type VsTestBase() =
     member __.ReferenceSourceProvider = referenceSourceProvider
 
     member __.AddProject(project: IProjectProvider) = 
-        dte.AddProject(project.ProjectFileName, project)
+        dte.AddProject(project.Project.ProjectFile, project)
 
     member __.SetActiveDocument(filePath: string, content: string) = 
         dte.SetActiveDocument filePath

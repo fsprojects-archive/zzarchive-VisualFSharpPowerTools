@@ -74,7 +74,7 @@ type UnusedSymbolClassifier
     let project() = projectFactory.CreateForDocument buffer doc.FilePath
     
     let isCurrentProjectForStandaloneScript = 
-        lazy (project() |> Option.map (fun p -> p.IsForStandaloneScript) |> Option.getOrElse false)
+        lazy (project() |> Option.map (fun p -> p.Project.IsForStandaloneScript) |> Option.getOrElse false)
 
     let includeUnusedOpens() =
         includeUnusedOpens
@@ -150,7 +150,7 @@ type UnusedSymbolClassifier
                 else async.Return symbolsUses
                 |> liftAsync
 
-            let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, project.CompilerOptions)
+            let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, project.Project.CompilerOptions)
             let getTextLineOneBased i = snapshot.GetLineFromLineNumber(i).GetText()
             let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, project)
             let! ast = checkResults.ParseTree
@@ -207,7 +207,7 @@ type UnusedSymbolClassifier
             asyncMaybe {
                 let! currentProject = project()
                 
-                if currentProject.IsForStandaloneScript || not (includeUnusedReferences()) then
+                if currentProject.Project.IsForStandaloneScript || not (includeUnusedReferences()) then
                     do! updateUnusedSymbolsIfNeeded callInUIContext |> liftAsync
                 else
                     let! snapshot = snapshot
@@ -228,7 +228,7 @@ type UnusedSymbolClassifier
                                 |> Array.map (fun opts ->
                                    { Options = opts
                                      // We mark standalone FSX's fake project as already checked because otherwise we never complete.
-                                     Checked = currentProject.IsForStandaloneScript })
+                                     Checked = currentProject.Project.IsForStandaloneScript })
                                 |> Array.toList
                         } |> liftAsync
                     

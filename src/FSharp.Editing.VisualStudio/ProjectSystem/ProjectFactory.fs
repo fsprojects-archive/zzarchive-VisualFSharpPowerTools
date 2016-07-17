@@ -158,7 +158,7 @@ type ProjectFactory
                     match signatureProjectData.TryGetValue(filePath) with
                     | true, (_, project) -> return project
                     | _ -> return! None
-                else return! None                
+                else return! None
         }
 
     member __.ListFSharpProjectsInSolution dte =
@@ -199,26 +199,26 @@ type ProjectFactory
                 else
                     let allProjects = x.ListFSharpProjectsInSolution dte |> List.map x.CreateForProject
                     let allProjectFileNames =
-                        lazy (allProjects |> List.map (fun p -> Path.GetFullPathSafe(p.ProjectFileName)))
+                        lazy (allProjects |> List.map (fun p -> Path.GetFullPathSafe(p.Project.ProjectFile)))
                     Debug.Assert(
                         allProjectFileNames.Value |> List.exists (fun projectFileName -> 
-                                                        Path.GetFullPathSafe(currentProject.ProjectFileName) = projectFileName), 
-                        sprintf "Current project '%s' should appear in the project list '%A'." currentProject.ProjectFileName allProjectFileNames.Value)
+                                                        Path.GetFullPathSafe(currentProject.Project.ProjectFile) = projectFileName), 
+                        sprintf "Current project '%s' should appear in the project list '%A'." currentProject.Project.ProjectFile allProjectFileNames.Value)
                     match allProjects |> List.filter (fun p -> p.SourceFiles |> Array.exists ((=) filePath)) with
                     | [] -> None
                     | projects -> Some (SymbolDeclarationLocation.Projects (projects, isSymbolLocalForProject))
             | None -> None
 
     member x.GetDependentProjects (dte: DTE) (projects: IProjectProvider list) =
-        let projectFileNames = projects |> List.map (fun p -> p.ProjectFileName.ToLowerInvariant()) |> set
+        let projectFileNames = projects |> List.map (fun p -> p.Project.ProjectFile.ToLowerInvariant()) |> set
         x.ListFSharpProjectsInSolution dte
         |> Seq.map x.CreateForProject
         |> Seq.filter (fun p -> 
             p.GetReferencedProjects() 
             |> List.exists (fun p -> 
-                projectFileNames |> Set.contains (p.ProjectFileName.ToLowerInvariant())))
+                projectFileNames |> Set.contains (p.Project.ProjectFile.ToLowerInvariant())))
         |> Seq.append projects
-        |> Seq.distinctBy (fun p -> p.ProjectFileName.ToLowerInvariant())
+        |> Seq.distinctBy (fun p -> p.Project.ProjectFile.ToLowerInvariant())
         |> Seq.toList
 
     interface IDisposable with

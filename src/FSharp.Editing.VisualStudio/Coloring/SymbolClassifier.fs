@@ -89,7 +89,7 @@ type SymbolClassifier
                 let! checkResults = vsLanguageService.ParseAndCheckFileInProject(doc.FilePath, currentProject)
                 let! ast = checkResults.ParseTree
                 do! checkAstIsNotEmpty ast
-                let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, currentProject.CompilerOptions)
+                let! lexer = vsLanguageService.CreateLexer(doc.FilePath, snapshot, currentProject.Project.CompilerOptions)
 
                 let! allSymbolsUses =
                     vsLanguageService.GetAllUsesOfAllSymbolsInFile(snapshot, doc.FilePath, currentProject, AllowStaleResults.No, false)
