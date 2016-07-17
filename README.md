@@ -52,7 +52,21 @@ You can suggest new features at our [user voice system](http://vfpt.uservoice.co
 Please vote for your favourite features so that they have higher chances to be implemented. 
 For user guides, please take a look at [the home page](http://fsprojects.github.io/VisualFSharpPowerTools/).
 
-### Build [![Build status](https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv/branch/master)](https://ci.appveyor.com/project/dungpa/visualfsharppowertools)
+### Build 
+
+<table>
+  <tr>
+    <td colspan="2">Build status</td>
+  </tr>
+  <tr>
+    <td>Windows (AppVeyor)</td>
+    <td><a href="https://ci.appveyor.com/project/dungpa/visualfsharppowertools"><img src="https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv/branch/master"></a></td>
+  </tr>
+  <tr>
+    <td>Travis</td>
+    <td><a href="https://travis-ci.org/fsprojects/VisualFSharpPowerTools"><img src="https://travis-ci.org/fsprojects/VisualFSharpPowerTools.svg?branch=master"></a></td>
+  </tr>
+</table>
 
 Require Visual Studio 2013 and Visual Studio 2013 SDK. 
 Run the `build.cmd` script or `FSharpVSPowerTools.sln` to build the solution.
