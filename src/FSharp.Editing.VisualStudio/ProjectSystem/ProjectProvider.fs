@@ -193,7 +193,7 @@ type internal VirtualProjectProvider (source: string, filePath: string, vsVersio
     
     let projectDescriptor = 
         lazy
-            { IsForStandaloneScript = false
+            { IsForStandaloneScript = true
               ProjectFile           = projectFileName
               TargetFramework       = FSharpTargetFramework.NET_4_5
               CompilerVersion       = Some compilerVersion
