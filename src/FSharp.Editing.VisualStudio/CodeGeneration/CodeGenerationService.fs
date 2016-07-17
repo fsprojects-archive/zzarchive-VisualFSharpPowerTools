@@ -23,7 +23,7 @@ type VSDocument(source: string, filePath: FilePath, snapshot: ITextSnapshot) =
 type CodeGenerationService(languageService: VSLanguageService, textBuffer: ITextBuffer) =
     interface ICodeGenerationService<IProjectProvider, SnapshotPoint, SnapshotSpan> with
         member __.TokenizeLine(project: IProjectProvider, document: IDocument, line1: int<Line1>): FSharpTokenInfo list option = 
-            languageService.TokenizeLine(document.FullName, textBuffer, project.CompilerOptions, int line1 - 1)
+            languageService.TokenizeLine(document.FullName, textBuffer, project.Project.CompilerOptions, int line1 - 1)
         
         member __.GetSymbolAtPosition(project, document, pos) =
             languageService.GetSymbol(pos, document.FullName, project)

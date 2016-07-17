@@ -169,7 +169,7 @@ and MockSolution(projects, dte: DTE) =
             let fileName = Path.GetFullPathSafe(fileName)
             match allProjects |> Seq.tryFind (fun project -> 
                     // Should compare and ignore cases since MsBuild can resolve differently.
-                    Array.exists (fun path -> String.Equals(fileName, path, StringComparison.OrdinalIgnoreCase)) project.SourceFiles) with
+                    Array.exists (fun path -> String.Equals(fileName, path, StringComparison.OrdinalIgnoreCase)) project.Project.SourceFiles) with
             | Some project ->
                 MockProjectItem(fileName, project, dte) :> _
             | None -> null
@@ -241,7 +241,7 @@ and MockProject(project: IProjectProvider, _dte: DTE) =
         member __.UniqueName = notimpl
         
         member __.FullName = 
-            project.ProjectFileName 
+            project.Project.ProjectFile
 
         member __.Kind = 
             FSharpProjectKind
@@ -280,7 +280,7 @@ and MockProjectItem(filePath, project: IProjectProvider, dte: DTE) =
         member __.SubProject = notimpl
         
         member __.ContainingProject = 
-            if project.IsForStandaloneScript then null
+            if project.Project.IsForStandaloneScript then null
             else MockProject(project, dte) :> _
 
         member __.Document = 

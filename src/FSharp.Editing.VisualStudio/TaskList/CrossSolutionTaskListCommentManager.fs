@@ -73,7 +73,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
             projectFactory.ListFSharpProjectsInSolution(dte)
             |> List.map projectFactory.CreateForProject
             |> List.toArray
-            |> Array.collect (fun projProvider -> projProvider.SourceFiles)
+            |> Array.collect (fun projProvider -> projProvider.Project.SourceFiles)
             |> Array.map preferOpenDocOverDiskContent
 
         sources
@@ -104,7 +104,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
             fileChangeCookies.Clear()
             projectFactory.ListFSharpProjectsInSolution(dte)
             |> Seq.map projectFactory.CreateForProject
-            |> Seq.collect (fun projProvider -> projProvider.SourceFiles)
+            |> Seq.collect (fun projProvider -> projProvider.Project.SourceFiles)
             |> Seq.iter (fun file ->
                             let cookie = ref 0u
                             fileChangeService.AdviseFileChange(file, trackedChange, fileChangeMonitor, cookie) |> ignore
@@ -130,7 +130,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
     let onProjectAdded (proj: Project) =
         if isFSharpProject proj then
-            projectFactory.CreateForProject(proj).SourceFiles
+            projectFactory.CreateForProject(proj).Project.SourceFiles
             |> Array.iter (fun file -> 
                 taskListManager.MergeTaskListComments(file, CommentExtractor.getComments options file (readAllLinesSafe(file)))
                 let cookie = ref 0u
@@ -146,7 +146,7 @@ type CrossSolutionTaskListCommentManager [<ImportingConstructor>]
 
     let onProjectRemoved (proj: Project) =
         if isFSharpProject proj then
-            projectFactory.CreateForProject(proj).SourceFiles
+            projectFactory.CreateForProject(proj).Project.SourceFiles
             |> Array.iter (fun filePath ->
                                taskListManager.MergeTaskListComments(filePath, [||])
                                tryRemoveFileCookie filePath)
