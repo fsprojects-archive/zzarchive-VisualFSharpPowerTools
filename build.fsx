@@ -306,7 +306,8 @@ Target "TravisCI" (fun _ ->
   
   let additionalFiles = 
     ["./packages/FSharp.Core/lib/net40/FSharp.Core.sigdata";
-     "./packages/FSharp.Core/lib/net40/FSharp.Core.optdata"]
+     "./packages/FSharp.Core/lib/net40/FSharp.Core.optdata";
+     "./packages/FSharp.Core/lib/net40/FSharp.Core.xml";]
   CopyTo "tests/FSharp.Editing.Tests/bin/Release" additionalFiles
 
   ["tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
