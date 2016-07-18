@@ -1466,7 +1466,7 @@ type CompiledNameAttribute =
     member CompiledName : string
 """
 
-[<Test>]
+[<Test; Ignore "Platform-senstive test">]
 let ``set up transitive open declarations correctly`` () =
     """namespace System
 [<System.Runtime.InteropServices.ComVisible(true)>]
