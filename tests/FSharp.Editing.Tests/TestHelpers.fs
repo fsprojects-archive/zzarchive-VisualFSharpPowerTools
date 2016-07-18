@@ -34,7 +34,7 @@ let inline assertf (condition : bool) format : 'T =
 /// Asserts that two values are equal.
 let inline assertEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =
     try Assert.AreEqual (expected, actual)
-    with -> Diagnostics.Trace.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
+    with _ -> Diagnostics.Trace.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
 
 /// Asserts that two values are NOT equal.
 let inline assertNotEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =

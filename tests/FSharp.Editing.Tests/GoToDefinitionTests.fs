@@ -262,7 +262,7 @@ type Console =
     static member Beep : unit -> unit
 """
 
-[<Test; Ignore "Need extra xml files on Travis">]
+[<Test>]
 let ``go to type definition that contains C# events`` () =
     """open System.ComponentModel
 
@@ -527,7 +527,7 @@ type MyStruct =
     end
 """
 
-[<Test; Ignore "Space sensitive on Travis">]
+[<Test; Ignore "Platform-sensitive test">]
 let ``go to constructor-less struct metadata`` () =
     """let x: System.Boolean = false"""
     |> generateDefinitionFromPos (Pos.fromZ 0 14)
