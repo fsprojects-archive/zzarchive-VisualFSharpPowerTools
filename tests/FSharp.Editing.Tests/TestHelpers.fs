@@ -79,7 +79,9 @@ module LanguageServiceTestHelper =
     open Microsoft.FSharp.Compiler.SourceCodeServices
 
     let references = 
-        [ yield typeof<System.Object>.Assembly.Location; // mscorlib
+        [ 
+          // We crawl this assembly for XmlDoc so it should be pinned down.
+          yield IO.Path.GetFullPath "../../lib/mscorlib.dll";
           yield typeof<System.Console>.Assembly.Location; // System.Console
           yield typeof<System.ComponentModel.DefaultValueAttribute>.Assembly.Location; // System.Runtime
           yield typeof<System.ComponentModel.PropertyChangedEventArgs>.Assembly.Location; // System.ObjectModel             
@@ -93,14 +95,26 @@ module LanguageServiceTestHelper =
         ]
         
     let args =
-        [|
-          yield "--noframework"
-          yield "--debug-"
-          yield "--optimize-"
-          yield "--tailcalls-"
-          for r in references do
-            yield "-r:" + r
-        |]
+        if Environment.OSVersion.Platform = PlatformID.Win32NT then
+            [|
+               "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.1.0\FSharp.Core.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\mscorlib.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Core.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Drawing.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Numerics.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Windows.Forms.dll";
+            |]
+        else
+            [|
+               yield "--noframework"
+               yield "--debug-"
+               yield "--optimize-"
+               yield "--tailcalls-"
+               for r in references do
+                   yield "-r:" + r
+            |]
 
     let argsDotNET451 = args
     

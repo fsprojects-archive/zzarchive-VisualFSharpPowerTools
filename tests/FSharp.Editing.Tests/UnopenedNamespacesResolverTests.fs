@@ -302,7 +302,7 @@ let ``fully qualified external entities / partially qualified name``() =
 
 open FSharp.Editing
 
-let file = "C:\\file.fs"
+let file = "/File.fs"
 let languageService = LanguageService()
 
 type Source = string

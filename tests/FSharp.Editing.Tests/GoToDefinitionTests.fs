@@ -86,10 +86,10 @@ let tryGenerateDefinitionFromPos caretPos src =
     |> Async.RunSynchronously
 
 let validateSignature source signature =
-    let projFileName = @"C:\Project.fsproj"
+    let projFileName = @"/Project.fsproj"
     let sourceFile = Path.ChangeExtension(Path.GetTempFileName(), ".fs")
     File.WriteAllText(sourceFile, source)
-    let signatureFile = @"C:\Temp.fsi"
+    let signatureFile = @"/Temp.fsi"
     let opts =
         { ProjectFileName = projFileName
           ProjectFileNames = [| sourceFile; signatureFile|]
