@@ -51,7 +51,13 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! parseResults = codeGenService.ParseFileInProject(document, projectOptions)
         let! parseTree = parseResults.ParseTree
         let getXmlDocBySignature = 
-            let xmlFile = symbolUse.Symbol.Assembly.FileName |> Option.map (fun fileName -> Path.ChangeExtension(fileName, ".xml"))
+            let xmlFile = 
+                symbolUse.Symbol.Assembly.FileName 
+                |> Option.map (fun fileName -> 
+                    if fileName.EndsWith "mscorlib.dll" then 
+                        Path.Combine(__SOURCE_DIRECTORY__, "../../lib/mscorlib.xml")
+                    else
+                        Path.ChangeExtension(fileName, ".xml"))
             let xmlMemberMap =
                 match xmlFile with
                 | Some xmlFile ->

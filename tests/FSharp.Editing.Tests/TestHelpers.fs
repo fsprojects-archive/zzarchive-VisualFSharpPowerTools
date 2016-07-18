@@ -80,8 +80,7 @@ module LanguageServiceTestHelper =
 
     let references = 
         [ 
-          // We crawl this assembly for XmlDoc so it should be pinned down.
-          yield IO.Path.GetFullPath "../../lib/mscorlib.dll";
+          yield typeof<System.Object>.Assembly.Location; // mscorlib
           yield typeof<System.Console>.Assembly.Location; // System.Console
           yield typeof<System.ComponentModel.DefaultValueAttribute>.Assembly.Location; // System.Runtime
           yield typeof<System.ComponentModel.PropertyChangedEventArgs>.Assembly.Location; // System.ObjectModel             
