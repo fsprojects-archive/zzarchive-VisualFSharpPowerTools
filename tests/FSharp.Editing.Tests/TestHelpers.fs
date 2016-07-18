@@ -33,7 +33,8 @@ let inline assertf (condition : bool) format : 'T =
 
 /// Asserts that two values are equal.
 let inline assertEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =
-    Assert.AreEqual (expected, actual)
+    try Assert.AreEqual (expected, actual)
+    with -> Diagnostics.Trace.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
 
 /// Asserts that two values are NOT equal.
 let inline assertNotEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =
@@ -69,7 +70,7 @@ module Collection =
     /// The collections must have the same count, and contain the exact same objects but the match may be in any order.
     let inline assertEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
         try CollectionAssert.AreEquivalent (expected, actual) 
-        with _ -> System.Diagnostics.Debug.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
+        with _ -> Diagnostics.Trace.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
 
     /// Asserts that two collections are not exactly equal.
     let inline assertNotEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
