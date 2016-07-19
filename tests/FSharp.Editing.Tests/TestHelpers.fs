@@ -96,8 +96,11 @@ module LanguageServiceTestHelper =
     let args =
         if Environment.OSVersion.Platform = PlatformID.Win32NT then
             [|
-               "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.1.0\FSharp.Core.dll";
+               "--noframework";
+               "--debug-";
+               "--optimize-";
+               "--tailcalls-";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.4.0.0\FSharp.Core.dll";
                @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\mscorlib.dll";
                @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.dll";
                @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Core.dll";
