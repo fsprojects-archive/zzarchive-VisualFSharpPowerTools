@@ -51,7 +51,15 @@ let tryGenerateDefinitionFromPos caretPos src =
         let! parseResults = codeGenService.ParseFileInProject(document, projectOptions)
         let! parseTree = parseResults.ParseTree
         let getXmlDocBySignature = 
-            let xmlFile = symbolUse.Symbol.Assembly.FileName |> Option.map (fun fileName -> Path.ChangeExtension(fileName, ".xml"))
+            let xmlFile = 
+                symbolUse.Symbol.Assembly.FileName 
+                |> Option.bind (fun fileName -> 
+                    let xmlFile = Path.ChangeExtension(fileName, ".xml")
+                    if File.Exists xmlFile then Some xmlFile
+                    else 
+                        // In Linux, we need to check for upper case extension separately
+                        let xmlFile = Path.ChangeExtension(xmlFile, Path.GetExtension(xmlFile).ToUpper())
+                        if File.Exists xmlFile then Some xmlFile else None)
             let xmlMemberMap =
                 match xmlFile with
                 | Some xmlFile ->
@@ -86,10 +94,10 @@ let tryGenerateDefinitionFromPos caretPos src =
     |> Async.RunSynchronously
 
 let validateSignature source signature =
-    let projFileName = @"C:\Project.fsproj"
+    let projFileName = @"/Project.fsproj"
     let sourceFile = Path.ChangeExtension(Path.GetTempFileName(), ".fs")
     File.WriteAllText(sourceFile, source)
-    let signatureFile = @"C:\Temp.fsi"
+    let signatureFile = @"/Temp.fsi"
     let opts =
         { ProjectFileName = projFileName
           ProjectFileNames = [| sourceFile; signatureFile|]
@@ -116,7 +124,7 @@ let generateDefinitionFromPos caretPos src =
 let generateDefinitionFromPosNoValidation caretPos src = 
     Option.get (tryGenerateDefinitionFromPos caretPos src)
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``go to Tuple definition`` () =
     [
         // Explicit 'new' statement: symbol is considered as a type
@@ -208,7 +216,7 @@ type Abstract =
     static member SP : int
 """
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``go to property definition generate enclosing type metadata`` () =
     """open System
 
@@ -233,7 +241,7 @@ type Tuple<'T1, 'T2> =
     member ToString : unit -> string
 """
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``go to method definition generate enclosing type metadata and supports C# events`` () =
     """open System
 
@@ -254,7 +262,7 @@ type Console =
     static member Beep : unit -> unit
 """
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``go to type definition that contains C# events`` () =
     """open System.ComponentModel
 
@@ -289,6 +297,8 @@ type List<'T> =
     | ( :: ) of Head: 'T * Tail: 'T list
     interface System.Collections.IEnumerable
     interface System.Collections.Generic.IEnumerable<'T>
+    /// Gets a slice of the list, the elements of the list from the given start index to the given end index.
+    member GetSlice : startIndex:int option * endIndex:int option -> 'T list
     /// Gets the first element of the list
     member Head : 'T
     /// Gets a value indicating if the list contains no entries
@@ -519,7 +529,7 @@ type MyStruct =
     end
 """
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``go to constructor-less struct metadata`` () =
     """let x: System.Boolean = false"""
     |> generateDefinitionFromPos (Pos.fromZ 0 14)
@@ -593,10 +603,20 @@ val iter : action:('T -> unit) -> option:'T option -> unit
 val map : mapping:('T -> 'U) -> option:'T option -> 'U option
 /// bind f inp evaluates to match inp with None -> None | Some x -> f x
 val bind : binder:('T -> 'U option) -> option:'T option -> 'U option
+/// filter f inp evaluates to match inp with None -> None | Some x -> if f x then Some x else None.
+val filter : predicate:('T -> bool) -> option:'T option -> 'T option
 /// Convert the option to an array of length 0 or 1.
 val toArray : option:'T option -> 'T []
 /// Convert the option to a list of length 0 or 1.
 val toList : option:'T option -> 'T list
+/// Convert the option to a Nullable value.
+val toNullable : option:'T option -> System.Nullable<'T> when 'T : (new : unit -> 'T) and 'T : struct and 'T :> System.ValueType
+/// Convert a Nullable value to an option.
+val ofNullable : value:System.Nullable<'T> -> 'T option when 'T : (new : unit -> 'T) and 'T : struct and 'T :> System.ValueType
+/// Convert a potentially null value to an option.
+val ofObj : value:'T -> 'T option when 'T : null
+/// Convert an option to a potentially null value.
+val toObj : value:'T option -> 'T when 'T : null
 """)
         
 [<Test>]
@@ -777,12 +797,25 @@ val inline averageBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (s
 val blit : source:'T [] -> sourceIndex:int -> target:'T [] -> targetIndex:int -> count:int -> unit
 /// For each element of the array, applies the given function. Concatenates all the results and return the combined array.
 val collect : mapping:('T -> 'U []) -> array:'T [] -> 'U []
+/// Compares two arrays using the given comparison function, element by element.
+/// Returns the first non-zero result from the comparison function.  If the end of an array
+/// is reached it returns a -1 if the first array is shorter and a 1 if the second array
+/// is shorter.
+val inline compareWith : comparer:('T -> 'T -> int) -> array1:'T [] -> array2:'T [] -> int
 /// Builds a new array that contains the elements of each of the given sequence of arrays.
 val concat : arrays:seq<'T []> -> 'T []
+/// Tests if the array contains the specified element.
+val inline contains : value:'T -> array:'T [] -> bool when 'T : equality
 /// Builds a new array that contains the elements of the given array.
 val copy : array:'T [] -> 'T []
+/// Applies a key-generating function to each element of an array and returns an array yielding unique
+/// keys and their number of occurrences in the original array.
+val countBy : projection:('T -> 'Key) -> array:'T [] -> ('Key * int) [] when 'Key : equality
 /// Creates an array whose elements are all initially the given value.
 val create : count:int -> value:'T -> 'T []
+/// Returns the first element of the array, or
+/// None if the array is empty.
+val tryHead : array:'T [] -> 'T option
 /// Applies the given function to successive elements, returning the first
 /// result where function returns Some(x) for some x. If the function 
 /// never returns Some(x) then None is returned.
@@ -797,8 +830,25 @@ val pick : chooser:('T -> 'U option) -> array:'T [] -> 'U
 /// the array comprised of the results "x" for each element where
 /// the function returns Some(x)
 val choose : chooser:('T -> 'U option) -> array:'T [] -> 'U []
+/// Divides the input array into chunks of size at most chunkSize.
+val chunkBySize : chunkSize:int -> array:'T [] -> 'T [] []
+/// Returns an array that contains no duplicate entries according to generic hash and
+/// equality comparisons on the entries.
+/// If an element occurs multiple times in the array then the later occurrences are discarded.
+val distinct : array:'T [] -> 'T [] when 'T : equality
+/// Returns an array that contains no duplicate entries according to the 
+/// generic hash and equality comparisons on the keys returned by the given key-generating function.
+/// If an element occurs multiple times in the array then the later occurrences are discarded.
+val distinctBy : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : equality
+/// Splits the input array into at most count chunks.
+val splitInto : count:int -> array:'T [] -> 'T [] []
 /// Returns an empty array of the given type.
 val empty : 'T []
+/// Returns the only element of the array.
+val exactlyOne : array:'T [] -> 'T
+/// Returns a new list with the distinct elements of the input array which do not appear in the itemsToExclude sequence,
+/// using generic hash and equality comparisons to compare values.
+val except : itemsToExclude:seq<'T> -> array:'T [] -> 'T [] when 'T : equality
 /// Tests if any element of the array satisfies the given predicate.
 val exists : predicate:('T -> bool) -> array:'T [] -> bool
 /// Tests if any pair of corresponding elements of the arrays satisfies the given predicate.
@@ -809,10 +859,17 @@ val filter : predicate:('T -> bool) -> array:'T [] -> 'T []
 /// Returns the first element for which the given function returns 'true'.
 /// Raise KeyNotFoundException if no such element exists.
 val find : predicate:('T -> bool) -> array:'T [] -> 'T
+/// Returns the last element for which the given function returns 'true'.
+/// Raise KeyNotFoundException if no such element exists.
+val findBack : predicate:('T -> bool) -> array:'T [] -> 'T
 /// Returns the index of the first element in the array
 /// that satisfies the given predicate. Raise KeyNotFoundException if 
-/// none of the elements satisy the predicate.
+/// none of the elements satisfy the predicate.
 val findIndex : predicate:('T -> bool) -> array:'T [] -> int
+/// Returns the index of the last element in the array
+/// that satisfies the given predicate. Raise KeyNotFoundException if
+/// none of the elements satisfy the predicate.
+val findIndexBack : predicate:('T -> bool) -> array:'T [] -> int
 /// Tests if all elements of the array satisfy the given predicate.
 val forall : predicate:('T -> bool) -> array:'T [] -> bool
 /// Tests if all corresponding elements of the array satisfy the given predicate pairwise.
@@ -821,7 +878,7 @@ val forall2 : predicate:('T1 -> 'T2 -> bool) -> array1:'T1 [] -> array2:'T2 [] -
 /// through the computation. If the input function is f and the elements are i0...iN then computes 
 /// f (... (f s i0)...) iN
 val fold : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'State
-/// Applies a function to each element of the array, threading an accumulator argument
+/// Applies a function to each element of the array, starting from the end, threading an accumulator argument
 /// through the computation. If the input function is f and the elements are i0...iN then computes 
 /// f i0 (...(f iN s))
 val foldBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State
@@ -838,6 +895,15 @@ val fold2 : folder:('State -> 'T1 -> 'T2 -> 'State) -> state:'State -> array1:'T
 val foldBack2 : folder:('T1 -> 'T2 -> 'State -> 'State) -> array1:'T1 [] -> array2:'T2 [] -> state:'State -> 'State
 /// Gets an element from an array.
 val get : array:'T [] -> index:int -> 'T
+/// Returns the first element of the array.
+val head : array:'T [] -> 'T
+/// Applies a key-generating function to each element of an array and yields an array of 
+/// unique keys. Each unique key contains an array of all elements that match 
+/// to this key.
+val groupBy : projection:('T -> 'Key) -> array:'T [] -> ('Key * 'T []) [] when 'Key : equality
+/// Builds a new array whose elements are the corresponding elements of the input array
+/// paired with the integer index (from 0) of each element.
+val indexed : array:'T [] -> (int * 'T) []
 /// Creates an array given the dimension and a generator function to compute the elements.
 val inline init : count:int -> initializer:(int -> 'T) -> 'T []
 /// Creates an array where the entries are initially the default value Unchecked.defaultof<'T>.
@@ -857,8 +923,15 @@ val iteri : action:(int -> 'T -> unit) -> array:'T [] -> unit
 /// also passing the index of the elements. The two arrays must have the same lengths, 
 /// otherwise an ArgumentException is raised.
 val iteri2 : action:(int -> 'T1 -> 'T2 -> unit) -> array1:'T1 [] -> array2:'T2 [] -> unit
+/// Returns the last element of the array.
+val inline last : array:'T [] -> 'T
+/// Gets an element from an array.
+val item : index:int -> array:'T [] -> 'T
 /// Returns the length of an array. You can also use property arr.Length.
 val length : array:'T [] -> int
+/// Returns the last element of the array.
+/// Return None if no such element exists.
+val tryLast : array:'T [] -> 'T option
 /// Builds a new array whose elements are the results of applying the given function
 /// to each of the elements of the array.
 val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
@@ -867,6 +940,17 @@ val inline map : mapping:('T -> 'U) -> array:'T [] -> 'U []
 /// arrays must have the same lengths, otherwise an ArgumentException is
 /// raised.
 val map2 : mapping:('T1 -> 'T2 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> 'U []
+/// Combines map and fold. Builds a new array whose elements are the results of applying the given function
+/// to each of the elements of the input array. The function is also used to accumulate a final value.
+val mapFold : mapping:('State -> 'T -> 'Result * 'State) -> state:'State -> array:'T [] -> 'Result [] * 'State
+/// Combines map and foldBack. Builds a new array whose elements are the results of applying the given function
+/// to each of the elements of the input array. The function is also used to accumulate a final value.
+val mapFoldBack : mapping:('T -> 'State -> 'Result * 'State) -> array:'T [] -> state:'State -> 'Result [] * 'State
+/// Builds a new collection whose elements are the results of applying the given function
+/// to the corresponding triples from the three collections. The three input
+/// arrays must have the same length, otherwise an ArgumentException is
+/// raised.
+val map3 : mapping:('T1 -> 'T2 -> 'T3 -> 'U) -> array1:'T1 [] -> array2:'T2 [] -> array3:'T3 [] -> 'U []
 /// Builds a new collection whose elements are the results of applying the given function
 /// to the corresponding elements of the two collections pairwise, also passing the index of 
 /// the elements. The two input arrays must have the same lengths, otherwise an ArgumentException is
@@ -888,6 +972,9 @@ val inline minBy : projection:('T -> 'U) -> array:'T [] -> 'T when 'U : comparis
 val ofList : list:'T list -> 'T []
 /// Builds a new array from the given enumerable object.
 val ofSeq : source:seq<'T> -> 'T []
+/// Returns an array of each element in the input array and its predecessor, with the
+/// exception of the first element which is only returned as the predecessor of the second element.
+val pairwise : array:'T [] -> ('T * 'T) []
 /// Splits the collection into two collections, containing the 
 /// elements for which the given predicate returns "true" and "false"
 /// respectively.
@@ -900,19 +987,27 @@ val permute : indexMap:(int -> int) -> array:'T [] -> 'T []
 /// then computes f (... (f i0 i1)...) iN.
 /// Raises ArgumentException if the array has size zero.
 val reduce : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
-/// Applies a function to each element of the array, threading an accumulator argument
+/// Applies a function to each element of the array, starting from the end, threading an accumulator argument
 /// through the computation. If the input function is f and the elements are i0...iN 
 /// then computes f i0 (...(f iN-1 iN)).
-/// Raises ArgumentException if the array has size zero.
 val reduceBack : reduction:('T -> 'T -> 'T) -> array:'T [] -> 'T
+/// Creates an array by replicating the given initial value.
+val replicate : count:int -> initial:'T -> 'T []
 /// Returns a new array with the elements in reverse order.
 val rev : array:'T [] -> 'T []
 /// Like fold, but return the intermediary and final results.
 val scan : folder:('State -> 'T -> 'State) -> state:'State -> array:'T [] -> 'State []
 /// Like foldBack, but return both the intermediary and final results.
 val scanBack : folder:('T -> 'State -> 'State) -> array:'T [] -> state:'State -> 'State []
+/// Returns an array that contains one item only.
+val inline singleton : value:'T -> 'T []
 /// Sets an element of an array.
 val set : array:'T [] -> index:int -> value:'T -> unit
+/// Builds a new array that contains the elements of the given array, excluding the first N elements.
+val skip : count:int -> array:'T [] -> 'T []
+/// Bypasses elements in an array while the given predicate returns true, and then returns
+/// the remaining elements in a new array.
+val skipWhile : predicate:('T -> bool) -> array:'T [] -> 'T []
 /// Builds a new array that contains the given subrange specified by
 /// starting index and length.
 val sub : array:'T [] -> startIndex:int -> count:int -> 'T []
@@ -931,24 +1026,58 @@ val sortInPlaceWith : comparer:('T -> 'T -> int) -> array:'T [] -> unit
 /// Sorts the elements of an array by mutating the array in-place, using the given comparison function. 
 /// Elements are compared using Operators.compare.
 val sortInPlace : array:'T [] -> unit when 'T : comparison
+/// Splits an array into two arrays, at the given index.
+val splitAt : index:int -> array:'T [] -> 'T [] * 'T []
+/// Sorts the elements of an array, in descending order, returning a new array. Elements are compared using Operators.compare. 
+val inline sortDescending : array:'T [] -> 'T [] when 'T : comparison
+/// Sorts the elements of an array, in descending order, using the given projection for the keys and returning a new array. 
+/// Elements are compared using Operators.compare.
+val inline sortByDescending : projection:('T -> 'Key) -> array:'T [] -> 'T [] when 'Key : comparison
 /// Returns the sum of the elements in the array.
 val inline sum : array: ^T [] ->  ^T when ^T : (static member ( + ) :  ^T *  ^T ->  ^T) and ^T : (static member Zero :  ^T)
 /// Returns the sum of the results generated by applying the function to each element of the array.
 val inline sumBy : projection:('T ->  ^U) -> array:'T [] ->  ^U when ^U : (static member ( + ) :  ^U *  ^U ->  ^U) and ^U : (static member Zero :  ^U)
+/// Returns the first N elements of the array.
+val take : count:int -> array:'T [] -> 'T []
+/// Returns an array that contains all elements of the original array while the 
+/// given predicate returns true, and then returns no further elements.
+val takeWhile : predicate:('T -> bool) -> array:'T [] -> 'T []
+/// Returns a new array containing the elements of the original except the first element.
+val tail : array:'T [] -> 'T []
 /// Builds a list from the given array.
 val toList : array:'T [] -> 'T list
 /// Views the given array as a sequence.
 val toSeq : array:'T [] -> seq<'T>
+/// Returns at most N elements in a new array.
+val truncate : count:int -> array:'T [] -> 'T []
 /// Returns the first element for which the given function returns true.
 /// Return None if no such element exists.
 val tryFind : predicate:('T -> bool) -> array:'T [] -> 'T option
+/// Returns the last element for which the given function returns true.
+/// Return None if no such element exists.
+val tryFindBack : predicate:('T -> bool) -> array:'T [] -> 'T option
 /// Returns the index of the first element in the array
 /// that satisfies the given predicate.
 val tryFindIndex : predicate:('T -> bool) -> array:'T [] -> int option
+/// Tries to find the nth element in the array.
+/// Returns None if index is negative or the input array does not contain enough elements.
+val tryItem : index:int -> array:'T [] -> 'T option
+/// Returns the index of the last element in the array
+/// that satisfies the given predicate.
+val tryFindIndexBack : predicate:('T -> bool) -> array:'T [] -> int option
+/// Returns an array that contains the elements generated by the given computation.
+/// The given initial state argument is passed to the element generator.
+val unfold : generator:('State -> ('T * 'State) option) -> state:'State -> 'T []
 /// Splits an array of pairs into two arrays.
 val unzip : array:('T1 * 'T2) [] -> 'T1 [] * 'T2 []
 /// Splits an array of triples into three arrays.
 val unzip3 : array:('T1 * 'T2 * 'T3) [] -> 'T1 [] * 'T2 [] * 'T3 []
+/// Returns a new array containing only the elements of the array
+/// for which the given predicate returns "true".
+val where : predicate:('T -> bool) -> array:'T [] -> 'T []
+/// Returns an array of sliding windows containing elements drawn from the input
+/// array. Each window is returned as a fresh array.
+val windowed : windowSize:int -> array:'T [] -> 'T [] []
 /// Combines the two arrays into an array of pairs. The two arrays must have equal lengths, otherwise an ArgumentException is
 /// raised.
 val zip : array1:'T1 [] -> array2:'T2 [] -> ('T1 * 'T2) []
@@ -958,7 +1087,7 @@ val zip3 : array1:'T1 [] -> array2:'T2 [] -> array3:'T3 [] -> ('T1 * 'T2 * 'T3) 
 
 /// Provides parallel operations on arrays 
 module Parallel = 
-
+    
     /// Apply the given function to each element of the array. Return
     /// the array comprised of the results "x" for each element where
     /// the function returns Some(x).
@@ -1458,7 +1587,7 @@ type CompiledNameAttribute =
     member CompiledName : string
 """
 
-[<Test>]
+[<Test; Category "IgnoreOnUnix">]
 let ``set up transitive open declarations correctly`` () =
     """namespace System
 [<System.Runtime.InteropServices.ComVisible(true)>]

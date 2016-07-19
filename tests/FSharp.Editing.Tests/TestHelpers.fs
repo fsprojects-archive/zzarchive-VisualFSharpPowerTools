@@ -33,7 +33,7 @@ let inline assertf (condition : bool) format : 'T =
 
 /// Asserts that two values are equal.
 let inline assertEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =
-    Assert.AreEqual (expected, actual)
+    Assert.AreEqual (expected, actual, sprintf "Expected: %A\nActual: %A" expected actual)
 
 /// Asserts that two values are NOT equal.
 let inline assertNotEqual<'T when 'T : equality> (expected : 'T) (actual : 'T) =
@@ -69,7 +69,7 @@ module Collection =
     /// The collections must have the same count, and contain the exact same objects but the match may be in any order.
     let inline assertEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
         try CollectionAssert.AreEquivalent (expected, actual) 
-        with _ -> System.Diagnostics.Debug.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
+        with _ -> Diagnostics.Trace.WriteLine (sprintf "Expected: %A, actual: %A" expected actual); reraise()
 
     /// Asserts that two collections are not exactly equal.
     let inline assertNotEquiv<'T, 'U when 'T :> seq<'U>> (expected : 'T) (actual : 'T) =
@@ -78,31 +78,53 @@ module Collection =
 module LanguageServiceTestHelper =
     open Microsoft.FSharp.Compiler.SourceCodeServices
 
+    let references = 
+        [ 
+          yield typeof<System.Object>.Assembly.Location; // mscorlib
+          yield typeof<System.Console>.Assembly.Location; // System.Console
+          yield typeof<System.ComponentModel.DefaultValueAttribute>.Assembly.Location; // System.Runtime
+          yield typeof<System.ComponentModel.PropertyChangedEventArgs>.Assembly.Location; // System.ObjectModel             
+          yield typeof<System.IO.BufferedStream>.Assembly.Location; // System.IO
+          yield typeof<System.Linq.Enumerable>.Assembly.Location; // System.Linq
+          yield typeof<System.Xml.Linq.XDocument>.Assembly.Location; // System.Xml.Linq
+          yield typeof<System.Net.WebRequest>.Assembly.Location; // System.Net.Requests
+          yield typeof<System.Numerics.BigInteger>.Assembly.Location; // System.Runtime.Numerics
+          yield typeof<System.Threading.Tasks.TaskExtensions>.Assembly.Location; // System.Threading.Tasks
+          yield typeof<Microsoft.FSharp.Core.MeasureAttribute>.Assembly.Location; // FSharp.Core
+        ]
+        
     let args =
-        [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Drawing.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Windows.Forms.dll"|]
+        if Environment.OSVersion.Platform = PlatformID.Win32NT then
+            [|
+               "--noframework";
+               "--debug-";
+               "--optimize-";
+               "--tailcalls-";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.4.0.0\FSharp.Core.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\mscorlib.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Core.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Drawing.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Numerics.dll";
+               @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Windows.Forms.dll";
+            |]
+        else
+            [|
+               yield "--noframework"
+               yield "--debug-"
+               yield "--optimize-"
+               yield "--tailcalls-"
+               for r in references do
+                   yield "-r:" + r
+            |]
 
-    let argsDotNET451 =
-        [|"--noframework"; "--debug-"; "--optimize-"; "--tailcalls-";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.1.0\FSharp.Core.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\mscorlib.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Core.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Drawing.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Numerics.dll";
-          @"-r:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Windows.Forms.dll"|]
-
+    let argsDotNET451 = args
+    
     let projectOptions =
         let counter = ref 0
         fun fileName ->
             incr counter
-            { ProjectFileName = sprintf @"C:\Project%i.fsproj" !counter
+            { ProjectFileName = sprintf "/Project%i.fsproj" !counter
               ProjectFileNames = [| fileName |]
               OtherOptions = args
               ReferencedProjects = Array.empty

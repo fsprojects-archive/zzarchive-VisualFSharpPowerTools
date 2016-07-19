@@ -303,17 +303,25 @@ Target "TravisCI" (fun _ ->
   ]
   |> MSBuildRelease "" "Rebuild"
   |> ignore
+  
+  let additionalFiles = 
+    ["./packages/FSharp.Core/lib/net40/FSharp.Core.sigdata";
+     "./packages/FSharp.Core/lib/net40/FSharp.Core.optdata";
+     "./packages/FSharp.Core/lib/net40/FSharp.Core.xml";]
+  CopyTo "tests/FSharp.Editing.Tests/bin/Release" additionalFiles
 
   ["tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
   |> NUnit3 (fun p ->
-    { p with
-        ShadowCopy = false
-        TimeOut = TimeSpan.FromMinutes 20.
-        Framework = NUnit3Runtime.Mono40
-        Domain = NUnit3DomainModel.MultipleDomainModel 
-        Workers = Some 1
-        ResultSpecs = ["TestResults.xml"]      
-    }
+    let param =
+        { p with
+            ShadowCopy = false
+            TimeOut = TimeSpan.FromMinutes 20.
+            Framework = NUnit3Runtime.Mono40
+            Domain = NUnit3DomainModel.MultipleDomainModel 
+            Workers = Some 1
+            ResultSpecs = ["TestResults.xml"]      
+        }
+    if Environment.OSVersion.Platform = PlatformID.Win32NT then param else { param with Where = "cat != IgnoreOnUnix" }
   )
 )
 
