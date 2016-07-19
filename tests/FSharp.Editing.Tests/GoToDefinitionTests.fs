@@ -285,7 +285,7 @@ let ``go to F# List<'T> definition`` () =
 
 let x: List<int> = []"""
     |> generateDefinitionFromPos (Pos.fromZ 2 7)
-    |> assertEqual """namespace Microsoft.FSharp.Collections
+    |> assertSrcAreEqual """namespace Microsoft.FSharp.Collections
 
 /// The type of immutable singly-linked lists.
 [<DefaultAugmentation(false)>]
@@ -577,7 +577,7 @@ let f x = Option.map(x)"""
         Pos.fromZ 2 17
     ]
     |> List.map (fun pos -> generateDefinitionFromPos pos src)
-    |> List.iter (assertEqual """/// Basic operations on options.
+    |> List.iter (assertSrcAreEqual """/// Basic operations on options.
 [<CompilationRepresentation(enum<CompilationRepresentationFlags> (4))>]
 module Microsoft.FSharp.Core.Option
 
@@ -782,7 +782,7 @@ let ``handle nested modules`` () =
 let x = Array.map
     """
     |> generateDefinitionFromPos (Pos.fromZ 1 9)
-    |> assertEqual """/// Basic operations on arrays.
+    |> assertSrcAreEqual """/// Basic operations on arrays.
 [<CompilationRepresentation(enum<CompilationRepresentationFlags> (4))>]
 [<RequireQualifiedAccess>]
 module Microsoft.FSharp.Collections.Array
