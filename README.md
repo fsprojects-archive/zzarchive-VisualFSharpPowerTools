@@ -63,7 +63,7 @@ For user guides, please take a look at [the home page](http://fsprojects.github.
     <td><a href="https://ci.appveyor.com/project/dungpa/visualfsharppowertools"><img src="https://ci.appveyor.com/api/projects/status/9ii93nkif8hc6cdv/branch/master"></a></td>
   </tr>
   <tr>
-    <td>Travis</td>
+    <td>Linux (Travis)</td>
     <td><a href="https://travis-ci.org/fsprojects/VisualFSharpPowerTools"><img src="https://travis-ci.org/fsprojects/VisualFSharpPowerTools.svg?branch=master"></a></td>
   </tr>
 </table>
