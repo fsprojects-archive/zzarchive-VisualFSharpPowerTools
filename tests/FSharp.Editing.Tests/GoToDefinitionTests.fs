@@ -53,13 +53,13 @@ let tryGenerateDefinitionFromPos caretPos src =
         let getXmlDocBySignature = 
             let xmlFile = 
                 symbolUse.Symbol.Assembly.FileName 
-                |> Option.map (fun fileName -> 
+                |> Option.bind (fun fileName -> 
                     let xmlFile = Path.ChangeExtension(fileName, ".xml")
-                    if File.Exists xmlFile then xmlFile
+                    if File.Exists xmlFile then Some xmlFile
                     else 
                         // In Linux, we need to check for upper case extension separately
                         let xmlFile = Path.ChangeExtension(xmlFile, Path.GetExtension(xmlFile).ToUpper())
-                        if File.Exists xmlFile then xmlFile else failwithf "Can't find XmlDoc file '%s'." xmlFile)
+                        if File.Exists xmlFile then Some xmlFile else None)
             let xmlMemberMap =
                 match xmlFile with
                 | Some xmlFile ->
