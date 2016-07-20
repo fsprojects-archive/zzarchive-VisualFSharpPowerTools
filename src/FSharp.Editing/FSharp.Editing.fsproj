@@ -60,7 +60,7 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
@@ -81,9 +81,9 @@
     <Compile Include="Common\XmlDocParser.fs" />
     <Compile Include="Common\IdentifierUtils.fs" />
     <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
-<<<<<<< 0187169c3d4e6c63897cfd7bb6bf8d36cb6e8d40
     <Compile Include="ProjectSystem\EditorBufferTracker.fs" />
     <Compile Include="ProjectSystem\FileSystem.fs" />
+<<<<<<< 90c366732a8810b99e5a53ecfac7eaefada18be2
     <Compile Include="ProjectSystem\ProjectConfig.fs" />
     <Compile Include="ProjectSystem\LanguageService.fs" />
     <Compile Include="Navigation\NavigationItemCollector.fs" />
