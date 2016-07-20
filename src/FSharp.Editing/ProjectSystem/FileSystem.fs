@@ -8,7 +8,7 @@ open FSharp.Editing
 type Version = int
 
 
-type FileSystem (openDocumentsTracker: IBufferTracker<_>) =
+type FileSystem (editorBufferTracker: IBufferTracker) =
     static let defaultFileSystem = Shim.FileSystem
 
     let getOpenDocContent (fileName: string) =
@@ -27,7 +27,7 @@ type FileSystem (openDocumentsTracker: IBufferTracker<_>) =
             |> Option.getOrTry (fun () -> defaultFileSystem.ReadAllBytesShim fileName)
 
         member __.GetLastWriteTimeShim fileName =
-            openDocumentsTracker.TryFindEditorBuffer fileName
+            editorBufferTracker.TryFindEditorBuffer fileName
             |> Option.bind (fun doc ->
                 if doc.IsDirty then Some doc.LastChangeTime else None)
             |> Option.getOrTry (fun () -> defaultFileSystem.GetLastWriteTimeShim fileName)
