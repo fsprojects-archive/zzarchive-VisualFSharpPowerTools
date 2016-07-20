@@ -81,6 +81,7 @@
     <Compile Include="Common\XmlDocParser.fs" />
     <Compile Include="Common\IdentifierUtils.fs" />
     <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
+<<<<<<< 0187169c3d4e6c63897cfd7bb6bf8d36cb6e8d40
     <Compile Include="ProjectSystem\EditorBufferTracker.fs" />
     <Compile Include="ProjectSystem\FileSystem.fs" />
     <Compile Include="ProjectSystem\ProjectConfig.fs" />
