@@ -85,6 +85,7 @@
     <Compile Include="ProjectSystem\ProjectConfig.fs" />
     <Compile Include="ProjectSystem\LanguageService.fs" />
     <Compile Include="Navigation\NavigableItemsCollector.fs" />
+    <Compile Include="Navigation\NavigationItemCollector.fs" />
     <Compile Include="Navigation\NavigateToIndex.fs" />
     <Compile Include="Navigation\ProjectNavigationCache.fs" />
     <Compile Include="Coloring\DepthParser.fs" />

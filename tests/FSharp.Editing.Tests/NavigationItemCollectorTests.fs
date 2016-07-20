@@ -31,7 +31,7 @@ let (=>) source expected =
     | None -> failwith "Language service returned no parse tree"
     | Some ast ->
         let actual =
-            NavigableItemsCollector.collect fileName ast 
+            NavigationItemCollector.collect fileName ast 
             |> Seq.map (fun x -> x.Name, x.Kind, x.Range.Start.Row, x.Range.Start.Col, x.Range.End.Row, x.Range.End.Col)
             |> Seq.toList
         
@@ -42,7 +42,7 @@ let (=>) source expected =
             debug "Actual: %A" actual
             reraise()
 
-type Kind = NavigableItemKind
+type Kind = NavigationItemKind
 
 [<Test>]
 let ``can collect navigable items of different kinds in a file``() =

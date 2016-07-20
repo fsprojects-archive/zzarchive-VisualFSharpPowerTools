@@ -68,7 +68,7 @@
     <Compile Include="LanguageServiceTests.fs" />
     <Compile Include="GetUsesOfSymbolInFileTests.fs" />
     <Compile Include="PrintfSpecifiersUsageGetterTests.fs" />
-    <Compile Include="NavigableItemsCollectorTests.fs" />
+    <Compile Include="NavigationItemCollectorTests.fs" />
     <Compile Include="DepthColorizerTests.fs" />
     <Compile Include="IdentifierDetectionTests.fs" />
     <Compile Include="RenameTests.fs" />
