@@ -6,6 +6,8 @@ open EnvDTE80
 open Microsoft.VisualStudio.Shell.Interop
 open EnvDTE
 open FSharp.Editing
+open FSharp.Editing.Navigation
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open System.Security.Cryptography
 open System.Text

@@ -10,7 +10,7 @@ open Fantomas.FormatConfig
 open FSharp.Editing
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open System.Threading
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.AsyncMaybe
 

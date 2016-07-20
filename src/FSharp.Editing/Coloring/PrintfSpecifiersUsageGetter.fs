@@ -1,8 +1,9 @@
 ﻿module FSharp.Editing.Features.PrintfSpecifiersUsageGetter
 
 open Microsoft.FSharp.Compiler
-open FSharp.Editing.UntypedAstUtils
 open FSharp.Editing
+open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing.ProjectSystem
 
 [<NoComparison>]
 type PrintfSpecifierUse =

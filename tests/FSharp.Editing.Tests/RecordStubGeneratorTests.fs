@@ -23,6 +23,7 @@ open TestHelpers.LanguageServiceTestHelper
 open FSharp.Editing
 open FSharp.Editing.Features.RecordStubGenerator
 open FSharp.Editing.Features
+open FSharp.Editing.ProjectSystem
 open CodeGenerationTestInfrastructure
 
 let args = LanguageServiceTestHelper.args

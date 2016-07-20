@@ -1,4 +1,4 @@
-﻿namespace FSharp.Editing
+﻿namespace FSharp.Editing.Navigation
 
 open System
 open Microsoft.FSharp.Compiler

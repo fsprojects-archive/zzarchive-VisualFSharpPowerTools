@@ -1,10 +1,12 @@
-﻿namespace FSharp.Editing
+﻿namespace FSharp.Editing.ProjectSystem
 
 open System
 open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing
 open AsyncMaybe
+
 
 // --------------------------------------------------------------------------------------
 /// Wraps the result of type-checking and provides methods for implementing

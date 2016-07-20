@@ -2,10 +2,11 @@
 
 open TestUtilities.Mocks
 open Microsoft.VisualStudio.Shell.Interop
-open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 open FSharpVSPowerTools
-open FSharp.Editing.Infrastructure
 
 /// Replace internal project providers by external ones for testing
 type MockProjectFactory(serviceProvider, openDocTracker, vsLanguageService, dte: MockDTE) =
