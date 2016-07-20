@@ -5,7 +5,9 @@ open System.Collections.Concurrent
 open EnvDTE80
 open Microsoft.VisualStudio.Shell.Interop
 open EnvDTE
+open FSharp.Editing
 open FSharp.Editing.Navigation
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open System.Security.Cryptography
 open System.Text
@@ -14,6 +16,15 @@ open System.IO
 open System.Threading
 open FSharp.Editing
 
+type Source = string
+
+type FileDescriptor =
+    { Path: FilePath
+      LastWriteTime: DateTime }
+
+type FileNavigableItems =
+    { Descriptor: FileDescriptor
+      Items: NavigableItem[] }
 
 type NavigableItemCache (serviceProvider: System.IServiceProvider) =
     let cache = ConcurrentDictionary<FilePath, FileNavigableItems>(StringComparer.Ordinal)

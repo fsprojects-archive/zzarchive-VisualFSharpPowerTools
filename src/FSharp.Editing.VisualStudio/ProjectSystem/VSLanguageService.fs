@@ -24,21 +24,21 @@ open FSharp.Editing.VisualStudio.ProjectSystem
 open Microsoft.VisualStudio.Text.Editor
 
 
-type ProjectDescriptor = 
-    {   IsForStandaloneScript : bool  
+type ProjectDescriptor =
+    {   IsForStandaloneScript : bool
         ProjectFile           : FileName
         TargetFramework       : FSharpTargetFramework
         CompilerVersion       : FSharpCompilerVersion option
         CompilerOptions       : string array
         SourceFiles           : FileName array
-        FullOutputFilePath    : FileName option 
-    } 
+        FullOutputFilePath    : FileName option
+    }
 
 
 type IProjectProvider =
     abstract Project: ProjectDescriptor
     abstract GetReferencedProjects: unit -> IProjectProvider list
-    abstract GetAllReferencedProjectFileNames: unit -> string list 
+    abstract GetAllReferencedProjectFileNames: unit -> string list
     abstract GetProjectCheckerOptions: LanguageService -> Async<FSharpProjectOptions>
 
 
@@ -56,7 +56,7 @@ module TypeExtensions =
 
 
 [<RequireQualifiedAccess; NoComparison>]
-type SymbolDeclarationLocation = 
+type SymbolDeclarationLocation =
     | File
     /// The case where the declared symbol may be included into several projects
     | Projects of IProjectProvider list * isLocalForProject: bool
@@ -77,8 +77,8 @@ type EntityCache() =
 
 [<Export>]
 type VSLanguageService
-    [<ImportingConstructor>] 
-    (editorFactory: IVsEditorAdaptersFactoryService, 
+    [<ImportingConstructor>]
+    (editorFactory: IVsEditorAdaptersFactoryService,
      fsharpLanguageService: FSharpLanguageService,
      openDocumentsTracker: IOpenDocumentsTracker,
      [<Import(typeof<FileSystem>)>] fileSystem: IFileSystem,
@@ -92,8 +92,8 @@ type VSLanguageService
     let suggestRecoveryAfterFailure ex fileName _source opts =
         Logging.logError (fun _ -> sprintf "The following exception: %A occurs for file '%O' and options '%A'." ex fileName opts)
         let statusBar = serviceProvider.GetService<IVsStatusbar, SVsStatusbar>()
-        statusBar.SetText Resource.languageServiceErrorMessage |> ignore 
-                
+        statusBar.SetText Resource.languageServiceErrorMessage |> ignore
+
     do instance.SetCriticalErrorHandler suggestRecoveryAfterFailure
        openDocumentsTracker.DocumentChanged.Add instance.OnFileChanged
        openDocumentsTracker.DocumentClosed.Add instance.OnFileClosed
@@ -118,7 +118,7 @@ type VSLanguageService
         | None -> true
         | Some doc ->
             doc.Snapshot.TextBuffer = snapshot.TextBuffer
-            
+
     let getSymbolUsing kind (point: SnapshotPoint) fileName (projectProvider: IProjectProvider) =
         maybe {
             let! source = openDocumentsTracker.TryGetDocumentText fileName
@@ -173,7 +173,7 @@ type VSLanguageService
 
     member __.FindUsages (word: SnapshotSpan, currentFile: string, currentProject: IProjectProvider, projectsToCheck: IProjectProvider list, ?progress: ShowProgress) =
         asyncMaybe {
-            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
+            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile,
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             try
                 let range = word.ToRange()
@@ -183,27 +183,27 @@ type VSLanguageService
                 let currentLine = word.Start.GetContainingLine().GetText()
                 let framework = currentProject.TargetFramework
                 let args = currentProject.CompilerOptions
-            
-                debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments" 
+
+                debug "[Language Service] Get symbol references for '%s' at line %d col %d on %A framework and '%s' arguments"
                       (word.GetText()) endLine endCol framework (String.concat " " args)
-            
+
                 reportProgress progress (Reporting Resource.findSymbolUseCurrentProject)
                 let! currentProjectOptions = currentProject.GetProjectCheckerOptions instance |> liftAsync
                 reportProgress progress (Reporting Resource.findSymbolUseOtherProjects)
-                let! projectsToCheckOptions = 
-                    projectsToCheck 
+                let! projectsToCheckOptions =
+                    projectsToCheck
                     |> List.toArray
                     |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
                     |> liftAsync
 
                 reportProgress progress (Reporting Resource.findSymbolUseAllProjects)
 
-                let newReportProgress projectName index length = 
+                let newReportProgress projectName index length =
                     reportProgress progress (Executing(sprintf "Finding usages in %s [%d of %d]..." projectName (index + 1) length, index, length))
-                
+
                 let! symbol, lastIdent, refs =
                     instance.GetUsesOfSymbolInProjectAtLocationInFile
-                        (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol, 
+                        (currentProjectOptions, projectsToCheckOptions, currentFile, source, endLine, endCol,
                          currentLine, args, buildQueryLexState word.Snapshot.TextBuffer, Some newReportProgress)
                 return symbol, lastIdent, filterSymbolUsesDuplicates refs
             with e ->
@@ -213,11 +213,11 @@ type VSLanguageService
 
     member __.FindUsagesInFile (word: SnapshotSpan, sym: Symbol, fileScopedCheckResults: ParseAndCheckResults) =
         async {
-            try 
+            try
                 let range = word.ToRange()
                 let endLine = range.End.Line
                 let currentLine = word.Start.GetContainingLine().GetText()
-            
+
                 debug "[Language Service] Get symbol references for '%s' at line %d col %d" (word.GetText()) endLine sym.RightColumn
                 let! res = fileScopedCheckResults.GetUsesOfSymbolInFileAtLocation (endLine, sym.RightColumn, currentLine, sym.Text)
                 return res |> Option.map (fun (symbol, ident, refs) -> symbol, ident, filterSymbolUsesDuplicates refs)
@@ -230,7 +230,7 @@ type VSLanguageService
     member __.FindUsagesInFile (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
         asyncMaybe {
             let currentLine = { Line = word.Start.GetContainingLine().GetText(); Range = word.ToRange(); File = currentFile }
-            let getCheckResults currentFile = 
+            let getCheckResults currentFile =
                 asyncMaybe {
                     let! source = openDocumentsTracker.TryGetDocumentText currentFile
                     let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
@@ -240,7 +240,7 @@ type VSLanguageService
             return! HighlightUsageInFile.findUsageInFile currentLine symbol getCheckResults
         }
 
-    member __.GetFSharpSymbolUse (currentLine: CurrentLine<FCS>, symbol: Symbol, projectProvider: IProjectProvider, stale) = 
+    member __.GetFSharpSymbolUse (currentLine: CurrentLine<FCS>, symbol: Symbol, projectProvider: IProjectProvider, stale) =
         asyncMaybe {
             let! source = openDocumentsTracker.TryGetDocumentText currentLine.File
             let! opts = projectProvider.GetProjectCheckerOptions instance |> liftAsync
@@ -248,9 +248,9 @@ type VSLanguageService
             let! symbol = results.GetSymbolUseAtLocation (currentLine.EndLine + 1, symbol.RightColumn, currentLine.Line, [symbol.Text])
             return symbol, results
         }
-    member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) = 
+    member __.GetFSharpSymbolUse (word: SnapshotSpan, symbol: Symbol, currentFile: string, projectProvider: IProjectProvider, stale) =
         asyncMaybe {
-            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile, 
+            Debug.Assert(mayReferToSameBuffer word.Snapshot currentFile,
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." word.Snapshot currentFile)
             let range = word.ToRange()
             let endLine = range.End.Line
@@ -267,14 +267,14 @@ type VSLanguageService
             let range = SnapshotSpan(snapshot, 0, snapshot.Length).ToRange()
             let lineStart = range.Start.Line
             let lineEnd = range.End.Line
-            
+
             let getLineStr line =
                 let lineNumber = line - lineStart
-                snapshot.GetLineFromLineNumber(lineNumber).GetText() 
-            
+                snapshot.GetLineFromLineNumber(lineNumber).GetText()
+
             let! source = openDocumentsTracker.TryGetDocumentText fileName
-            
-            return 
+
+            return
                 { new LexerBase() with
                     member __.GetSymbolFromTokensAtLocation (tokens, line, rightCol) =
                         Lexer.getSymbolFromTokens tokens line rightCol (getLineStr line) SymbolLookupKind.ByRightColumn
@@ -283,15 +283,15 @@ type VSLanguageService
                     member __.LineCount = lineEnd + 1 }
         }
 
-    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) = 
+    member x.GetAllUsesOfAllSymbolsInFile (snapshot: ITextSnapshot, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) =
         asyncMaybe {
-            Debug.Assert(mayReferToSameBuffer snapshot currentFile, 
+            Debug.Assert(mayReferToSameBuffer snapshot currentFile,
                 sprintf "Snapshot '%A' doesn't refer to the current document '%s'." snapshot currentFile)
             let! source = openDocumentsTracker.TryGetDocumentText currentFile
             return! x.GetAllUsesOfAllSymbolsInSourceString(source, currentFile, project, stale, checkForUnusedOpens) |> liftAsync
         }
 
-    member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) = 
+    member __.GetAllUsesOfAllSymbolsInSourceString (source: string, currentFile: string, project: IProjectProvider, stale, checkForUnusedOpens: bool) =
         async {
             let! opts = project.GetProjectCheckerOptions instance
             let! allSymbolsUses = instance.GetAllUsesOfAllSymbolsInFile(opts, currentFile, source, stale, checkForUnusedOpens)
@@ -305,10 +305,10 @@ type VSLanguageService
                  | Some SymbolDeclarationLocation.File -> Some [currentProject]
                  | Some (SymbolDeclarationLocation.Projects (declProjects, _)) -> Some declProjects
                  | None -> None
-         
+
              match projects with
              | Some projects ->
-                 return! 
+                 return!
                      projects
                      |> List.toArray
                      |> Async.Array.map (fun p -> p.GetProjectCheckerOptions instance)
@@ -325,10 +325,10 @@ type VSLanguageService
         }
 
     member __.GetAllEntities (fileName, project: IProjectProvider) =
-        asyncMaybe { 
+        asyncMaybe {
             let! opts = project.GetProjectCheckerOptions instance |> liftAsync
             let! source = openDocumentsTracker.TryGetDocumentText fileName
-            try 
+            try
                 return! instance.GetAllEntitiesInProjectAndReferencedAssemblies (opts, fileName, source, entityCache.Locking)
             with e ->
                 debug "[Language Service] GetAllSymbols raises an exception: %O" e
@@ -352,17 +352,17 @@ type VSLanguageService
             with _ -> return! None
         }
 
-    member __.InvalidateProject (projectProvider: IProjectProvider) = 
+    member __.InvalidateProject (projectProvider: IProjectProvider) =
         async {
-            let! opts = projectProvider.GetProjectCheckerOptions(instance) 
+            let! opts = projectProvider.GetProjectCheckerOptions(instance)
             return! instance.InvalidateConfiguration opts
         }
 
-    member __.ClearCaches() = 
+    member __.ClearCaches() =
         debug "[Language Service] Clearing FCS caches."
         instance.RawChecker.InvalidateAll()
         entityCache.Clear()
-    
+
     member __.CheckProjectInBackground (opts: FSharpProjectOptions) =
         debug "[LanguageService] StartBackgroundCompile (%s)" opts.ProjectFileName
         instance.RawChecker.CheckProjectInBackground opts
@@ -370,7 +370,7 @@ type VSLanguageService
     member __.RawChecker = instance.RawChecker
 
     /// This value is used for testing when VS lex cache isn't available
-    member internal __.SkipLexCache 
+    member internal __.SkipLexCache
         with get () = skipLexCache
         and set v = skipLexCache <- v
 

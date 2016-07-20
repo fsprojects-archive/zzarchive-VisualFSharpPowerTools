@@ -2,7 +2,7 @@
 
 open FSharp.Editing
 open Microsoft.FSharp.Compiler.SourceCodeServices
-open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.ProjectSystem
 
 type ExternalProjectProvider(projectFileName) =    
     // We use Debug mode since test assemblies are created in Debug mode in BuildTests target
