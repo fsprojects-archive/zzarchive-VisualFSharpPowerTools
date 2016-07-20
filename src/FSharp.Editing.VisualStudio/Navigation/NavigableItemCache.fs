@@ -91,7 +91,7 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
 
     let saveTimer = new Timer((fun _ -> tryGetSolutionPath() |> Option.iter saveToDisk), null, 0, 5000)
 
-    member __.TryGet (file: FileDescriptor): NavigableItem[] option =
+    member __.TryGet (file: FileDescriptor): NavigationItem[] option =
         match cache.TryGetValue file.Path with
         | true, x when x.Descriptor.LastWriteTime = file.LastWriteTime -> 
             //Logging.logInfo (fun _ -> sprintf "[NavigableItemCache] Found for %s, %O" file.Path file.LastWriteTime)
@@ -104,7 +104,7 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
             //Logging.logInfo (fun _ -> sprintf "[NavigableItemCache] Not found for %s" file.Path)
             None
     
-    member __.Add (file: FileDescriptor, items: NavigableItem[]): unit = 
+    member __.Add (file: FileDescriptor, items: NavigationItem[]): unit = 
         cache.[file.Path] <- { Descriptor = file; Items = items }
         dirty := true
     

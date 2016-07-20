@@ -19,7 +19,7 @@ let ``Index should return all matching entries``() =
           Name = name
           Range = { Start = { Row = 1; Col = 1 }; End = { Row = 1; Col = 1 }}
           IsSignature = false
-          Kind = NavigableItemKind.Type }
+          Kind = NavigationItemKind.Type }
     let items =
         [ item "a.fs" "foo"
           item "b.fs" "Symb"
