@@ -73,6 +73,7 @@
     <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common\Utils.fs" />
+    <Compile Include="Common\Constants.fs" />
     <Compile Include="Common\CompilerLocationUtils.fs" />
     <Compile Include="Common\UntypedAstUtils.fs" />
     <Compile Include="Common\TypedAstUtils.fs" />
@@ -81,9 +82,9 @@
     <Compile Include="Common\IdentifierUtils.fs" />
     <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
     <Compile Include="ProjectSystem\EditorBufferTracker.fs" />
-    <Compile Include="ProjectSystem\LanguageService.fs" />
     <Compile Include="ProjectSystem\FileSystem.fs" />
-    <Compile Include="ProjectSystem\SolutionProvider.fs" />
+    <Compile Include="ProjectSystem\ProjectConfig.fs" />
+    <Compile Include="ProjectSystem\LanguageService.fs" />
     <Compile Include="Navigation\NavigableItemsCollector.fs" />
     <Compile Include="Navigation\NavigateToIndex.fs" />
     <Compile Include="Navigation\ProjectNavigationCache.fs" />

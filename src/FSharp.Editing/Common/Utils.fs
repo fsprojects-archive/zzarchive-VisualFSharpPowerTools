@@ -685,6 +685,8 @@ module String =
             strArr.[0] <- Char.ToLower c
             String (strArr)
 
+    let inline equalsIgnoreCase (str1:string) (str2:string) =
+        str1.Equals(str2, StringComparison.OrdinalIgnoreCase)
 
     let extractTrailingIndex (str: string) =
         match str with
