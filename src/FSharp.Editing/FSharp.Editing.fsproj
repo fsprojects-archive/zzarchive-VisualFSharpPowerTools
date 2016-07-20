@@ -83,9 +83,9 @@
     <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
     <Compile Include="ProjectSystem\EditorBufferTracker.fs" />
     <Compile Include="ProjectSystem\FileSystem.fs" />
-<<<<<<< 90c366732a8810b99e5a53ecfac7eaefada18be2
     <Compile Include="ProjectSystem\ProjectConfig.fs" />
     <Compile Include="ProjectSystem\LanguageService.fs" />
+<<<<<<< 42f42852971fcd002956c37ae17a24381ee30e55
     <Compile Include="Navigation\NavigationItemCollector.fs" />
     <Compile Include="Navigation\NavigateToIndex.fs" />
     <Compile Include="Navigation\ProjectNavigationCache.fs" />
