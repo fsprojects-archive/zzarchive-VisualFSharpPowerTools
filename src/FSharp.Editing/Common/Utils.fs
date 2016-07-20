@@ -684,6 +684,9 @@ module String =
         | Some c  -> 
             strArr.[0] <- Char.ToLower c
             String (strArr)
+    
+    let inline contains (target:string) (str:string) =
+        str.Contains target
 
     let inline equalsIgnoreCase (str1:string) (str2:string) =
         str1.Equals(str2, StringComparison.OrdinalIgnoreCase)
