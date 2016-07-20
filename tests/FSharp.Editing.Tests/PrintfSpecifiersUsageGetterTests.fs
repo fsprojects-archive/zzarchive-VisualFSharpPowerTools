@@ -11,6 +11,7 @@ open NUnit.Framework
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)

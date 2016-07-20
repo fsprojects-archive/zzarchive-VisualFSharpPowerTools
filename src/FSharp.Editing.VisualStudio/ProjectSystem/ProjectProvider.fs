@@ -4,8 +4,8 @@ open System
 open System.IO
 open System.Diagnostics
 open EnvDTE
-open FSharp.Editing.Infrastructure
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices

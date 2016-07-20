@@ -15,8 +15,9 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
-open FSharp.Editing.Infrastructure
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
+open FSharp.Editing.Navigation
 open FSharp.Editing.AsyncMaybe
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem

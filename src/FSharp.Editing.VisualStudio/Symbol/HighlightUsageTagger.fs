@@ -10,7 +10,7 @@ open FSharp.Editing.AsyncMaybe
 open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing.VisualStudio.ProjectSystem
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features.HighlightUsageInFile
 
 // Reference at http://social.msdn.microsoft.com/Forums/vstudio/en-US/8e0f71f6-4794-4f0e-9a63-a8b55bc22e00/predefined-textmarkertag?forum=vsx

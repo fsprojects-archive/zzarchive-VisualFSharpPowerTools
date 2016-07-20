@@ -9,6 +9,7 @@ open Microsoft.VisualStudio.Shell
 open Microsoft.VisualStudio.Utilities
 open Microsoft.VisualStudio.Shell.Interop
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices

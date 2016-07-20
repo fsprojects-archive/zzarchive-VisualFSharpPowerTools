@@ -16,7 +16,7 @@ NUGET
       FParsec
       FSharp.Compiler.Service
       FSharp.Compiler.Service.ProjectCracker
-    FsPickler (2.3)
+    FsPickler (2.4)
     FsXaml.Wpf (2.0)
     SourceLink.SymbolStore (0.5)
     Zlib.Portable (1.11) - framework: portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81

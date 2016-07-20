@@ -1,8 +1,9 @@
-﻿namespace FSharp.Editing
+﻿namespace FSharp.Editing.Navigation
 
 open System.Collections.Generic
 open System.Globalization
 open Microsoft.FSharp.Compiler
+
 
 module Index =
     type MatchKind = 

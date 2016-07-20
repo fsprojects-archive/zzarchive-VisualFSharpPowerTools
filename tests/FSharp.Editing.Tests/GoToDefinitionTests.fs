@@ -6,6 +6,7 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Data
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open CodeGenerationTestInfrastructure
 open LanguageServiceTestHelper

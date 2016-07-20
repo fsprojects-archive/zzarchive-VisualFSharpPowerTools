@@ -1,4 +1,4 @@
-﻿namespace FSharp.Editing.Infrastructure
+﻿namespace FSharp.Editing.ProjectSystem
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing

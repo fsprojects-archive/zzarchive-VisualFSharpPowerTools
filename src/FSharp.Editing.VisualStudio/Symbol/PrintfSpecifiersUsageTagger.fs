@@ -10,6 +10,7 @@ open FSharp.Editing.Features.PrintfSpecifiersUsageGetter
 open Microsoft.FSharp.Compiler
 open FSharp.Editing.VisualStudio.ProjectSystem
 open FSharp.Editing.Features
+open FSharp.Editing.ProjectSystem
 
 type PrintfSpecifiersUsageTag() = 
     inherit TextMarkerTag(Constants.fsharpPrintfTagType) 
