@@ -1,6 +1,5 @@
 ﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
 
-open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Editor
 open System.ComponentModel.Composition
@@ -10,7 +9,6 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.TextManager.Interop
 open System
 open System.Collections.Generic
-open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
@@ -18,13 +16,44 @@ open FSharp.Editing.ProjectSystem
 open FSharp.Editing.ProjectSystem.AssemblyContentProvider
 open FSharp.Editing.AsyncMaybe
 open FSharp.Editing
-open FSharp.Editing.Navigation
 open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open FSharp.Editing.Features.Symbols
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem
 open Microsoft.VisualStudio.Text.Editor
+
+
+type ProjectDescriptor = 
+    {   IsForStandaloneScript : bool  
+        ProjectFile           : FileName
+        TargetFramework       : FSharpTargetFramework
+        CompilerVersion       : FSharpCompilerVersion option
+        CompilerOptions       : string array
+        SourceFiles           : FileName array
+        FullOutputFilePath    : FileName option 
+    } 
+
+
+type IProjectProvider =
+    abstract Project: ProjectDescriptor
+    abstract GetReferencedProjects: unit -> IProjectProvider list
+    abstract GetAllReferencedProjectFileNames: unit -> string list 
+    abstract GetProjectCheckerOptions: LanguageService -> Async<FSharpProjectOptions>
+
+
+[<AutoOpen>]
+module TypeExtensions =
+    // this is to avoid unneeded code churn while we figure out further changes to IProjectProvider
+    type IProjectProvider with
+        member inline x.IsForStandaloneScript = x.Project.IsForStandaloneScript
+        member inline x.ProjectFileName       = x.Project.ProjectFile
+        member inline x.TargetFramework       = x.Project.TargetFramework
+        member inline x.CompilerVersion       = x.Project.CompilerVersion
+        member inline x.CompilerOptions       = x.Project.CompilerOptions
+        member inline x.SourceFiles           = x.Project.SourceFiles
+        member inline x.FullOutputFilePath    = x.Project.FullOutputFilePath
+
 
 [<RequireQualifiedAccess; NoComparison>]
 type SymbolDeclarationLocation = 
