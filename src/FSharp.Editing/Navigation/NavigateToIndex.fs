@@ -14,7 +14,7 @@ module Index =
         | None = 4
 
     [<System.Diagnostics.DebuggerDisplay("{DebugString()}")>]
-    type private IndexEntry(str: string, offset: int, item: NavigableItem, isOperator: bool) =
+    type private IndexEntry(str: string, offset: int, item: NavigationItem, isOperator: bool) =
         member __.String = str
         member __.Offset = offset
         member __.Length = str.Length - offset
@@ -35,7 +35,7 @@ module Index =
                     if res = 0 then a.Offset.CompareTo(b.Offset) else res
         }
 
-    type NavigableItemProcessor = NavigableItem * string * bool * MatchKind -> unit
+    type NavigableItemProcessor = NavigationItem * string * bool * MatchKind -> unit
         
     type IIndexedNavigableItems =
         abstract Find: searchValue: string * itemProcessor: NavigableItemProcessor -> unit
@@ -43,7 +43,7 @@ module Index =
     type Builder() =
         let entries = ResizeArray()
 
-        member __.Add(items: seq<NavigableItem>) =
+        member __.Add(items: seq<NavigationItem>) =
             for item in items do
                 let isOperator, name = 
                     if PrettyNaming.IsMangledOpName item.Name then 
