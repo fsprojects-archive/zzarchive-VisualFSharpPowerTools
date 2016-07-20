@@ -7,7 +7,7 @@ open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Editor
 open System.Collections.Generic
 open FSharp.Editing
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 
 [<NoComparison>]

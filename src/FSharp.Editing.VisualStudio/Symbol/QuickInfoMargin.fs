@@ -5,6 +5,7 @@ open System.Text
 open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open FSharp.ViewModule
 open Microsoft.FSharp.Compiler

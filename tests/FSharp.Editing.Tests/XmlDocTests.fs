@@ -11,6 +11,7 @@ open System.IO
 open NUnit.Framework
 open TestHelpers.LanguageServiceTestHelper
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 
 [<Literal>]
 let dataFolderName = __SOURCE_DIRECTORY__ + "/../data/"

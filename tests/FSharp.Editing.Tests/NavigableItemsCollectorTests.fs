@@ -4,6 +4,8 @@ open NUnit.Framework
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
+open FSharp.Editing.Navigation
+open FSharp.Editing.ProjectSystem
  
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

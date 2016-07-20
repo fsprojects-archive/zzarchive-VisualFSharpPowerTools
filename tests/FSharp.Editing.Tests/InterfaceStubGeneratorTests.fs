@@ -13,6 +13,7 @@ open System.IO
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 
 [<Literal>]

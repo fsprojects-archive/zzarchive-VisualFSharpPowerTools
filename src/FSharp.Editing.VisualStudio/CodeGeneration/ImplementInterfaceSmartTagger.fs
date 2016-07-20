@@ -15,7 +15,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler
 open System.Threading
 open FSharp.Editing.VisualStudio.ProjectSystem
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 
 type ImplementInterfaceSmartTag(actionSets) = 
     inherit SmartTag(SmartTagType.Factoid, actionSets)
