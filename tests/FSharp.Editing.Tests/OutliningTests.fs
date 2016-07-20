@@ -17,6 +17,7 @@ module FSharp.Editing.Tests.UntypedAstUtils.Outlining
 open System.IO
 open NUnit.Framework
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.UntypedAstUtils.Outlining
 open FSharp.Editing.Tests
 

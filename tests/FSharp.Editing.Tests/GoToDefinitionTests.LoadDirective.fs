@@ -4,6 +4,7 @@ open System.IO
 open Microsoft.FSharp.Compiler.Range
 open NUnit.Framework
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.UntypedAstUtils.HashDirectiveInfo
 open FSharp.Editing.Tests
 

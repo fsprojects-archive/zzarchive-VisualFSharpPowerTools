@@ -14,13 +14,16 @@ open System.IO
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
-open FSharp.Editing.AssemblyContentProvider
+open FSharp.Editing.ProjectSystem
+open FSharp.Editing.ProjectSystem.AssemblyContentProvider
 open FSharp.Editing.AsyncMaybe
 open FSharp.Editing
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.Navigation
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open FSharp.Editing.Features.Symbols
 open FSharp.Editing.VisualStudio
+open FSharp.Editing.VisualStudio.ProjectSystem
 open Microsoft.VisualStudio.Text.Editor
 
 [<RequireQualifiedAccess; NoComparison>]

@@ -10,6 +10,7 @@ open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler
 open FSharp.Editing.VisualStudio.ProjectSystem
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open FSharp.Editing.AsyncMaybe
 

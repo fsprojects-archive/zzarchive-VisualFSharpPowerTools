@@ -9,6 +9,7 @@ module FSharp.Editing.Tests.NavigateToIndexTests
 
 open NUnit.Framework
 open FSharp.Editing
+open FSharp.Editing.Navigation
 
 [<Test>]
 let ``Index should return all matching entries``() =

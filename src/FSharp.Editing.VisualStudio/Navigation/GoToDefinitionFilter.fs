@@ -17,7 +17,7 @@ open FSharp.Editing
 open FSharp.Editing.VisualStudio.ProjectSystem
 open SourceLink.SymbolStore
 open FSharp.Editing.AsyncMaybe
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 
 [<RequireQualifiedAccess>]

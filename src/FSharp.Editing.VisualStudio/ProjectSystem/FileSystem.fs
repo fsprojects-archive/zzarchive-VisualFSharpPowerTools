@@ -3,6 +3,7 @@
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library
 open System.IO
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open System.ComponentModel.Composition
 
 type Version = int

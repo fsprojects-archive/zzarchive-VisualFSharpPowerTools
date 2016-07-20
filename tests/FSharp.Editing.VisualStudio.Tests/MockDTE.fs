@@ -5,7 +5,7 @@ open System.IO
 open EnvDTE
 open System.Collections
 open System.Collections.Generic
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
 
