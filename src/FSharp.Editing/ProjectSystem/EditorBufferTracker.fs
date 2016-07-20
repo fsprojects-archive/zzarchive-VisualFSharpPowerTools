@@ -6,8 +6,6 @@ open System.Collections.Generic
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 
-type IEditorBuffer =
-    abstract Text : string
 
 [<NoComparison>]
 type EditorBuffer =
@@ -26,13 +24,11 @@ type EditorBuffer =
             LastChangeTime = lastChangeTime
             ViewCount      = 1 
         }
-    interface IEditorBuffer with
-        member x.Text = x.Text
 
 
-type IBufferTracker<'OpenDoc when 'OpenDoc :> IEditorBuffer> =
-    abstract MapEditorBuffers    : (KeyValuePair<string, 'OpenDoc> -> 'a) -> seq<'a>
-    abstract TryFindEditorBuffer : string -> 'OpenDoc option
+type IBufferTracker =
+    abstract MapEditorBuffers    : (KeyValuePair<string, EditorBuffer> -> 'a) -> seq<'a>
+    abstract TryFindEditorBuffer : string -> EditorBuffer option
     abstract TryGetBufferText    : string -> string option
     abstract BufferChanged       : string IEvent
     abstract BufferClosed        : string IEvent
