@@ -7,6 +7,7 @@ open Microsoft.VisualStudio
 open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
 open Microsoft.VisualStudio.Text

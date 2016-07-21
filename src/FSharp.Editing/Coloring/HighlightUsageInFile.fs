@@ -1,6 +1,7 @@
 namespace FSharp.Editing.Features
 
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 
 module Symbols = 
     open System.IO

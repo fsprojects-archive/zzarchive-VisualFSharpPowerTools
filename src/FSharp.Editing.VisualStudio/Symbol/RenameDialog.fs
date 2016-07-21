@@ -12,6 +12,7 @@ open FSharp.ViewModule.Progress
 open FSharp.ViewModule.Validation
 open FSharp.Editing.IdentifierUtils
 open FSharp.Editing.Features
+open FSharp.Editing.ProjectSystem
 
 type RenameDialog = FsXaml.XAML< @"Gui/RenameDialog.xaml">
 

@@ -6,6 +6,7 @@ open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text.Operations
 open Microsoft.VisualStudio.Language.Intellisense
 open System
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open Microsoft.FSharp.Compiler.SourceCodeServices

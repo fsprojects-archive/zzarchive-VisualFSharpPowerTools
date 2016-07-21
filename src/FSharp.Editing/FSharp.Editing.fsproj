@@ -39,7 +39,7 @@
     <DocumentationFile>bin\Release\FSharp.Editing.XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52</NoWarn>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
   <PropertyGroup>
@@ -72,6 +72,7 @@
     <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common\Utils.fs" />
+    <Compile Include="Common\Constants.fs" />
     <Compile Include="Common\CompilerLocationUtils.fs" />
     <Compile Include="Common\UntypedAstUtils.fs" />
     <Compile Include="Common\TypedAstUtils.fs" />
@@ -79,11 +80,13 @@
     <Compile Include="Common\XmlDocParser.fs" />
     <Compile Include="Common\IdentifierUtils.fs" />
     <Compile Include="ProjectSystem\AssemblyContentProvider.fs" />
-    <Compile Include="ProjectSystem\OpenDocumentsTracker.fs" />
+    <Compile Include="ProjectSystem\EditorBufferTracker.fs" />
+    <Compile Include="ProjectSystem\FileSystem.fs" />
+    <Compile Include="ProjectSystem\ProjectConfig.fs" />
     <Compile Include="ProjectSystem\LanguageService.fs" />
-    <Compile Include="ProjectSystem\SolutionProvider.fs" />
-    <Compile Include="Navigation\NavigableItemsCollector.fs" />
+    <Compile Include="Navigation\NavigationItemCollector.fs" />
     <Compile Include="Navigation\NavigateToIndex.fs" />
+    <Compile Include="Navigation\ProjectNavigationCache.fs" />
     <Compile Include="Coloring\DepthParser.fs" />
     <Compile Include="Coloring\OpenDeclarationsGetter.fs" />
     <Compile Include="Coloring\UnopenedNamespacesResolver.fs" />
@@ -174,6 +177,53 @@
         <Reference Include="FSharp.Core">
           <HintPath>..\..\packages\FSharp.Core\lib\portable-net45+sl5+netcore45\FSharp.Core.dll</HintPath>
           <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v3.5'">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net35\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.0'">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net40\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1' Or $(TargetFrameworkVersion) == 'v4.6.2' Or $(TargetFrameworkVersion) == 'v4.6.3')">
+      <ItemGroup>
+        <Reference Include="FsPickler">
+          <HintPath>..\..\packages\FsPickler\lib\net45\FsPickler.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Runtime.Serialization">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="System.Xml">
           <Paket>True</Paket>
         </Reference>
       </ItemGroup>

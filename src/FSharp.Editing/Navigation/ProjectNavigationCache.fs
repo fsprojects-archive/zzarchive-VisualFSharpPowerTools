@@ -1,40 +1,47 @@
-namespace FSharp.Editing.VisualStudio.Navigation
+﻿namespace FSharp.Editing.Navigation
 
 open System
-open System.Collections.Concurrent
-open EnvDTE80
-open Microsoft.VisualStudio.Shell.Interop
-open EnvDTE
-open FSharp.Editing.Navigation
-open FSharp.Editing.VisualStudio
-open System.Security.Cryptography
-open System.Text
-open Nessos.FsPickler
 open System.IO
+open System.Text
 open System.Threading
+open System.Collections.Concurrent
+open System.Security.Cryptography
+open Nessos.FsPickler
 open FSharp.Editing
 
+type Source = string
 
-type NavigableItemCache (serviceProvider: System.IServiceProvider) =
+type FileDescriptor =
+    { Path: FilePath
+      LastWriteTime: DateTime }
+
+type FileNavigableItems =
+    { Descriptor: FileDescriptor
+      Items: NavigationItem[] }
+
+
+// TODO - the cache doesn't have a way of checking and clearing out projects that are no longer on disk
+// i.e. they were deleted or the project name was changed
+type ProjectNavigationCache (projectPath:FilePath) =
     let cache = ConcurrentDictionary<FilePath, FileNavigableItems>(StringComparer.Ordinal)
     let dirty = ref false
     let pickler = FsPickler.CreateBinarySerializer()
 
-    let solutionPathHash (solutionPath: FilePath): string =
+    let projectPathHash (projectPath: FilePath): string =
         use digest = SHA1.Create()
-        let bytes = Encoding.UTF8.GetBytes solutionPath
+        let bytes = Encoding.UTF8.GetBytes projectPath
         digest.ComputeHash bytes |> Array.toShortHexString
 
-    let cacheFilePath solutionPath =
-        let solutionHash = solutionPathHash solutionPath
-        let root = Environment.ExpandEnvironmentVariables @"%LOCALAPPDATA%\VisualFSharpPowerTools\SolutionCaches"
-        root </> solutionHash </> "navigable_items.cache"
+    let cacheFilePath projectPath =
+        let projectHash = projectPathHash projectPath
+        let root = Environment.ExpandEnvironmentVariables @"%LOCALAPPDATA%/FSharp.Editing/ProjectCaches"
+        root </> projectHash </> "navigable_items.cache"
 
-    let loadFromDisk (solutionPath: FilePath) =
+    let loadFromDisk (projectPath: FilePath) =
         protect <| fun _ ->
             cache.Clear()
             let pf = Profiler()
-            let filePath = cacheFilePath solutionPath
+            let filePath = cacheFilePath projectPath
             let items = pf.Time "Read from file" <| fun _ ->
                 if File.Exists filePath then
                     use file = File.OpenRead filePath
@@ -49,19 +56,19 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
                         cache.[item.Descriptor.Path] <- item
                     | _ -> ()
                 items
-
+            items |> ignore // temp - just to stop the warning
             pf.Stop()
-            Logging.logInfo <| fun _ -> 
-                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files %s" 
-                        (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length
-                        (cache.Values |> Seq.sumBy (fun x -> x.Items.Length)) cache.Count
-                        pf.Result
+//            Logging.logInfo <| fun _ -> 
+//                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files %s" 
+//                        (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length
+//                        (cache.Values |> Seq.sumBy (fun x -> x.Items.Length)) cache.Count
+//                        pf.Result
 
-    let saveToDisk (solutionPath: FilePath) =
+    let saveToDisk (projectPath: FilePath) =
         if !dirty then
             dirty := false
             protect <| fun _ ->
-                let filePath = cacheFilePath solutionPath
+                let filePath = cacheFilePath projectPath
                 let pf = Profiler()
                 let items = pf.Time "Save to file" <| fun _ ->
                     let items = cache.Values |> Seq.toArray
@@ -70,26 +77,17 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
                     pickler.Serialize (file, items)
                     items
                 pf.Stop()
-                Logging.logInfo <| fun _ -> 
-                    sprintf "[NavigableItemCache] Saved %d items for %d files to %s %s" 
-                            (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath pf.Result
+                items |> ignore // temp - just to stop the warning
+//                Logging.logInfo <| fun _ -> 
+//                    sprintf "[NavigableItemCache] Saved %d items for %d files to %s %s" 
+//                            (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath pf.Result
+//
 
-    let dte = serviceProvider.GetService<DTE, SDTE>()
-    let tryGetSolutionPath() = Option.attempt (fun () -> dte.Solution.FullName)  
-    let afterSolutionClosing = _dispSolutionEvents_AfterClosingEventHandler (fun () -> cache.Clear())
-    let tryLoadFromFile() = tryGetSolutionPath() |> Option.iter loadFromDisk
-    let solutionOpened = _dispSolutionEvents_OpenedEventHandler tryLoadFromFile
-    let mutable solutionEvents: SolutionEvents = null
-    
-    do match dte.Events with
-       | :? Events2 as events ->
-           solutionEvents <- events.SolutionEvents
-           solutionEvents.add_Opened solutionOpened
-           solutionEvents.add_AfterClosing afterSolutionClosing
-       | _ -> ()
-    do tryLoadFromFile()
+//    do tryLoadFromFile()
+    do loadFromDisk projectPath
 
-    let saveTimer = new Timer((fun _ -> tryGetSolutionPath() |> Option.iter saveToDisk), null, 0, 5000)
+//    let saveTimer = new Timer((fun _ -> tryGetSolutionPath() |> Option.iter saveToDisk), null, 0, 5000)
+    let saveTimer = new Timer((fun _ -> saveToDisk projectPath), null, 0, 5000)
 
     member __.TryGet (file: FileDescriptor): NavigationItem[] option =
         match cache.TryGetValue file.Path with
@@ -108,12 +106,9 @@ type NavigableItemCache (serviceProvider: System.IServiceProvider) =
         cache.[file.Path] <- { Descriptor = file; Items = items }
         dirty := true
     
-    member __.Remove (filePath: FilePath): unit = cache.TryRemove filePath |> ignore
+    member __.Remove (filePath: FilePath): unit = 
+        cache.TryRemove filePath |> ignore
 
     interface IDisposable with
-        member __.Dispose() =
-            saveTimer.Dispose()
-            solutionEvents.remove_Opened solutionOpened
-            solutionEvents.remove_AfterClosing afterSolutionClosing
-
-    
+        member __.Dispose () =
+            saveTimer.Dispose ()

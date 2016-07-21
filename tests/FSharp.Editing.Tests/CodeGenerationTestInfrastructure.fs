@@ -5,6 +5,7 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing.Features
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.AsyncMaybe
 
 type pos with

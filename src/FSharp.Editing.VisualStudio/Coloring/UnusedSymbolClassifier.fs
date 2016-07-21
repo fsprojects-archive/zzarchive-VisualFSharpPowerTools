@@ -5,6 +5,7 @@ open System.IO
 open Microsoft.VisualStudio.Text
 open Microsoft.VisualStudio.Text.Classification
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.AsyncMaybe
 open FSharp.Editing.Features
 open FSharp.Editing.UntypedAstUtils

@@ -8,6 +8,7 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler
 open System.Diagnostics
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.UntypedAstUtils
 open FSharp.Editing.Features
 open FSharp.Editing.AsyncMaybe

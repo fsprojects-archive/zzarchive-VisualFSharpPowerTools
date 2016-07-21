@@ -7,7 +7,7 @@ open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem
 open FSharp.Editing.Features
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 
 type VSDocument(source: string, filePath: FilePath, snapshot: ITextSnapshot) =
     interface IDocument with

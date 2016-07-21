@@ -12,6 +12,7 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio.Shell
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open Microsoft.VisualStudio.Text
 open Microsoft.FSharp.Compiler.Range
 open SourceLink.SymbolStore

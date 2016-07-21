@@ -46,7 +46,7 @@
     </DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
     <NoWarn>52</NoWarn>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
   <PropertyGroup>
