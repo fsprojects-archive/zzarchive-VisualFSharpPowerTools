@@ -1,10 +1,12 @@
-﻿namespace FSharp.Editing.VisualStudio.Tests
+﻿#nowarn "0044" 
+namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text.Tagging
 open Microsoft.VisualStudio.Text
 open NUnit.Framework
 open Microsoft.VisualStudio.Language.Intellisense
+
 
 type ResolveUnopenedNamespaceSmartTaggerHelper() =    
     inherit VsTestBase()
@@ -24,6 +26,7 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
 
     member __.GetTagger(buffer, view) = 
         taggerProvider.CreateTagger<_>(view, buffer)
+
 
     member __.TagsOf(buffer: ITextBuffer, tagger: ITagger<_>) =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)

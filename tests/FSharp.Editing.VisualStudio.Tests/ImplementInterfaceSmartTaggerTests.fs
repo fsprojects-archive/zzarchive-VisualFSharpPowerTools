@@ -1,4 +1,5 @@
-﻿namespace FSharp.Editing.VisualStudio.Tests
+﻿#nowarn "0044"
+namespace FSharp.Editing.VisualStudio.Tests
 
 open FSharpVSPowerTools
 open Microsoft.VisualStudio.Text.Tagging
