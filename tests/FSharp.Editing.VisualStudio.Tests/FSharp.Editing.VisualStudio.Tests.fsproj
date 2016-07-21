@@ -30,7 +30,7 @@
     <Prefer32Bit>true</Prefer32Bit>
     <NoWarn>52</NoWarn>
     <OtherFlags>--warnon:1182</OtherFlags>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">

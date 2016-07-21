@@ -7,10 +7,11 @@ open Microsoft.VisualStudio.Text
 open NUnit.Framework
 open Microsoft.VisualStudio.Language.Intellisense
 
-type ResolveUnopenedNamespaceSmartTaggerHelper() =    
+
+type ResolveUnopenedNamespaceSmartTaggerHelper() =
     inherit VsTestBase()
 
-    let taggerProvider = 
+    let taggerProvider =
         ResolveUnopenedNamespaceSmartTaggerProvider
             (
                 fsharpVsLanguageService = base.VsLanguageService,
@@ -23,8 +24,9 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
     member __.GetView(buffer) =
         createMockTextView buffer
 
-    member __.GetTagger(buffer, view) = 
+    member __.GetTagger(buffer, view) =
         taggerProvider.CreateTagger<_>(view, buffer)
+
 
     member __.TagsOf(buffer: ITextBuffer, tagger: ITagger<_>) =
         let span = SnapshotSpan(buffer.CurrentSnapshot, 0, buffer.CurrentSnapshot.Length)
@@ -33,7 +35,7 @@ type ResolveUnopenedNamespaceSmartTaggerHelper() =
                 match box span.Tag with
                 | :? SmartTag as tag ->
                     tag.ActionSets |> Seq.map (fun ac -> seq ac.Actions) |> Some
-                | _ -> 
+                | _ ->
                     None)
         |> Seq.concat
 
@@ -43,7 +45,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
     let fileName = getTempFileName ".fsx"
 
     [<Test>]
-    let ``return nothing if tags not found``() = 
+    let ``return nothing if tags not found``() =
         let content = "TimeDate"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
@@ -51,13 +53,13 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger) 
-                       |> Seq.concat 
-                       |> Seq.toList 
+            (fun () -> helper.TagsOf(buffer, tagger)
+                       |> Seq.concat
+                       |> Seq.toList
                        |> assertEqual [])
 
     [<Test>]
-    let ``should not display unopened namespace tags on known values``() = 
+    let ``should not display unopened namespace tags on known values``() =
         let content = "System.DateTime.Now"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
@@ -65,12 +67,12 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 17) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger) 
-                       |> Seq.toList 
+            (fun () -> helper.TagsOf(buffer, tagger)
+                       |> Seq.toList
                        |> assertEqual [])
 
     [<Test>]
-    let ``should not fail if active document raises exceptions``() = 
+    let ``should not fail if active document raises exceptions``() =
         let content = "System.IO.Path"
         // Give an invalid path for active document
         let fileName = ""
@@ -80,12 +82,12 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 10) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger) 
-                       |> Seq.toList 
+            (fun () -> helper.TagsOf(buffer, tagger)
+                       |> Seq.toList
                        |> assertEqual [])
 
     [<Test>]
-    let ``should generate correct labels for unopened namespace tags``() = 
+    let ``should generate correct labels for unopened namespace tags``() =
         let content = "DateTime"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
@@ -93,14 +95,14 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
+            (fun () ->
+                helper.TagsOf(buffer, tagger)
                 |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
-                |> Seq.toList 
+                |> Seq.toList
                 |> assertEqual [ ["open System"]; ["System.DateTime"] ])
 
     [<Test>]
-    let ``should generate correct labels for unopened namespace tags if a single namespace contains multiple suitable qualified idents``() = 
+    let ``should generate correct labels for unopened namespace tags if a single namespace contains multiple suitable qualified idents``() =
         let content = "empty"
         let buffer = createMockTextBuffer content fileName
         helper.SetUpProjectAndCurrentDocument(createVirtualProject(buffer, fileName), fileName, content)
@@ -108,11 +110,11 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 1 1) |> ignore)
-            (fun () -> 
-                helper.TagsOf(buffer, tagger) 
+            (fun () ->
+                helper.TagsOf(buffer, tagger)
                 |> Seq.map (Seq.map (fun action -> action.DisplayText) >> Seq.toList)
-                |> Seq.toList 
-                |> assertEqual 
+                |> Seq.toList
+                |> assertEqual
                     [ ["open Microsoft.FSharp.Collections (Array.empty)"
                        "open Microsoft.FSharp.Collections (List.empty)"
                        "open Microsoft.FSharp.Collections (Map.empty)"
@@ -126,7 +128,7 @@ module ResolveUnopenedNamespaceSmartTaggerTests =
                        "Microsoft.FSharp.Collections.Set.empty" ] ])
 
     [<Test>]
-    let ``should insert open declarations at correct positions``() = 
+    let ``should insert open declarations at correct positions``() =
         let content = """
 #r "System.dll"
 TimeSpan
@@ -137,14 +139,14 @@ TimeSpan
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
-            (fun () -> 
+            (fun () ->
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
                     |> Seq.tryFind (fun action -> action.DisplayText = "open System")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() 
+                buffer.CurrentSnapshot.GetText()
                 |> assertEquivString """
 #r "System.dll"
 
@@ -154,7 +156,7 @@ TimeSpan
 """ )
 
     [<Test>]
-    let ``should insert namespace prefix at correct positions``() = 
+    let ``should insert namespace prefix at correct positions``() =
         let content = """
 #r "System.dll"
 DateTime
@@ -165,14 +167,14 @@ DateTime
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 1) |> ignore)
-            (fun () -> 
+            (fun () ->
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
                     |> Seq.tryFind (fun action -> action.DisplayText = "System.DateTime")
                     |> Option.get
                 tagToInsert.Invoke()
-                buffer.CurrentSnapshot.GetText() 
+                buffer.CurrentSnapshot.GetText()
                 |> assertEquivString """
 #r "System.dll"
 System.DateTime

@@ -56,7 +56,7 @@ type ProjectNavigationCache (projectPath:FilePath) =
                         cache.[item.Descriptor.Path] <- item
                     | _ -> ()
                 items
-
+            items |> ignore // temp - just to stop the warning
             pf.Stop()
 //            Logging.logInfo <| fun _ -> 
 //                sprintf "[NavigableItemCache] Loaded: %d items for %d files. Sutable: %d items for %d files %s" 
@@ -77,6 +77,7 @@ type ProjectNavigationCache (projectPath:FilePath) =
                     pickler.Serialize (file, items)
                     items
                 pf.Stop()
+                items |> ignore // temp - just to stop the warning
 //                Logging.logInfo <| fun _ -> 
 //                    sprintf "[NavigableItemCache] Saved %d items for %d files to %s %s" 
 //                            (items |> Array.sumBy (fun x -> x.Items.Length)) items.Length filePath pf.Result
