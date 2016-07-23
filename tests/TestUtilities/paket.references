@@ -1,0 +1,12 @@
+group vssdklegacy
+    VSSDK.ComponentModelHost
+    VSSDK.NavigateTo
+    
+group vssdk
+    Microsoft.VisualStudio.Editor
+    Microsoft.VisualStudio.Language.Intellisense
+    Microsoft.VisualStudio.OLE.Interop
+    Microsoft.VisualStudio.Shell.Interop
+    Microsoft.VisualStudio.Shell.Interop.10.0
+    Microsoft.VisualStudio.Text.UI.Wpf
+    VSSDK.Shell.12 
