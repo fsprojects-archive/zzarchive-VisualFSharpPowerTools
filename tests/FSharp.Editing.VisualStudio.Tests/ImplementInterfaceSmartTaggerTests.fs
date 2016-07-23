@@ -108,7 +108,7 @@ let _ =
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 let _ =
     { new System.IDisposable with
-          member x.Dispose(): unit =
+          member x.Dispose(): unit = 
               failwith "Not implemented yet"
            }
 """))
@@ -145,10 +145,10 @@ type Interface =
     abstract member Method2 : int -> int
     abstract member Method3 : int -> int
 type Class() =
-    interface Interface with
-        member x.Method2(arg1: int): int =
+    interface Interface with 
+        member x.Method2(arg1: int): int = 
             failwith "Not implemented yet"
-        member x.Method3(arg1: int): int =
+        member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
 
         member __.Method1(n) = 2 * n
@@ -194,9 +194,9 @@ type Interface3 =
     abstract member Method3 : int -> int
 type Class() =
     interface Interface3 with
-        member x.Method(arg1: int): int =
+        member x.Method(arg1: int): int = 
             failwith "Not implemented yet"
-        member x.Method3(arg1: int): int =
+        member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
 
 """))
