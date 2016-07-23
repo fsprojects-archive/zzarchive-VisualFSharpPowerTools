@@ -15,8 +15,9 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.VisualStudio
 open Microsoft.VisualStudio.TextManager.Interop
 open EnvDTE
-open FSharp.Editing.Infrastructure
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
+open FSharp.Editing.Navigation
 open FSharp.Editing.AsyncMaybe
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem
@@ -26,22 +27,22 @@ module Constants =
 
 type NavigateToItemExtraData = 
     { FileName: string
-      Span: NavigableItemRange
+      Span: NavigationItemRange
       Description: string }
 
 module private ItemKind =
     let toKinds = function
-        | NavigableItemKind.Exception -> NavigateToItemKind.Class, "exception"
-        | NavigableItemKind.Field -> NavigateToItemKind.Field, "field"
-        | NavigableItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
-        | NavigableItemKind.Member -> NavigateToItemKind.Method, "member"
-        | NavigableItemKind.Module -> NavigateToItemKind.Module, "module"
-        | NavigableItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
-        | NavigableItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
-        | NavigableItemKind.Property -> NavigateToItemKind.Property, "property"
-        | NavigableItemKind.Type -> NavigateToItemKind.Class, "type"
-        | NavigableItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
-        | NavigableItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
+        | NavigationItemKind.Exception -> NavigateToItemKind.Class, "exception"
+        | NavigationItemKind.Field -> NavigateToItemKind.Field, "field"
+        | NavigationItemKind.Constructor -> NavigateToItemKind.Class, "constructor"
+        | NavigationItemKind.Member -> NavigateToItemKind.Method, "member"
+        | NavigationItemKind.Module -> NavigateToItemKind.Module, "module"
+        | NavigationItemKind.ModuleAbbreviation -> NavigateToItemKind.Module, "module abbreviation"
+        | NavigationItemKind.ModuleValue -> NavigateToItemKind.Field, "module value"
+        | NavigationItemKind.Property -> NavigateToItemKind.Property, "property"
+        | NavigationItemKind.Type -> NavigateToItemKind.Class, "type"
+        | NavigationItemKind.EnumCase -> NavigateToItemKind.EnumItem, "enum"
+        | NavigationItemKind.UnionCase -> NavigateToItemKind.Class, "union case"
 
     let fromGlyphGroup = function
         | NavigateToItemKind.Class -> StandardGlyphGroup.GlyphGroupClass
@@ -121,7 +122,7 @@ type NavigateToItemProvider
 
     let processNavigableItemsInProject (openDocuments, project: IProjectProvider, processNavigableItems, ct: CancellationToken) =
         async {
-            let (cachedItems, newItems): NavigableItem[][] * ((FileDescriptor * (unit -> Source option)) option []) =
+            let (cachedItems, newItems): NavigationItem[][] * ((FileDescriptor * (unit -> Source option)) option []) =
                 project.SourceFiles 
                 |> Array.mapPartition (fun file ->
                     let res =
@@ -146,7 +147,7 @@ type NavigateToItemProvider
             cachedItems |> Array.iter processNavigableItems
 
             let processAst (file: FileDescriptor) ast =
-                let items = NavigableItemsCollector.collect file.Path ast |> Seq.toArray
+                let items = NavigationItemCollector.collect file.Path ast |> Seq.toArray
                 navigableItemCache.Add (file, items)
                 processNavigableItems items
 
@@ -198,7 +199,7 @@ type NavigateToItemProvider
             indexPromises |> Array.map (fun tcs -> tcs.Task)
 
     let runSearch(indexTasks: Tasks.Task<Index.IIndexedNavigableItems>[], searchValue: string, callback: INavigateToCallback, ct) = 
-        let processItem (seen: ConcurrentDictionary<_, unit>) (item: NavigableItem, name, isOperator, matchKind: Index.MatchKind) = 
+        let processItem (seen: ConcurrentDictionary<_, unit>) (item: NavigationItem, name, isOperator, matchKind: Index.MatchKind) = 
             let itemName = if isOperator then "(" + name + ")" else name
             if seen.TryAdd ((itemName, item.FilePath, item.Range), ()) then
                 let kind, textKind = ItemKind.toKinds item.Kind
@@ -227,7 +228,7 @@ type NavigateToItemProvider
         
         Async.StartInThreadPoolSafe(searchValueComputations, cancellationToken = ct)
 
-    member __.ProcessNavigableItemsInProject (openDocs, project, ct): Async<NavigableItem list> =
+    member __.ProcessNavigableItemsInProject (openDocs, project, ct): Async<NavigationItem list> =
         async {
             let result = ResizeArray()
             do! processNavigableItemsInProject (openDocs, project, (fun items -> result.AddRange items), ct)

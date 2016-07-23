@@ -9,7 +9,7 @@ open Microsoft.VisualStudio.Text
 open FSharp.Editing
 open FSharp.Editing.VisualStudio.ProjectSystem
 open System.Threading
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 
 let inline notimpl<'T> : 'T = failwith "Not implemented yet"

@@ -52,6 +52,30 @@ module Prelude =
     let inline isNotNull v = not (isNull v)
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
 
+    /// Try to run a given function, resorting to a default value if it throws exceptions
+    let protectOrDefault f defaultVal =
+        try
+            f()
+        with e ->
+            //Logging.logException e
+            defaultVal
+
+    /// Try to run a given async computation, catch and log its exceptions
+    let protectAsync a =
+        async {
+            let! res = Async.Catch a
+            return 
+                match res with 
+                | Choice1Of2 () -> ()
+//                | Choice2Of2 e ->
+                | Choice2Of2 _ ->
+              //      Logging.logException e
+                    ()
+        }
+
+    /// Try to run a given function and catch its exceptions
+    let protect f = protectOrDefault f ()
+
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =
@@ -660,7 +684,12 @@ module String =
         | Some c  -> 
             strArr.[0] <- Char.ToLower c
             String (strArr)
+    
+    let inline contains (target:string) (str:string) =
+        str.Contains target
 
+    let inline equalsIgnoreCase (str1:string) (str2:string) =
+        str1.Equals(str2, StringComparison.OrdinalIgnoreCase)
 
     let extractTrailingIndex (str: string) =
         match str with

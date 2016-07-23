@@ -24,6 +24,7 @@ open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open TestHelpers.LanguageServiceTestHelper
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open CodeGenerationTestInfrastructure
 open FSharp.Editing.Features.UnionPatternMatchCaseGenerator

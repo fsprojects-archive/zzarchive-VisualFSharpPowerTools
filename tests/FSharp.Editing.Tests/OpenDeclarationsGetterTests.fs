@@ -18,6 +18,7 @@ module FSharp.Editing.Tests.OpenDeclarationsGetterTests
 open System.IO
 open NUnit.Framework
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open FSharp.Editing.Features

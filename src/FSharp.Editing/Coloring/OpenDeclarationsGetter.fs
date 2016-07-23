@@ -5,6 +5,7 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Range
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 
 type RawOpenDeclaration =
     { Idents: Idents

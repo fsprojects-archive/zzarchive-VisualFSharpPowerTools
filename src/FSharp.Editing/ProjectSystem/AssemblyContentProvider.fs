@@ -1,7 +1,8 @@
-﻿namespace FSharp.Editing
+﻿namespace FSharp.Editing.ProjectSystem
 
 open System
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open FSharp.Editing
 
 type internal ShortIdent = string
 type Idents = ShortIdent[]

@@ -2,6 +2,7 @@
 
 open FSharp.Editing
 open FSharp.Editing.UntypedAstUtils
+open FSharp.Editing.ProjectSystem
 
 type LongIdent = string
 

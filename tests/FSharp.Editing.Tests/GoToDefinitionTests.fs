@@ -25,6 +25,7 @@ open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.Range
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.Features
 open CodeGenerationTestInfrastructure
 open FSharp.Editing.Features.UnionPatternMatchCaseGenerator

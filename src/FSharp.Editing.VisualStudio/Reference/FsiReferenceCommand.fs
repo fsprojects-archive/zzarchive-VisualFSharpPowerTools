@@ -1,6 +1,7 @@
 ﻿namespace FSharp.Editing.VisualStudio.Reference
 
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open EnvDTE80
 open Microsoft.VisualStudio.Shell
@@ -11,7 +12,6 @@ open VSLangProj
 open System.ComponentModel.Design
 open System.Text
 open System.Runtime.Versioning
-open FSharp.Editing.Infrastructure
 open FSharp.Editing.VisualStudio.ProjectSystem
 
 type FsiReferenceCommand(dte2: DTE2, mcs: OleMenuCommandService) =

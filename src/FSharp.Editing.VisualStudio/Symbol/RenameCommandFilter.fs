@@ -11,7 +11,7 @@ open Microsoft.FSharp.Compiler.Range
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open FSharp.ViewModule.Progress
-open FSharp.Editing.Infrastructure
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio.ProjectSystem
 
 [<NoEquality; NoComparison>]

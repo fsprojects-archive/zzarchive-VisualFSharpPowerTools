@@ -4,8 +4,8 @@ open System
 open System.IO
 open System.Diagnostics
 open EnvDTE
-open FSharp.Editing.Infrastructure
 open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 open FSharp.Editing.VisualStudio
 open VSLangProj
 open Microsoft.FSharp.Compiler.SourceCodeServices
@@ -156,15 +156,16 @@ type internal ProjectProvider
                 cache := Some opts
                 return opts
         }
-    let projectDescriptor = 
-        { IsForStandaloneScript = false
-          ProjectFile           = projectFileName.Value
-          TargetFramework       = targetFramework.Value
-          CompilerVersion       = None // This option is only relevant in scripts
-          CompilerOptions       = compilerOptions.Value
-          SourceFiles           = sourceFiles.Value
-          FullOutputFilePath    = fullOutputPath.Value
+    let projectDescriptor : ProjectDescriptor = 
+        {   IsForStandaloneScript = false
+            ProjectFile           = projectFileName.Value
+            TargetFramework       = targetFramework.Value
+            CompilerVersion       = None // This option is only relevant in scripts
+            CompilerOptions       = compilerOptions.Value
+            SourceFiles           = sourceFiles.Value
+            FullOutputFilePath    = fullOutputPath.Value
         }
+
     interface IProjectProvider with
         member __.Project = projectDescriptor
         member __.GetReferencedProjects() = referencedProjects.Value
@@ -179,6 +180,7 @@ type internal ProjectProvider
                  p.Events.ReferencesEvents.remove_ReferenceChanged refChanged
                  p.Events.ReferencesEvents.remove_ReferenceRemoved refRemoved)
      
+
 /// A standalone project provider in order to represent script files
 type internal VirtualProjectProvider (source: string, filePath: string, vsVersion) = 
     do Debug.Assert (isNotNull filePath && isNotNull source, "FilePath and source should not be null.")
@@ -190,15 +192,16 @@ type internal VirtualProjectProvider (source: string, filePath: string, vsVersio
     let projectFileName = filePath + ".fsproj"
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
     
-    let projectDescriptor = 
-        { IsForStandaloneScript = true
-          ProjectFile           = projectFileName
-          TargetFramework       = FSharpTargetFramework.NET_4_5
-          CompilerVersion       = Some compilerVersion
-          CompilerOptions       = flags
-          SourceFiles           = [| filePath |]
-          FullOutputFilePath    = Some (Path.ChangeExtension(projectFileName, ".dll"))
+    let projectDescriptor : ProjectDescriptor = 
+        {   IsForStandaloneScript = true
+            ProjectFile           = projectFileName
+            TargetFramework       = FSharpTargetFramework.NET_4_5
+            CompilerVersion       = Some compilerVersion
+            CompilerOptions       = flags
+            SourceFiles           = [| filePath |]
+            FullOutputFilePath    = Some (Path.ChangeExtension(projectFileName, ".dll"))
         }
+
     interface IProjectProvider with
         member __.Project = projectDescriptor
         member __.GetReferencedProjects() = []
@@ -206,39 +209,39 @@ type internal VirtualProjectProvider (source: string, filePath: string, vsVersio
         member __.GetProjectCheckerOptions languageService =
             languageService.GetScriptCheckerOptions (filePath, projectFileName, source, compilerVersion)
 
+
 /// An ad-hoc project provider in order to integrate generated signatures into the project system
 type internal SignatureProjectProvider (filePath: string, attachedProject: IProjectProvider) = 
     let projectFileName = filePath + ".fsproj"
     let sourceFiles = [| filePath |]
     let flags = [| "--noframework"; "--debug-"; "--optimize-"; "--tailcalls-" |]
     
-    let projectDescriptor = 
-        { IsForStandaloneScript = true // Although we inherit from another project, symbol-based features only work in the scope of current file.
-          ProjectFile           = projectFileName
-          TargetFramework       = attachedProject.Project.TargetFramework
-          CompilerVersion       = attachedProject.Project.CompilerVersion
-          CompilerOptions       = flags
-          SourceFiles           = sourceFiles
-          FullOutputFilePath    = Some (Path.ChangeExtension(projectFileName, ".dll"))
+    let projectDescriptor : ProjectDescriptor = 
+        {   IsForStandaloneScript = true // Although we inherit from another project, symbol-based features only work in the scope of current file.
+            ProjectFile           = projectFileName
+            TargetFramework       = attachedProject.Project.TargetFramework
+            CompilerVersion       = attachedProject.Project.CompilerVersion
+            CompilerOptions       = flags
+            SourceFiles           = sourceFiles
+            FullOutputFilePath    = Some (Path.ChangeExtension(projectFileName, ".dll"))
         }
 
     interface IProjectProvider with
         member __.Project = projectDescriptor
         member __.GetReferencedProjects() = []
         member __.GetAllReferencedProjectFileNames() = []
-        member __.GetProjectCheckerOptions languageService =
-            async {
-                let! opts = attachedProject.GetProjectCheckerOptions languageService
-                let refProjectsOutPaths = 
-                    opts.ReferencedProjects 
-                    |> Array.map fst
-                    |> Set.ofArray
-                let references = 
-                    opts.OtherOptions
-                    |> Array.choose (fun arg -> 
-                            // Filter out project references, which aren't necessary for the scenario
-                            if arg.StartsWith("-r:") && not (Set.contains (arg.[3..].Trim()) refProjectsOutPaths) then 
-                                Some arg 
-                            else None)
-                return languageService.GetProjectCheckerOptions (projectFileName, sourceFiles, Array.append flags references, [||])
-            }
+        member __.GetProjectCheckerOptions languageService = async {
+            let! opts = attachedProject.GetProjectCheckerOptions languageService
+            let refProjectsOutPaths = 
+                opts.ReferencedProjects 
+                |> Array.map fst
+                |> Set.ofArray
+            let references = 
+                opts.OtherOptions
+                |> Array.choose (fun arg -> 
+                        // Filter out project references, which aren't necessary for the scenario
+                        if arg.StartsWith("-r:") && not (Set.contains (arg.[3..].Trim()) refProjectsOutPaths) then 
+                            Some arg 
+                        else None)
+            return languageService.GetProjectCheckerOptions (projectFileName, sourceFiles, Array.append flags references, [||])
+        }
