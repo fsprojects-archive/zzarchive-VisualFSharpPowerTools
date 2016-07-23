@@ -1,0 +1,1 @@
+type Record = { ``My Record`` : string }

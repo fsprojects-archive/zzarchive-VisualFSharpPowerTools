@@ -8,6 +8,8 @@ NUGET
     FSharp.Compiler.Service (5.0)
     FSharp.Compiler.Service.ProjectCracker (3.0)
     FSharp.Core (4.0.0.1)
+    FSharp.Data (2.3.1)
+      Zlib.Portable (>= 1.11) - framework: portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81
     FSharp.Management (0.3)
     FSharp.ViewModule.Core (0.9.9.3)
     FSharpLint.Core (0.4.1-beta)
@@ -17,6 +19,7 @@ NUGET
     FsPickler (2.3)
     FsXaml.Wpf (2.0)
     SourceLink.SymbolStore (0.5)
+    Zlib.Portable (1.11) - framework: portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81
 
 GROUP Build
 NUGET

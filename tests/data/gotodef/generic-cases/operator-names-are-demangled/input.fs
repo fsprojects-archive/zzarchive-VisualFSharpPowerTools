@@ -1,0 +1,1 @@
+let inline func x = x + x
