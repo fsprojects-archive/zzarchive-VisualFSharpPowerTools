@@ -40,7 +40,7 @@ let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 let solutionFile  = "FSharpVSPowerTools"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
-// The profile where the project is posted 
+// The profile where the project is posted
 let gitOwner = "fsprojects"
 let gitHome = "https://github.com/" + gitOwner
 
