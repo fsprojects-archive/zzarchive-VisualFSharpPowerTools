@@ -20,7 +20,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/CommonResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/Gui/CommonResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <fsxaml:BooleanToVisibilityConverter x:Key="BoolToVis" />
