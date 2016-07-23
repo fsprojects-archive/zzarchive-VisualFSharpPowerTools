@@ -16,7 +16,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/CommonResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/FSharp.Editing.VisualStudio;component/Gui/CommonResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         <Style TargetType="HeaderedContentControl">
             <Setter Property="Focusable" Value="False"/>
