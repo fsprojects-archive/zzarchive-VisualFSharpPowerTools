@@ -76,6 +76,7 @@
     <Resource Include="Gui\FolderNameDialog.xaml" />
     <Resource Include="Gui\MoveToFolderDialog.xaml" />
     <Resource Include="Gui\QuickInfoMargin.xaml" />
+    <Resource Include="Gui\BreadcrumbBar.xaml" />
     <Resource Include="Gui\LintOptionsPageControl.xaml" />
     <Compile Include="Common/Resource.fs" />
     <Compile Include="Common/Constants.fs" />
@@ -102,6 +103,7 @@
     <Compile Include="Navigation/NavigateToMetadataService.fs" />
     <Compile Include="Navigation/GoToDefinitionFilter.fs" />
     <Compile Include="Navigation/NoPeekDefinitionFilterProvider.fs" />
+    <Compile Include="Navigation\BreadcrumbBarMargin.fs" />
     <Compile Include="Formatting/CodeFormattingServices.fs" />
     <Compile Include="Formatting/CodeFormattingCommands.fs" />
     <Compile Include="Formatting/FormatDocumentCommand.fs" />

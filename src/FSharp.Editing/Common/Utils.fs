@@ -57,6 +57,14 @@ module Prelude =
 module Seq =
     let toReadOnlyCollection (xs: _ seq) = ResizeArray(xs).AsReadOnly()
 
+    let ofType<'a when 'a : not struct> (col : System.Collections.IEnumerable) = 
+        seq {
+                for item in col do
+                    match item with 
+                    | :? 'a as a -> yield a
+                    | _ -> ()
+            }
+
 [<RequireQualifiedAccess>]
 module List =
     /// Fold over the list passing the index and element at that index to a folding function

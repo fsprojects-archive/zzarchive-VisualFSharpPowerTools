@@ -52,5 +52,4 @@ namespace FSharpVSPowerTools.QuickInfo
                 return null;
         }
     }
-
 }
