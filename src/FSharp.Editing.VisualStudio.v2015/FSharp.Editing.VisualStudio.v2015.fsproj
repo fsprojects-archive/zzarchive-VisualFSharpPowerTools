@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>FSharp.Editing.VisualStudio.v2015</RootNamespace>
     <AssemblyName>FSharp.Editing.VisualStudio.v2015</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>FSharp.Editing.VisualStudio.v2015</Name>
