@@ -1,12 +1,15 @@
 ﻿#r "../../bin/FSharp.Compiler.Service.dll"
 
-#load "../../src/FSharpVSPowerTools.Core/Utils.fs"
-      "../../src/FSharpVSPowerTools.Core/CompilerLocationUtils.fs"
-      "../../src/FSharpVSPowerTools.Core/UntypedAstUtils.fs"
-      "../../src/FSharpVSPowerTools.Core/TypedAstUtils.fs"
-      "../../src/FSharpVSPowerTools.Core/Lexer.fs"
-      "../../src/FSharpVSPowerTools.Core/AssemblyContentProvider.fs"
-      "../../src/FSharpVSPowerTools.Core/LanguageService.fs"
+#load "../../src/FSharp.Editing/Common/Utils.fs"
+      "../../src/FSharp.Editing/Common/CompilerLocationUtils.fs"
+      "../../src/FSharp.Editing/Common/UntypedAstUtils.fs"
+      "../../src/FSharp.Editing/Common/TypedAstUtils.fs"
+      "../../src/FSharp.Editing/Common/Lexer.fs"
+      "../../src/FSharp.Editing/Common/IdentifierUtils.fs"
+      "../../src/FSharp.Editing/ProjectSystem/AssemblyContentProvider.fs"
+      "../../src/FSharp.Editing/ProjectSystem/LanguageService.fs"
+      "../../src/FSharp.Editing/Coloring/OpenDeclarationsGetter.fs"
+      "../../src/FSharp.Editing/Symbols/SourceCodeClassifier.fs"
 //      "../../src/FSharpVSPowerTools.Core/XmlDocParser.fs"
 //      "../../src/FSharpVSPowerTools.Core/DepthParser.fs"
 //      "../../src/FSharpVSPowerTools.Core/NavigableItemsCollector.fs"
@@ -23,7 +26,8 @@
 //      "../../src/FSharpVSPowerTools.Core/TaskListCommentExtractor.fs"
 
 open System.IO
-open FSharpVSPowerTools
+open FSharp.Editing
+open FSharp.Editing.ProjectSystem
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")

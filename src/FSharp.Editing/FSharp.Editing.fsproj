@@ -69,7 +69,6 @@
   -->
   <Import Project="$(SolutionDir)\.paket\paket.targets" />
   <ItemGroup>
-    <None Include="Scratchpad.fsx" />
     <Content Include="paket.references" />
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Common\Utils.fs" />
@@ -101,6 +100,7 @@
     <Compile Include="CodeGeneration\InterfaceStubGenerator.fs" />
     <Compile Include="CodeGeneration\RecordStubGenerator.fs" />
     <Compile Include="TaskListCommentExtractor.fs" />
+    <None Include="Scratchpad.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
