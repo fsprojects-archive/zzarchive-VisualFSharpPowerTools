@@ -11,7 +11,7 @@ open Microsoft.VisualStudio.Text
 open System.Windows.Input
 open Microsoft.VisualStudio.Text.Tagging
 open FSharp.Editing
-open FSharp.Editing.Features.SourceCodeClassifier
+open FSharp.Editing.SourceCodeClassifier
 open FSharp.Editing.VisualStudio
 
 [<Name(Constants.fsharpUnusedDeclarationMargin)>]

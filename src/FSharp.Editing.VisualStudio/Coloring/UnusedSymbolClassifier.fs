@@ -17,7 +17,7 @@ open Microsoft.FSharp.Compiler
 open System.Diagnostics
 open FSharp.Editing.VisualStudio.Coloring
 open FSharp.Editing.VisualStudio.ProjectSystem
-open FSharp.Editing.Features.SourceCodeClassifier
+open FSharp.Editing.SourceCodeClassifier
 
 [<NoComparison>]
 type private CheckingProject =
