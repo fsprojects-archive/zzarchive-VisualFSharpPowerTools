@@ -1,5 +1,5 @@
 ﻿#if INTERACTIVE // Emulate minimal NUnit in F# Interactive
-#r @"..\packages\Foq.1.7.1\Lib\net45\Foq.dll"
+#r @"../../../packages/test/Foq/lib/net45/Foq.dll"
 
 type TestAttribute() = inherit System.Attribute()
 
@@ -9,7 +9,7 @@ module Assert =
         if not (expected = actual) then 
             sprintf "Expected '%A' Actual '%A'" expected actual |> failwith
     let inline Throws<'T when 'T :> exn> (f) =
-        let fail () = failwith "Expected %s" typeof<'T>.Name
+        let fail () = failwithf "Expected %s" typeof<'T>.Name
         try f (); fail () with :? 'T as e -> e | _ -> fail()
 #else
 module Foq.Usage
