@@ -385,46 +385,43 @@ open System
 open FsCheck
 open Microsoft.FSharp.Compiler.SourceCodeServices.PrettyNaming
 
-type Args = Args of string list
 
 let allUnderscores (arg: string) = arg.ToCharArray() |> Array.forall (fun c -> c = '_')
 
-let keywords = 
-    KeywordNames
-    |> List.filter (not << allUnderscores)
+let keywords = KeywordNames |> List.filter (not << allUnderscores)
 
-type Generators =
-    static member Args() : Arbitrary<Args> =
-        let shuffle =
-            let rnd = Random()
+let private rnd = Random()
 
-            let swap (a: _ []) x y =
-                let tmp = a.[x]
-                a.[x] <- a.[y]
-                a.[y] <- tmp
+let shuffle ls =
+    let swap (a: _ []) x y =
+        let tmp = a.[x]
+        a.[x] <- a.[y]
+        a.[y] <- tmp
 
-            fun l -> 
-                let a = Array.ofList l
-                Array.iteri (fun i _ -> swap a i (rnd.Next(i, Array.length a))) a
-                a |> Array.toList
+    let arr = Array.ofList ls
+    Array.iteri (fun i _ -> swap arr i (rnd.Next(i, Array.length arr))) arr
+    arr |> Array.toList
 
-        let random = 
-            Arb.generate
-            |> Gen.filter (fun (x: string) -> 
-                x <> null && x.Length > 0 && not (Char.IsDigit x.[0])
-                && x.ToCharArray() |> Array.forall (fun c -> Char.IsLetterOrDigit c || c = '_')
-                && not (allUnderscores x))
-            |> Gen.nonEmptyListOf
-        let keywords = Gen.elements keywords
-        gen {
-            let! randoms = random
-            let! keywords = keywords |> Gen.listOf |> Gen.resize 50
-            return Args (shuffle (randoms @ keywords))
-        }
-        |> Arb.fromGen
 
-let reg() = Arb.register<Generators>() |> ignore
-do reg()
+let randomList = 
+    Arb.generate
+    |> Gen.filter (fun (x: string) -> 
+        x <> null && x.Length > 0 && not (Char.IsDigit x.[0])
+        && x.ToCharArray() |> Array.forall (fun c -> Char.IsLetterOrDigit c || c = '_')
+        && not (allUnderscores x))
+    |> Gen.nonEmptyListOf
+
+
+
+let arbitraryArg =
+    let keywords = Gen.elements keywords
+    gen {
+        let! randoms = randomList
+        let! keywords = keywords |> Gen.listOf |> Gen.resize 50
+        return (shuffle (randoms @ keywords))
+    }
+    |> Arb.fromGen
+
 
 let normalizeArgs =
     List.fold (fun (acc, namesWithIndices) arg ->
@@ -433,36 +430,44 @@ let normalizeArgs =
         ([], Map.empty)
     >> fst
 
-let inline (!) prop = reg(); Check.QuickThrowOnFailure prop
 
-[<Test>]
+let checkArgs fn =
+    Check.QuickThrowOnFailure (Prop.forAll arbitraryArg fn)
+
+[<Test; Parallelizable>]
 let ``does not change number of args``() =
-    ! (fun (Args args) -> normalizeArgs args |> List.length = List.length args)
+    checkArgs (fun args -> normalizeArgs args |> List.length = List.length args)
+
     
-[<Test>]
+[<Test; Parallelizable>]
 let ``no duplicated args``() =
-    ! (fun (Args args) ->
+    checkArgs (fun args ->
         let normalized = normalizeArgs args
         normalized |> Seq.distinct |> Seq.toList = normalized)
 
-[<Test>]
+
+[<Test; Parallelizable>]
 let ``no keywords in args``() =
-    ! (fun (Args args) ->
+    checkArgs (fun args ->
         let normalized = normalizeArgs args
         set normalized |> Set.intersect (set keywords) = Set.empty)
 
-[<Test>]
+
+[<Test; Parallelizable>]
 let ``no empty args``() =
-    ! (fun (Args args) ->
+    checkArgs (fun args ->
         normalizeArgs args |> List.forall (not << String.IsNullOrWhiteSpace))
 
-[<Test>]
+
+[<Test; Parallelizable>]
 let ``all args start with lower case letter``() =
-    ! (fun (Args args) ->
+    checkArgs (fun args ->
         normalizeArgs args |> List.forall (fun arg -> 
             let arg = if arg.StartsWith "``" then arg.Substring 2 else arg
             let firstChar = arg.ToCharArray().[0]
-            Char.IsLower firstChar || firstChar = '_'))
+            Char.IsLower firstChar || firstChar = '_')
+    )
+
 
 #if INTERACTIVE
 ``should generate stubs for simple interface``();;
