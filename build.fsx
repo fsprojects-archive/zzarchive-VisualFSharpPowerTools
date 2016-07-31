@@ -327,7 +327,7 @@ Target "TravisCI" (fun _ ->
   ==> "Build"
   ==> "BuildTests"
   ==> "UnitTests"
-  ==> "IntegrationTests"
+  <=> "IntegrationTests"
   ==> "Main"
 
 "Clean"
