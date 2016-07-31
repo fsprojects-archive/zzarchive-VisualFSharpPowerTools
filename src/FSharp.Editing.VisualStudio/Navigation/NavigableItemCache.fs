@@ -9,7 +9,7 @@ open FSharp.Editing.Navigation
 open FSharp.Editing.VisualStudio
 open System.Security.Cryptography
 open System.Text
-open Nessos.FsPickler
+open MBrace.FsPickler
 open System.IO
 open System.Threading
 open FSharp.Editing

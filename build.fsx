@@ -1,10 +1,10 @@
 // --------------------------------------------------------------------------------------
-// FAKE build script 
+// FAKE build script
 // --------------------------------------------------------------------------------------
 
 #r @"packages/build/FAKE/tools/FakeLib.dll"
 
-open Fake 
+open Fake
 open Fake.Git
 open Fake.AssemblyInfoFile
 open Fake.ReleaseNotesHelper
@@ -15,11 +15,11 @@ open Fake.Testing
 
 // Information about the project are used
 //  - for version and project name in generated AssemblyInfo file
-//  - by the generated NuGet package 
+//  - by the generated NuGet package
 //  - to run tests and to publish documentation on GitHub gh-pages
 //  - for documentation, you also need to edit info in "docs/tools/generate.fsx"
 
-// The name of the project 
+// The name of the project
 // (used by attributes in AssemblyInfo, name of a NuGet package and directory in 'src')
 let project = "FSharpVSPowerTools"
 
@@ -35,7 +35,7 @@ let authors = [ "Anh-Dung Phan"; "Vasily Kirichenko"; "Denis Ok" ]
 // Tags for your project (for NuGet package)
 let tags = "F# fsharp formatting editing highlighting navigation refactoring"
 
-// File system information 
+// File system information
 // (<solutionFile>.sln is built during the building process)
 let solutionFile  = "FSharpVSPowerTools"
 
@@ -65,7 +65,7 @@ Target "AssemblyInfo" (fun _ ->
     [   Attribute.Product project
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
-        Attribute.FileVersion release.AssemblyVersion ] 
+        Attribute.FileVersion release.AssemblyVersion ]
 
   CreateCSharpAssemblyInfo "src/FSharpVSPowerTools/Properties/AssemblyInfo.cs"
       (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharpVSPowerTools" :: shared)
@@ -77,17 +77,17 @@ Target "AssemblyInfo" (fun _ ->
       (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharp.Editing.VisualStudio" :: shared)
 
   CreateFSharpAssemblyInfo "src/FSharp.Editing.VisualStudio.Tests.v2015/AssemblyInfo.fs"
-      (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharp.Editing.VisualStudio.v2015" :: shared) 
+      (Attribute.InternalsVisibleTo "FSharp.Editing.VisualStudio.Tests" :: Attribute.Title "FSharp.Editing.VisualStudio.v2015" :: shared)
 )
 
 Target "VsixManifest" (fun _ ->
     let manifest = "./src/FSharpVSPowerTools/source.extension.vsixmanifest"
     let doc = new XmlDocument(PreserveWhitespace=true) in
     doc.Load manifest
-    doc.GetElementsByTagName("Identity") 
-        |> Seq.cast<XmlNode> 
-        |> Seq.head 
-        |> fun node -> 
+    doc.GetElementsByTagName("Identity")
+        |> Seq.cast<XmlNode>
+        |> Seq.head
+        |> fun node ->
             let currentVersion = node.Attributes.GetNamedItem("Version").Value
             node.Attributes.GetNamedItem("Version").Value <- sprintf "%s.%s" currentVersion AppVeyor.AppVeyorEnvironment.BuildNumber
     doc.Save manifest
@@ -115,7 +115,7 @@ Target "Build" (fun _ ->
 )
 
 // Build test projects in Debug mode in order to provide correct paths for multi-project scenarios
-Target "BuildTests" (fun _ ->    
+Target "BuildTests" (fun _ ->
     !! "tests/data/**/*.sln"
     |> MSBuildDebug "" "Rebuild"
     |> ignore
@@ -146,7 +146,7 @@ Target "UnitTests" (fun _ ->
                 ShadowCopy = false
                 TimeOut = TimeSpan.FromMinutes 20.
                 //Framework = NUnit3Runtime.Net45
-                Domain = NUnit3DomainModel.MultipleDomainModel 
+                Domain = NUnit3DomainModel.MultipleDomainModel
                 //Workers = Some 1
                 ResultSpecs = ["TestResults.xml"] }
         if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
@@ -160,7 +160,7 @@ Target "IntegrationTests" (fun _ ->
                 ShadowCopy = false
                 TimeOut = TimeSpan.FromMinutes 20.
                 //Framework = NUnit3Runtime.Net45
-                Domain = NUnit3DomainModel.MultipleDomainModel 
+                Domain = NUnit3DomainModel.MultipleDomainModel
                 //Workers = Some 1
                 ResultSpecs = ["TestResults.xml"] }
         if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
@@ -170,8 +170,8 @@ Target "IntegrationTests" (fun _ ->
 // Build a NuGet package
 
 Target "PublishNuGet" (fun _ ->
-    NuGet (fun p -> 
-        { p with   
+    NuGet (fun p ->
+        { p with
             Authors = authors
             Project = project + ".Core"
             Summary = summary
@@ -215,7 +215,7 @@ let readString prompt echo : string =
     let rec loop cs =
         let key = Console.ReadKey(not echo)
         match key.Key with
-        | ConsoleKey.Backspace -> 
+        | ConsoleKey.Backspace ->
             match cs with [] -> loop [] | _::cs -> loop cs
         | ConsoleKey.Enter -> cs
         | _ -> loop (key.KeyChar :: cs)
@@ -245,7 +245,7 @@ Target "UploadToGallery" (fun _ ->
         lines.[0],lines.[1]
 
     // log in to msdn
-    url galleryUrl    
+    url galleryUrl
     "#i0116" << username
     "#i0118" << password
     click "#idSIButton9"
@@ -253,11 +253,11 @@ Target "UploadToGallery" (fun _ ->
     // start a new upload session - via hacky form link
     js (sprintf "$('form[action=\"/%s/edit/changeContributionUpload\"]').submit();" vsixGuid) |> ignore
 
-    // select "upload the vsix"    
+    // select "upload the vsix"
     let fi = System.IO.FileInfo "bin/FSharpVSPowerTools.vsix"
-    
-    ".uploadFileInput" << fi.FullName 
-    click "#setContributionTypeButton"  
+
+    ".uploadFileInput" << fi.FullName
+    click "#setContributionTypeButton"
     sleep 15
     click "#uploadButton"
     sleep 15
@@ -277,7 +277,7 @@ Target "Release" (fun _ ->
 
     // release on github
     createClient user pw
-    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes 
+    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
     |> uploadFile "./bin/FSharpVSPowerTools.vsix"
     |> releaseDraft
     |> Async.RunSynchronously
@@ -292,14 +292,14 @@ Target "Main" DoNothing
 
 Target "All" DoNothing
 
-Target "TravisCI" (fun _ -> 
+Target "TravisCI" (fun _ ->
   [ "src/FSharp.Editing/FSharp.Editing.fsproj"
     "tests/FSharp.Editing.Tests/FSharp.Editing.Tests.fsproj"
   ]
   |> MSBuildRelease "" "Rebuild"
   |> ignore
-  
-  let additionalFiles = 
+
+  let additionalFiles =
     ["./packages/FSharp.Core/lib/net40/FSharp.Core.sigdata";
      "./packages/FSharp.Core/lib/net40/FSharp.Core.optdata";
      "./packages/FSharp.Core/lib/net40/FSharp.Core.xml";]
@@ -312,9 +312,9 @@ Target "TravisCI" (fun _ ->
             ShadowCopy = false
             TimeOut = TimeSpan.FromMinutes 20.
             Framework = NUnit3Runtime.Mono40
-            Domain = NUnit3DomainModel.MultipleDomainModel 
+            Domain = NUnit3DomainModel.MultipleDomainModel
             Workers = Some 1
-            ResultSpecs = ["TestResults.xml"]      
+            ResultSpecs = ["TestResults.xml"]
         }
     if Environment.OSVersion.Platform = PlatformID.Win32NT then param else { param with Where = "cat != IgnoreOnUnix" }
   )
@@ -345,7 +345,7 @@ Target "TravisCI" (fun _ ->
 "Main"
   ==> "All"
 
-"Main" 
+"Main"
   ==> "CleanDocs"
   ==> "GenerateDocs"
   ==> "ReleaseDocs"

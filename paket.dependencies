@@ -1,6 +1,8 @@
 source http://nuget.org/api/v2
 redirects: on
 strategy: max
+framework: >= net45
+
 
 nuget Fantomas
 nuget FSharp.Compiler.Service

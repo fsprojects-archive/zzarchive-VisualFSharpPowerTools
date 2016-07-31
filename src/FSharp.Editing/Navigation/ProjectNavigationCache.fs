@@ -6,7 +6,7 @@ open System.Text
 open System.Threading
 open System.Collections.Concurrent
 open System.Security.Cryptography
-open Nessos.FsPickler
+open MBrace.FsPickler
 open FSharp.Editing
 
 type Source = string
