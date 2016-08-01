@@ -62,7 +62,7 @@ Target "BuildVersion" (fun _ ->
 // Generate assembly info files with the right version & up-to-date information
 Target "AssemblyInfo" (fun _ ->
   let shared =
-      [ Attribute.Product project
+    [   Attribute.Product project
         Attribute.Description summary
         Attribute.Version release.AssemblyVersion
         Attribute.FileVersion release.AssemblyVersion ] 
@@ -85,9 +85,9 @@ Target "VsixManifest" (fun _ ->
     let doc = new XmlDocument(PreserveWhitespace=true) in
     doc.Load manifest
     doc.GetElementsByTagName("Identity") 
-      |> Seq.cast<XmlNode> 
-      |> Seq.head 
-      |> fun node -> 
+        |> Seq.cast<XmlNode> 
+        |> Seq.head 
+        |> fun node -> 
             let currentVersion = node.Attributes.GetNamedItem("Version").Value
             node.Attributes.GetNamedItem("Version").Value <- sprintf "%s.%s" currentVersion AppVeyor.AppVeyorEnvironment.BuildNumber
     doc.Save manifest
@@ -124,8 +124,7 @@ Target "BuildTests" (fun _ ->
 let count label glob =
     let (fileCount, lineCount) =
         !! glob
-        |> Seq.map (fun path ->
-            File.ReadLines(path) |> Seq.length)
+        |> Seq.map (fun path -> File.ReadLines path |> Seq.length)
         |> Seq.fold (fun (fileCount, lineCount) lineNum -> (fileCount+1, lineCount + lineNum)) (0, 0)
     printfn "%s - File Count: %i, Line Count: %i." label fileCount lineCount
 
@@ -142,29 +141,29 @@ Target "RunStatistics" (fun _ ->
 Target "UnitTests" (fun _ ->
     [@"tests/FSharp.Editing.Tests/bin/Release/FSharp.Editing.Tests.dll"]
     |> NUnit3 (fun p ->
-         let param =
-             { p with
-                 ShadowCopy = false
-                 TimeOut = TimeSpan.FromMinutes 20.
-                 Framework = NUnit3Runtime.Net45
-                 Domain = NUnit3DomainModel.MultipleDomainModel 
-                 Workers = Some 1
-                 ResultSpecs = ["TestResults.xml"] }
-         if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
+        let param =
+            { p with
+                ShadowCopy = false
+                TimeOut = TimeSpan.FromMinutes 20.
+                //Framework = NUnit3Runtime.Net45
+                Domain = NUnit3DomainModel.MultipleDomainModel 
+                //Workers = Some 1
+                ResultSpecs = ["TestResults.xml"] }
+        if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
 )
 
 Target "IntegrationTests" (fun _ ->
     [@"tests/FSharp.Editing.VisualStudio.Tests/bin/Release/FSharp.Editing.VisualStudio.Tests.dll"]
     |> NUnit3 (fun p ->
-         let param =
-             { p with
-                 ShadowCopy = false
-                 TimeOut = TimeSpan.FromMinutes 20.
-                 Framework = NUnit3Runtime.Net45
-                 Domain = NUnit3DomainModel.MultipleDomainModel 
-                 Workers = Some 1
-                 ResultSpecs = ["TestResults.xml"] }
-         if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
+        let param =
+            { p with
+                ShadowCopy = false
+                TimeOut = TimeSpan.FromMinutes 20.
+                //Framework = NUnit3Runtime.Net45
+                Domain = NUnit3DomainModel.MultipleDomainModel 
+                //Workers = Some 1
+                ResultSpecs = ["TestResults.xml"] }
+        if isAppVeyorBuild then { param with Where = "cat != AppVeyorLongRunning" } else param)
 )
 
 // --------------------------------------------------------------------------------------
@@ -213,27 +212,23 @@ Target "ReleaseDocs" (fun _ ->
 open Octokit
 
 let readString prompt echo : string =
-  let rec loop cs =
-    let key = Console.ReadKey(not echo)
-    match key.Key with
-    | ConsoleKey.Backspace -> match cs with
-                              | [] -> loop []
-                              | _::cs -> loop cs
-    | ConsoleKey.Enter -> cs
-    | _ -> loop (key.KeyChar :: cs)
+    let rec loop cs =
+        let key = Console.ReadKey(not echo)
+        match key.Key with
+        | ConsoleKey.Backspace -> 
+            match cs with [] -> loop [] | _::cs -> loop cs
+        | ConsoleKey.Enter -> cs
+        | _ -> loop (key.KeyChar :: cs)
 
-  printf "%s" prompt
-  let input =
-    loop []
-    |> List.rev
-    |> Array.ofList
-    |> fun cs -> new String(cs)
-  if not echo then
-    printfn ""
-  input
+    printf "%s" prompt
+    let input =
+        loop []
+        |> List.rev
+        |> Array.ofList
+        |> fun cs -> String cs
+    if not echo then printfn ""
+    input
 
-#I @"packages/build/Selenium.Support/lib/net40"
-#I @"packages/build/Selenium.WebDriver/lib/net40"
 #r @"packages/build/Selenium.WebDriver/lib/net40/WebDriver.dll"
 #r @"packages/build/canopy/lib/canopy.dll"
 
@@ -246,7 +241,7 @@ Target "UploadToGallery" (fun _ ->
     let galleryUrl = sprintf "https://visualstudiogallery.msdn.microsoft.com/%s/edit?newSession=True" vsixGuid
 
     let username,password =
-        let lines = File.ReadAllLines("gallerycredentials.txt")
+        let lines = File.ReadAllLines "gallerycredentials.txt"
         lines.[0],lines.[1]
 
     // log in to msdn
@@ -259,14 +254,14 @@ Target "UploadToGallery" (fun _ ->
     js (sprintf "$('form[action=\"/%s/edit/changeContributionUpload\"]').submit();" vsixGuid) |> ignore
 
     // select "upload the vsix"    
-    let fi = System.IO.FileInfo("bin/FSharpVSPowerTools.vsix")
+    let fi = System.IO.FileInfo "bin/FSharpVSPowerTools.vsix"
     
     ".uploadFileInput" << fi.FullName 
     click "#setContributionTypeButton"  
     sleep 15
     click "#uploadButton"
     sleep 15
-    quit()
+    quit ()
 )
 
 Target "Release" (fun _ ->
@@ -332,7 +327,7 @@ Target "TravisCI" (fun _ ->
   ==> "Build"
   ==> "BuildTests"
   ==> "UnitTests"
-  ==> "IntegrationTests"
+  <=> "IntegrationTests"
   ==> "Main"
 
 "Clean"
