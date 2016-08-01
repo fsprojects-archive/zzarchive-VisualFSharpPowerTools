@@ -7,10 +7,10 @@ open Microsoft.VisualStudio.Text
 open NUnit.Framework
 open Microsoft.VisualStudio.Language.Intellisense
 
-type ImplementInterfaceSmartTaggerHelper() =
+type ImplementInterfaceSmartTaggerHelper() =    
     inherit VsTestBase()
 
-    let taggerProvider =
+    let taggerProvider = 
         ImplementInterfaceSmartTaggerProvider
             (
                 fsharpVsLanguageService = base.VsLanguageService,
@@ -24,7 +24,7 @@ type ImplementInterfaceSmartTaggerHelper() =
     member __.GetView(buffer) =
         createMockTextView buffer
 
-    member __.GetTagger(buffer, view) =
+    member __.GetTagger(buffer, view) = 
         taggerProvider.CreateTagger<_>(view, buffer)
 
     member __.TagsOf(buffer: ITextBuffer, tagger: ITagger<_>) =
@@ -34,16 +34,16 @@ type ImplementInterfaceSmartTaggerHelper() =
                 match box span.Tag with
                 | :? SmartTag as tag ->
                     tag.ActionSets |> Seq.map (fun ac -> seq ac.Actions) |> Some
-                | _ ->
+                | _ -> 
                     None)
         |> Seq.concat
 
 module ImplementInterfaceSmartTaggerTests =
 
     let helper = ImplementInterfaceSmartTaggerHelper()
-
+    
     [<Test>]
-    let ``return nothing if interfaces are empty``() =
+    let ``return nothing if interfaces are empty``() = 
         let content = """
 type IEmptyInterface = interface end
 type Impl() =
@@ -56,17 +56,17 @@ type Impl() =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 4 15) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger)
-                       |> Seq.concat
-                       |> Seq.toList
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
                        |> assertEqual [])
 
     [<Test>]
-    let ``return nothing if all members have been implemented and there is no type error``() =
+    let ``return nothing if all members have been implemented and there is no type error``() = 
         let content = """
 let _ =
     { new System.IDisposable with
-          member x.Dispose(): unit =
+          member x.Dispose(): unit = 
               failwith "Not implemented yet"
            }
 """
@@ -77,13 +77,13 @@ let _ =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () -> view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
-            (fun () -> helper.TagsOf(buffer, tagger)
-                       |> Seq.concat
-                       |> Seq.toList
+            (fun () -> helper.TagsOf(buffer, tagger) 
+                       |> Seq.concat 
+                       |> Seq.toList 
                        |> assertEqual [])
 
     [<Test>]
-    let ``should insert all members if no member has been implemented``() =
+    let ``should insert all members if no member has been implemented``() = 
         let content = """
 let _ =
     { new System.IDisposable }
@@ -96,7 +96,7 @@ let _ =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 3 18) |> ignore)
-            (fun () ->
+            (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
@@ -104,24 +104,24 @@ let _ =
                 // Test tag insertion in an asynchronous manner
                 testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
                     (fun () -> tagToInsert.Invoke())
-                    (fun () ->
+                    (fun () -> 
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 let _ =
     { new System.IDisposable with
-          member x.Dispose(): unit =
+          member x.Dispose(): unit = 
               failwith "Not implemented yet"
            }
 """))
 
     [<Test>]
-    let ``should insert selective members if some members have been implemented``() =
+    let ``should insert selective members if some members have been implemented``() = 
         let content = """
 type Interface =
     abstract member Method1 : int -> int
     abstract member Method2 : int -> int
     abstract member Method3 : int -> int
 type Class() =
-    interface Interface with
+    interface Interface with 
         member __.Method1(n) = 2 * n
 """
         let fileName = getTempFileName ".fsx"
@@ -131,14 +131,14 @@ type Class() =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 7 16) |> ignore)
-            (fun () ->
+            (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
                     |> Seq.head
                 testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
                     (fun () -> tagToInsert.Invoke())
-                    (fun () ->
+                    (fun () -> 
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 type Interface =
     abstract member Method1 : int -> int
@@ -146,16 +146,16 @@ type Interface =
     abstract member Method3 : int -> int
 type Class() =
     interface Interface with
-        member x.Method2(arg1: int): int =
+        member x.Method2(arg1: int): int = 
             failwith "Not implemented yet"
-        member x.Method3(arg1: int): int =
+        member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
-
+         
         member __.Method1(n) = 2 * n
 """))
 
     [<Test>]
-    let ``should insert duplicated members once``() =
+    let ``should insert duplicated members once``() = 
         let content = """
 type Interface1 =
     abstract member Method : int -> int
@@ -175,14 +175,14 @@ type Class() =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 11 16) |> ignore)
-            (fun () ->
+            (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
                     |> Seq.head
                 testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
                     (fun () -> tagToInsert.Invoke())
-                    (fun () ->
+                    (fun () -> 
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 type Interface1 =
     abstract member Method : int -> int
@@ -194,15 +194,15 @@ type Interface3 =
     abstract member Method3 : int -> int
 type Class() =
     interface Interface3 with
-        member x.Method(arg1: int): int =
+        member x.Method(arg1: int): int = 
             failwith "Not implemented yet"
-        member x.Method3(arg1: int): int =
+        member x.Method3(arg1: int): int = 
             failwith "Not implemented yet"
-
+        
 """))
 
     [<Test>]
-    let ``should generate members correctly for indexer-like properties``() =
+    let ``should generate members correctly for indexer-like properties``() = 
         let content = """
 type Interface =
     abstract member Method1 : int -> int with get
@@ -217,14 +217,14 @@ type Class() =
         let tagger = helper.GetTagger(buffer, view)
         testEventTrigger tagger.TagsChanged "Timed out before tags changed" timeout
             (fun () ->  view.Caret.MoveTo(snapshotPoint view.TextSnapshot 6 16) |> ignore)
-            (fun () ->
+            (fun () -> 
                 let tagToInsert =
                     helper.TagsOf(buffer, tagger)
                     |> Seq.concat
                     |> Seq.last
                 testEventTrigger buffer.Changed "Timed out before buffer updated" timeout
                     (fun () -> tagToInsert.Invoke())
-                    (fun () ->
+                    (fun () -> 
                         buffer.CurrentSnapshot.GetText() |> assertEquivString """
 type Interface =
     abstract member Method1 : int -> int with get
@@ -235,5 +235,5 @@ type Class() =
             with get (arg1) = failwith "Not implemented yet"
         member x.Method2
             with set (arg1) (v) = failwith "Not implemented yet"
-
+        
 """))
