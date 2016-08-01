@@ -12,8 +12,8 @@ type FileSystem (editorBufferTracker: IBufferTracker) =
     static let defaultFileSystem = Shim.FileSystem
 
     let getOpenDocContent (fileName: string) =
-        openDocumentsTracker.TryFindEditorBuffer fileName
-        |> Option.map (fun doc ->
+        editorBufferTracker.TryFindEditorBuffer fileName
+        |> Option.map (fun doc -> 
             doc.Text |> doc.Encoding.GetBytes)
 
     interface IFileSystem with
