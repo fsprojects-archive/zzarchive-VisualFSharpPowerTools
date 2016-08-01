@@ -1,0 +1,1 @@
+type ``My abbrev`` = int

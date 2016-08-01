@@ -1,0 +1,3 @@
+module File
+
+exception MyEmptyException

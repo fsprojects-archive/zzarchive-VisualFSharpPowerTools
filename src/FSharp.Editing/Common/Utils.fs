@@ -52,6 +52,12 @@ module Prelude =
     let inline isNotNull v = not (isNull v)
     let inline dispose (disposable:#IDisposable) = disposable.Dispose ()
 
+    let inline Ok a = Choice1Of2 a
+    let inline Fail a = Choice2Of2 a
+    let inline (|Ok|Fail|) a = a
+
+      
+    
 [<RequireQualifiedAccess>]
 [<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
 module Seq =

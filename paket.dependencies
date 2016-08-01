@@ -5,6 +5,7 @@ strategy: max
 nuget Fantomas
 nuget FSharp.Compiler.Service
 nuget FSharp.Core
+nuget FSharp.Data
 nuget FSharp.Management
 nuget FSharp.ViewModule.Core
 nuget FSharpLint.Core prerelease

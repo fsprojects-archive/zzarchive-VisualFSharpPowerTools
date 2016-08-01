@@ -1,0 +1,2 @@
+
+let x: string = null

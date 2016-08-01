@@ -1,0 +1,7 @@
+[
+{ "pos": { "line": 50, "col": 10}, "assertType" : "eq" }
+, { "pos": { "line": 50, "col": 10}, "assertType" : "eq", "validation": false }
+, { "pos": { "line":52, "col": 5}, "assertType" : "firstLinesEq", "firstLineCount": 5 }
+, { "pos": { "line": 50, "col": 10}, "assertType" : "eq" , "ignoreOnUnix" : true }
+, { "pos": { "line":52, "col": 5}, "assertType" : "firstLinesEq", "firstLineCount": 5, "ignoreOnUnix" : true }
+]

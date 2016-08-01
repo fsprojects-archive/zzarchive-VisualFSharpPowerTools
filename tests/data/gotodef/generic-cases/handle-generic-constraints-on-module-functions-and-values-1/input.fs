@@ -1,0 +1,1 @@
+let func<'X when 'X : null and 'X : comparison>(x: 'X) = 0
