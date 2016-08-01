@@ -7,10 +7,11 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>70456b75-f623-41b4-8044-ed02c265f0ff</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>FSharpVSPowerTools.Logic</RootNamespace>
+    <RootNamespace>>FSharp.Editing.VisualStudio</RootNamespace>
     <AssemblyName>FSharp.Editing.VisualStudio</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Name>FSharp.Editing.VisualStudio</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
     <TargetFrameworkProfile />
@@ -20,10 +21,10 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <Tailcalls>false</Tailcalls>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\$(Configuration)</OutputPath>
     <DefineConstants>TRACE;DEBUG; </DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Debug\FSharp.Editing.VisualStudio.XML</DocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52,44</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -33,10 +34,10 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\$(Configuration)</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>5</WarningLevel>
-    <DocumentationFile>bin\Release\FSharp.Editing.VisualStudio.XML</DocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
     <OtherFlags>--warnon:1182</OtherFlags>
     <NoWarn>52,44</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
