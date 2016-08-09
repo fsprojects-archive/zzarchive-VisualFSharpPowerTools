@@ -44,7 +44,7 @@ namespace FSharpVSPowerTools
         private readonly SolutionEvents _solutionEvents;
 
         private static readonly Type serviceType = typeof(GoToDefinitionFilterProvider);
-        
+
         [ImportingConstructor]
         public GoToDefinitionFilterProvider(
             [Import(typeof(SVsServiceProvider))] System.IServiceProvider serviceProvider,
@@ -83,29 +83,34 @@ namespace FSharpVSPowerTools
         {
             var textView = _editorFactory.GetWpfTextView(textViewAdapter);
             if (textView == null) return;
-            Register(textViewAdapter, textView, fireNavigationEvent: false);
+            Register(textViewAdapter, textView, fireNavigationEvent: false, processStart: ProcessStart);
         }
 
-        internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent)
+        private void ProcessStart(String path)
+        {
+            System.Diagnostics.Process.Start(path);
+        }
+
+        internal GoToDefinitionFilter RegisterCommandFilter(IWpfTextView textView, bool fireNavigationEvent, Action<String> processStart)
         {
             var textViewAdapter = _editorFactory.GetViewAdapter(textView);
-            return textViewAdapter == null ? null : Register(textViewAdapter, textView, fireNavigationEvent);
+            return textViewAdapter == null ? null : Register(textViewAdapter, textView, fireNavigationEvent, processStart);
         }
 
-        private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent)
+        private GoToDefinitionFilter Register(IVsTextView textViewAdapter, IWpfTextView textView, bool fireNavigationEvent, Action<String> processStart)
         {
             var generalOptions = Setting.getGeneralOptions(_serviceProvider);
             if (generalOptions == null || (!generalOptions.GoToMetadataEnabled && !generalOptions.GoToSymbolSourceEnabled)) return null;
             // Favor Navigate to Source feature over Go to Metadata
             var preference = generalOptions.GoToSymbolSourceEnabled
-                                ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource) 
+                                ? (generalOptions.GoToMetadataEnabled ? NavigationPreference.SymbolSourceOrMetadata : NavigationPreference.SymbolSource)
                                 : NavigationPreference.Metadata;
             ITextDocument doc;
             if (_textDocumentFactoryService.TryGetTextDocument(textView.TextBuffer, out doc))
             {
                 var commandFilter = new GoToDefinitionFilter(doc, textView, _fsharpVsLanguageService,
                                                              _serviceProvider, _projectFactory, _referenceSourceProvider,
-                                                             _navigationService, preference, fireNavigationEvent);
+                                                             _navigationService, preference, fireNavigationEvent, processStart);
                 if (!_referenceSourceProvider.IsActivated && generalOptions.GoToSymbolSourceEnabled)
                     _referenceSourceProvider.Activate();
                 textView.Properties.AddProperty(serviceType, commandFilter);

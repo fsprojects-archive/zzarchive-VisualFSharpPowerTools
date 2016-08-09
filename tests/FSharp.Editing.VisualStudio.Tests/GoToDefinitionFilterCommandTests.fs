@@ -24,8 +24,11 @@ type GoToDefinitionCommandHelper() =
                 metadataService = Unchecked.defaultof<_>
             )
 
+    let stubProcessStart =
+        Action<string> (fun _ -> ())
+
     member __.GetCommandFilter(wpfTextView) =
-        command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true)
+        command.RegisterCommandFilter(wpfTextView, fireNavigationEvent = true, processStart = stubProcessStart)
 
 module GoToDefinitionCommandTests =
 
