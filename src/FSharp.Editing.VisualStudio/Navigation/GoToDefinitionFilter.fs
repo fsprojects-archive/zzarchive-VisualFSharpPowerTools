@@ -3,7 +3,6 @@
 open System
 open System.IO
 open System.Threading
-open System.Diagnostics
 open System.Text.RegularExpressions
 open Microsoft.Win32
 open Microsoft.VisualStudio
@@ -46,7 +45,8 @@ type GoToDefinitionFilter
         referenceSourceProvider: ReferenceSourceProvider,
         metadataService: NavigateToMetadataService,
         navigationPreference: NavigationPreference,
-        fireNavigationEvent: bool
+        fireNavigationEvent: bool,
+        processStart: System.Action<string>
     ) =
     
     let urlChanged = if fireNavigationEvent then Some (Event<UrlChangeEventArgs>()) else None
@@ -127,7 +127,7 @@ type GoToDefinitionFilter
             if fireNavigationEvent then
                 currentUrl <- Some url
                 urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))
-            Process.Start(browserUrl) |> ignore)
+            processStart.Invoke(browserUrl) |> ignore)
 
     let tryFindSourceUrl (fsSymbol: FSharpSymbol) = 
         let changeExt ext path = Path.ChangeExtension(path, ext)
@@ -194,7 +194,7 @@ type GoToDefinitionFilter
                     if fireNavigationEvent then
                         currentUrl <- Some url
                         urlChanged |> Option.iter (fun event -> event.Trigger(UrlChangeEventArgs(url)))                                    
-                    Process.Start url |> ignore
+                    processStart.Invoke(url) |> ignore
                 | None ->
                     Logging.logWarning (fun _ -> sprintf "Can't find navigation information for %s." symbol.FullName)
             else

@@ -200,7 +200,6 @@ module Test =
 """
         let projectFileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project2.fsproj"
         let fileName = fullPathBasedOnSourceDir "../data/MultiProjects/Project2/Project21.fs"
-        File.WriteAllText (fileName, "")
         let buffer = createMockTextBuffer "" fileName
         helper.SetUpProjectAndCurrentDocument(ExternalProjectProvider(projectFileName), fileName, "")
         let view = helper.GetView(buffer)
