@@ -41,11 +41,12 @@ namespace FSharpVSPowerTools
             _printfColorManager = printfColorManager;
 
             VSColorTheme.ThemeChanged += UpdateTheme;
+            _printfColorManager.UpdateColors(true);
         }
 
         void UpdateTheme(EventArgs e)
         {
-            _printfColorManager.UpdateColors();
+            _printfColorManager.UpdateColors(false);
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -79,6 +80,7 @@ namespace FSharpVSPowerTools
         static readonly Color DarkThemeColor = Color.FromRgb(0, 77, 77);
         
         VisualStudioTheme _currentTheme;
+        DateTime _lastThemeChange;
         ThemeManager _themeManager;
         IEditorFormatMapService _editorFormatMapService;
 
@@ -89,6 +91,7 @@ namespace FSharpVSPowerTools
             _editorFormatMapService = editorFormatMapService;
 
             _currentTheme = _themeManager.GetCurrentTheme();
+            _lastThemeChange = DateTime.MinValue;
         }
 
         public Color GetDefaultColor()
@@ -96,15 +99,19 @@ namespace FSharpVSPowerTools
             return _currentTheme == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
         }
 
-        public void UpdateColors()
+        public void UpdateColors(bool force)
         {
             var newTheme = _themeManager.GetCurrentTheme();
 
-            if (newTheme != VisualStudioTheme.Unknown && newTheme != _currentTheme)
+            // Multiple theme change events are fired in rapid succession after the theme was changed.
+            // All of them must be processed to properly update the color scheme.
+            if (newTheme != VisualStudioTheme.Unknown &&
+                (newTheme != _currentTheme || (_lastThemeChange - DateTime.Now).TotalSeconds < 10 || force))
             {
                 _currentTheme = newTheme;
-                var formatMap = _editorFormatMapService.GetEditorFormatMap(category: "text");
+                _lastThemeChange = DateTime.Now;
 
+                var formatMap = _editorFormatMapService.GetEditorFormatMap(category: "text");
                 try
                 {
                     formatMap.BeginBatchUpdate();
