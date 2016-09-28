@@ -41,12 +41,12 @@ namespace FSharpVSPowerTools
             _printfColorManager = printfColorManager;
 
             VSColorTheme.ThemeChanged += UpdateTheme;
-            _printfColorManager.UpdateColors(true);
+            _printfColorManager.UpdateColors(force: true);
         }
 
         void UpdateTheme(EventArgs e)
         {
-            _printfColorManager.UpdateColors(false);
+            _printfColorManager.UpdateColors(force: false);
         }
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -106,7 +106,7 @@ namespace FSharpVSPowerTools
             // Multiple theme change events are fired in rapid succession after the theme was changed.
             // All of them must be processed to properly update the color scheme.
             if (newTheme != VisualStudioTheme.Unknown &&
-                (newTheme != _currentTheme || (_lastThemeChange - DateTime.Now).TotalSeconds < 10 || force))
+                (newTheme != _currentTheme || (DateTime.Now - _lastThemeChange).TotalSeconds < 10 || force))
             {
                 _currentTheme = newTheme;
                 _lastThemeChange = DateTime.Now;

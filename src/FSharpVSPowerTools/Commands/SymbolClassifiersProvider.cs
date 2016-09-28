@@ -177,7 +177,7 @@ namespace FSharpVSPowerTools
             // Multiple theme change events are fired in rapid succession after the theme was changed.
             // All of them must be processed to properly update the color scheme.
             if (newTheme != VisualStudioTheme.Unknown && 
-                (newTheme != _currentTheme || (_lastThemeChange - DateTime.Now).TotalSeconds < 10) || force)
+                (newTheme != _currentTheme || (DateTime.Now - _lastThemeChange).TotalSeconds < 10) || force)
             {
                 _currentTheme = newTheme;
                 _lastThemeChange = DateTime.Now;
@@ -445,12 +445,12 @@ namespace FSharpVSPowerTools
             // Receive notification for Visual Studio theme change
             // and update colors at startup to prevent colors from before a theme-change to reappear.
             VSColorTheme.ThemeChanged += UpdateTheme;
-            _classificationColorManager.UpdateColors(true);
+            _classificationColorManager.UpdateColors(force: true);
         }
 
         private void UpdateTheme(EventArgs e)
         {
-            _classificationColorManager.UpdateColors(false);
+            _classificationColorManager.UpdateColors(force: false);
         }
 
         public IClassifier GetClassifier(ITextBuffer buffer)
@@ -512,12 +512,12 @@ namespace FSharpVSPowerTools
             // Receive notification for Visual Studio theme change
             // and update colors at startup to prevent colors from before a theme-change to reappear.
             VSColorTheme.ThemeChanged += UpdateTheme;
-            _classificationColorManager.UpdateColors(true);
+            _classificationColorManager.UpdateColors(force: true);
         }
 
         private void UpdateTheme(EventArgs e)
         {
-            _classificationColorManager.UpdateColors(false);
+            _classificationColorManager.UpdateColors(force: false);
         }
 
         public IClassifier GetClassifier(ITextBuffer buffer)
