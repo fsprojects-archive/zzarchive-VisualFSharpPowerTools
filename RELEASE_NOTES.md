@@ -1,4 +1,4 @@
-#### 2.5.1 - October 17 2016
+#### 2.5.2 - October 17 2016
 * Fix class declaration coloring if it contains any static let bindings
 
 #### 2.5.0 - May 17 2016

@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 [assembly: AssemblyTitleAttribute("FSharpVSPowerTools")]
 [assembly: AssemblyProductAttribute("FSharpVSPowerTools")]
 [assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")]
-[assembly: AssemblyVersionAttribute("2.5.1")]
-[assembly: AssemblyFileVersionAttribute("2.5.1")]
+[assembly: AssemblyVersionAttribute("2.5.2")]
+[assembly: AssemblyFileVersionAttribute("2.5.2")]
 namespace System {
     internal static class AssemblyVersionInformation {
-        internal const string Version = "2.5.1";
-        internal const string InformationalVersion = "2.5.1";
+        internal const string Version = "2.5.2";
+        internal const string InformationalVersion = "2.5.2";
     }
 }
