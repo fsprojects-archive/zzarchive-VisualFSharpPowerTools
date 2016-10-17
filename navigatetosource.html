@@ -34,29 +34,22 @@
         <div class="span9" id="main">
           
 <h1><a name="Navigate-to-Source" class="anchor" href="#Navigate-to-Source">Navigate to Source</a></h1>
-
 <p>When the feature is enabled and users click Go to Definition (F12), Navigate to Source happens if:</p>
-
 <ul>
 <li>current symbol originates from BCL libraries. The behavior is to go to exact line in <a href="http://referencesource.microsoft.com/.">http://referencesource.microsoft.com/.</a></li>
 <li>current symbol comes from an assembly with an associated source-indexed pdb file. The behavior is to go to the source code provider that hosts associated source code.</li>
 </ul>
-
 <p>Here is a screencast of the feature in action:</p>
-
 <p><img src="img/navigate_to_source.gif" alt="Navigate to Source" /></p>
-
 <h2><a name="I-am-a-library-author-what-should-I-do-to-enable-source-indexing-on-my-libraries" class="anchor" href="#I-am-a-library-author-what-should-I-do-to-enable-source-indexing-on-my-libraries">I am a library author, what should I do to enable source indexing on my libraries?</a></h2>
-
-<p>You should run <a href="http://ctaggart.github.io/SourceLink/">SourceLink</a> on pdb files and distribute these files with your NuGet packages. 
+<p>You should run <a href="http://ctaggart.github.io/SourceLink/">SourceLink</a> on pdb files and distribute these files with your NuGet packages.
 <a href="https://github.com/fsprojects/ProjectScaffold">ProjectScaffold</a> also includes a SourceLink target to make the process easier to use.
 Once the source-indexed pdb files are available, Navigate to Source should work as expected.</p>
-
 <h2><a name="I-am-a-normal-user-what-should-I-do-to-have-Navigate-to-Source-working" class="anchor" href="#I-am-a-normal-user-what-should-I-do-to-have-Navigate-to-Source-working">I am a normal user, what should I do to have Navigate to Source working?</a></h2>
-
 <p>Navigate to Source should work for any assembly if its source-indexed pdb file locates in the symbol cache directory.
-You should enable source server support and set symbol cache directory -- see a simple guide at <a href="http://ctaggart.github.io/SourceLink/visualstudio.html.">http://ctaggart.github.io/SourceLink/visualstudio.html.</a> 
-During the debugging process, pdb files will be downloaded and cached in this folder.
+You should enable source server support and set symbol cache directory -- see a simple guide at <a href="http://ctaggart.github.io/SourceLink/visualstudio.html.
+During">http://ctaggart.github.io/SourceLink/visualstudio.html.
+During</a> the debugging process, pdb files will be downloaded and cached in this folder.
 In the subsequent uses of F12 Navigate to Source, VFPT will pick up and use these pdb files.</p>
 
 
@@ -74,7 +67,7 @@ In the subsequent uses of F12 Navigate to Source, VFPT will pick up and use thes
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
-                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/.github/CONTRIBUTING.md">How to contribute</a></li>
                 <li><a href="./faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>

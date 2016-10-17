@@ -33,35 +33,20 @@
         <div class="span9" id="main">
           
 <h2><a name="Lint" class="anchor" href="#Lint">Lint</a></h2>
-
 <p>An <a href="http://fsprojects.github.io/FSharpLint/">F# linter</a> runs as you modify your source code to try to highlight code that could possibly be improved. The linter can be turned off from the F# Power Tools general settings where it is listed as <code>FSharpLint Integration</code>.</p>
-
 <h3><a name="Rules" class="anchor" href="#Rules">Rules</a></h3>
-
 <p>When a broken lint rule is discovered the first two characters of the code in question are underlined in orange, a mouse-over of these characters will show the lint's suggestion in a tooltip:</p>
-
 <p><img src="img/lint_rule_warning.gif" alt="Example of a broken lint rule" /></p>
-
 <p>Each rule can be turned off in the F# Power Tools lint settings under the <code>Rules</code> tab, the checkboxes indicate whether a rule is enabled/disabled. Some rules are grouped in a collection under an analyser, disabling the analyser will disable all of its rules, to enable/disable specific rules expand the analyser to view its rules:</p>
-
 <p><img src="img/lint_disable_rule.gif" alt="Example of disabling a lint rule" /></p>
-
 <p>Some rules and analysers have additional settings, these can be viewed and updated by selecting the rule/analyser:</p>
-
 <p><img src="img/lint_change_rule_setting.gif" alt="Example of changing a rule's settings" /></p>
-
 <h3><a name="Hints" class="anchor" href="#Hints">Hints</a></h3>
-
 <p>Hints in the linter provide a way for new rules to easily be added by modifying the configuration alone. They are written in a DSL that appears as a subset of F#, in the format of <code>match expression ===&gt; suggest expression or suggest message</code>. <a href="http://fsprojects.github.io/FSharpLint/Hints.html">Further documentation on writing hints</a>.</p>
-
 <p>Under the <code>Hints</code> tab in the F# Power Tools lint settings existing hints can be viewed, and new hints can be added. When adding a new hints it will be parsed to check for any errors before adding it to the configuration, if the hint could not be parsed the textbox will be highlighted red and a mouse-over will show the parse error.</p>
-
 <p><img src="img/lint_add_hint.gif" alt="Example of adding a hint" /></p>
-
 <h3><a name="Configuration-Files" class="anchor" href="#Configuration-Files">Configuration Files</a></h3>
-
 <p>Lint settings are all stored on disk on a per directory basis, lint setting changes from within F# Power Tools will be written out to a lint configuration file titled <code>Settings.FSharpLint</code>. The directory the settings are written to will attempt to default to a directory common to all open projects; under the <code>Files</code> tab you can choose to view/modify the settings for another directory - when you change directory any outstanding changes will be saved.</p>
-
 <p>When the lint runs it picks up the settings from the directory the source file is in and its ancestors, the settings in subdirectories taking precedence over any settings found in ancestor directories - this enables solution wide settings which can be overridden with project specific settings.</p>
 
 
@@ -79,7 +64,7 @@
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
-                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/.github/CONTRIBUTING.md">How to contribute</a></li>
                 <li><a href="./faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>

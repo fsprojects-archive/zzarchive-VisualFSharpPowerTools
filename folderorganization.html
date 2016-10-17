@@ -34,13 +34,10 @@
         <div class="span9" id="main">
           
 <h1><a name="Folder-Organization" class="anchor" href="#Folder-Organization">Folder Organization</a></h1>
-
 <blockquote>
-  <p><strong>NOTE:</strong> Folder organization feature doesn't change the order of source files in your projects. You still have to follow the linear order of F# source files as shown in Solution Explorer.</p>
+<p><strong>NOTE:</strong> Folder organization feature doesn't change the order of source files in your projects. You still have to follow the linear order of F# source files as shown in Solution Explorer.</p>
 </blockquote>
-
 <p>We currently support:</p>
-
 <ul>
 <li>adding folders to projects</li>
 <li>adding subfolders to existing folders</li>
@@ -48,37 +45,28 @@
 <li>moving files to folders</li>
 <li>moving folders up/down</li>
 </ul>
-
 <p>Here is how Solution Explorer context menu commands looks like for Folder Organization:</p>
-
 <p><img src="img/FolderOrganization_ContextMenu.png" alt="Folder Organization Commands" /></p>
-
 <p>Particular commands are enabled/disabled according to item you invoke the context menu on.</p>
-
 <p>When you add new folder or rename existing one folder name must be provided into a dialog:</p>
-
 <p><img src="img/FolderOrganization_NewFolderDialog.png" alt="New Folder Dialog" /></p>
-
-<p><strong>This feature is disabled by default</strong>. 
+<p><strong>This feature is disabled by default</strong>.
 Because there are known issues with F# Project System in Visual F# Tools, folder organization may not work 100% correctly in all cases.</p>
-
 <ul>
 <li><em></em>We do not advice you to introduce complicated folder structure within F# projects.</li>
 <li><em></em> You should keep number of folders within your project as low as possible.</li>
 </ul>
-
 <h2><a name="Limitations" class="anchor" href="#Limitations">Limitations</a></h2>
-
-<p>One of known issues causes problems when project contains two folders with the same name. 
+<p>One of known issues causes problems when project contains two folders with the same name.
 Our <em>New Folder</em> and <em>Rename Folder</em> dialogs validates folders names across entire project to prevent that problem from occurring.</p>
-
 <p>Other issues:</p>
-
 <ul>
 <li>An empty folder will disappear after saving if you don't add any file to it.</li>
-<li>Renaming a file could make it jump out of the current folder. 
+<li>
+Renaming a file could make it jump out of the current folder. 
 It's a UI bug, if you close the project and reopen it, Solution Explorer shows correct folder structure again.
-Alternatively you can move files out of the folder and move them into the folder again using menus.</li>
+Alternatively you can move files out of the folder and move them into the folder again using menus.
+</li>
 <li>Renaming a folder using standard F2 shortcut (in-place editing) is buggy due to issues inside F# project system. We advise you to use 'F# Power Tools --&gt; Rename Folder' instead.</li>
 </ul>
 
@@ -97,7 +85,7 @@ Alternatively you can move files out of the folder and move them into the folder
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
-                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/.github/CONTRIBUTING.md">How to contribute</a></li>
                 <li><a href="./faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>

@@ -34,11 +34,8 @@
         <div class="span9" id="main">
           
 <h1><a name="FAQ-Frequently-Asked-Questions" class="anchor" href="#FAQ-Frequently-Asked-Questions">FAQ - Frequently Asked Questions</a></h1>
-
 <h2><a name="VFPT-is-slow-what-can-I-do-to-speed-it-up" class="anchor" href="#VFPT-is-slow-what-can-I-do-to-speed-it-up">VFPT is slow, what can I do to speed it up?</a></h2>
-
 <p>Our suggestion is to disable automatic features including</p>
-
 <ul>
 <li>Highlight references</li>
 <li>Indent guides/Depth colorizer</li>
@@ -54,32 +51,22 @@
 <li>FSharpLint integration</li>
 <li>Outlining</li>
 </ul>
-
-<p>and enable them one by one to identify the features causing slowness. 
+<p>and enable them one by one to identify the features causing slowness.
 If you found a scenario that is slow, please let us know on <a href="https://github.com/fsprojects/VisualFSharpPowerTools/issues">the issue tracker</a>.</p>
-
 <h2><a name="Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0" class="anchor" href="#Why-is-unused-declaration-option-divided-into-two-separate-options-in-v1-6-0">Why is unused declaration option divided into two separate options in v1.6.0?</a></h2>
-
-<p>There are some performance penalties on checking unused declarations. 
+<p>There are some performance penalties on checking unused declarations.
 Until the performance issue is sorted out, we divide the option into two settings to provide more granularity to users.
 The new options are disabled by default.</p>
-
 <h2><a name="What-is-Diagnostic-mode-When-should-I-use-it" class="anchor" href="#What-is-Diagnostic-mode-When-should-I-use-it">What is Diagnostic mode? When should I use it?</a></h2>
-
 <p>If Diagnostic mode is on, logging information will be dumped into Visual Studio Output window (particularly on F# Power Tools tab).
 This information is valuable for bug fixing purpose.
 If you encounter any bug, please take some time to record diagnostics information and include it for bug reports.</p>
-
 <p><img src="img/configuration_dialog.png" alt="Configuration dialog" /></p>
-
 <h2><a name="Why-are-object-identifiers-in-members-marked-as-unused" class="anchor" href="#Why-are-object-identifiers-in-members-marked-as-unused">Why are object identifiers in members marked as unused?</a></h2>
-
 <p>If object identifiers (<code>x</code> in <code>x.Member</code>) aren't referred anywhere in the member bodies, they are understood as unused values.
 In order to fix it, we recommend to use <code>__</code> or any identifier with <code>_</code> prefix (<code>_x</code> for example).</p>
-
 <h2><a name="Why-are-my-VFPT-key-bindings-overridden-by-ReSharper" class="anchor" href="#Why-are-my-VFPT-key-bindings-overridden-by-ReSharper">Why are my VFPT key bindings overridden by ReSharper?</a></h2>
-
-<p>If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a <a href="http://youtrack.jetbrains.com/issue/RSRP-409199">known issue</a> where some F# commands are hidden by ReSharper. 
+<p>If you are using Visual F# Power Tools along side with ReSharper 8 or below, there is a <a href="http://youtrack.jetbrains.com/issue/RSRP-409199">known issue</a> where some F# commands are hidden by ReSharper.
 You can workaround by disabling the ReSharper option "Hide overridden Visual Studio menu items" (ReSharper -&gt; Options -&gt; Keyboard &amp; Menus).</p>
 
 
@@ -97,7 +84,7 @@ You can workaround by disabling the ReSharper option "Hide overridden Visual Stu
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools">Source Code on GitHub</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/LICENSE.txt">License</a></li>
                 <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/RELEASE_NOTES.md">Release Notes</a></li>
-                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+                <li><a href="http://github.com/fsprojects/VisualFSharpPowerTools/blob/master/.github/CONTRIBUTING.md">How to contribute</a></li>
                 <li><a href="./faq.html">FAQ</a></li>
 
                 <li class="nav-header">Supported Features</li>
