@@ -139,7 +139,7 @@ module ParsedInput =
             | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar t
             | SynTypeConstraint.WhereTyparSubtypeOfType(t, ty, _) -> walkTypar t |> Option.orElse (walkType ty)
             | SynTypeConstraint.WhereTyparSupportsMember(ts, sign, _) -> 
-                List.tryPick walkTypar ts |> Option.orElse (walkMemberSig sign)
+                List.tryPick walkType ts |> Option.orElse (walkMemberSig sign)
             | SynTypeConstraint.WhereTyparIsEnum(t, ts, _) -> walkTypar t |> Option.orElse (List.tryPick walkType ts)
             | SynTypeConstraint.WhereTyparIsDelegate(t, ts, _) -> walkTypar t |> Option.orElse (List.tryPick walkType ts)
 
