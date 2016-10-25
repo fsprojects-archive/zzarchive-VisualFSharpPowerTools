@@ -7,16 +7,14 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyTitleAttribute("FSharp.Editing.VisualStudio")>]
 [<assembly: AssemblyProductAttribute("FSharpVSPowerTools")>]
 [<assembly: AssemblyDescriptionAttribute("A collection of additional commands for F# in Visual Studio")>]
-[<assembly: AssemblyVersionAttribute("2.5.2")>]
-[<assembly: AssemblyFileVersionAttribute("2.5.2")>]
+[<assembly: AssemblyVersionAttribute("2.5.4")>]
+[<assembly: AssemblyFileVersionAttribute("2.5.4")>]
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] Version = "2.5.2"
-    let [<Literal>] InformationalVersion = "2.5.2"
     let [<Literal>] InternalsVisibleTo = "FSharp.Editing.VisualStudio.Tests"
     let [<Literal>] AssemblyTitle = "FSharp.Editing.VisualStudio"
     let [<Literal>] AssemblyProduct = "FSharpVSPowerTools"
     let [<Literal>] AssemblyDescription = "A collection of additional commands for F# in Visual Studio"
-    let [<Literal>] AssemblyVersion = "2.6.0"
-    let [<Literal>] AssemblyFileVersion = "2.6.0"
+    let [<Literal>] AssemblyVersion = "2.5.4"
+    let [<Literal>] AssemblyFileVersion = "2.5.4"

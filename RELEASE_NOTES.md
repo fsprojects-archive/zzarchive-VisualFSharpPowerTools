@@ -1,3 +1,6 @@
+#### 2.5.4 - October 25 2016
+* Update F# Compiler Service, Fantomas and FSharpLint
+
 #### 2.5.2 - October 17 2016
 * Fix class declaration coloring if it contains any static let bindings
 
