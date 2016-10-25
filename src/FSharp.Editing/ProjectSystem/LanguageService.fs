@@ -37,6 +37,7 @@ type ParseAndCheckResults private (infoOpt: (FSharpCheckFileResults * FSharpPars
         }
 
     member __.ParseTree = infoOpt |> Option.bind (fun (_, parseResults) -> parseResults.ParseTree)
+    member __.CheckResults = infoOpt |> Option.map (fun (checkResults, _) -> checkResults)
     member __.CheckErrors = infoOpt |> Option.map (fun (checkResults, _) -> checkResults.Errors)
     member __.ParseErrors = infoOpt |> Option.map (fun (_, parseResults) -> parseResults.Errors)
     

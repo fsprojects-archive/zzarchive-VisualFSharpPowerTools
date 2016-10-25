@@ -20,7 +20,7 @@ namespace FSharpVSPowerTools
 {
     [PackageRegistration(UseManagedResourcesOnly = true)]
     [ProvideMenuResource(resourceID: "Menus.ctmenu", version: 1)]
-    [InstalledProductRegistration("#110", "#112", AssemblyVersionInformation.Version, IconResourceID = 400)]
+    [InstalledProductRegistration("#110", "#112", AssemblyVersionInformation.AssemblyVersion, IconResourceID = 400)]
     [ProvideBindingPath]
     [ProvideOptionPage(typeof(GeneralOptionsPage), Resource.vsPackageTitle, "General", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]
     [ProvideOptionPage(typeof(FantomasOptionsPage), Resource.vsPackageTitle, "Formatting", categoryResourceID: 0, pageNameResourceID: 0, supportsAutomation: true, keywordListResourceId: 0)]

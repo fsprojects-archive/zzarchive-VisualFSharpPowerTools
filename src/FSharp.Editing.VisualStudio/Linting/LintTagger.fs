@@ -43,8 +43,8 @@ type LintTagger(doc: ITextDocument,
     let updateAtCaretPosition (CallInUIContext callInUIContext) =
         asyncMaybe {
             let! project = project()
-            let! parseFileResults = vsLanguageService.ParseFileInProject (doc.FilePath, project)
-            let! ast = parseFileResults.ParseTree
+            let! checkFileResults = vsLanguageService.ParseAndCheckFileInProject (doc.FilePath, project)
+            let! ast = checkFileResults.ParseTree
             let config, shouldFileBeIgnored = lintData.Value
             let! source = openDocumentsTracker.TryGetDocumentText doc.FilePath
 
@@ -54,7 +54,7 @@ type LintTagger(doc: ITextDocument,
                         { Lint.OptionalLintParameters.Default with Configuration = Some config }
                         { Ast = ast
                           Source = source
-                          TypeCheckResults = None
+                          TypeCheckResults = checkFileResults.CheckResults
                           FSharpVersion = version }
                         doc.FilePath
 
