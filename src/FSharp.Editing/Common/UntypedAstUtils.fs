@@ -73,7 +73,7 @@ let internal getLongIdents (input: ParsedInput option) : IDictionary<Range.pos, 
         | SynTypeConstraint.WhereTyparSubtypeOfType (t, ty, _) -> walkTypar t; walkType ty
         | SynTypeConstraint.WhereTyparIsEnum (t, ts, _)
         | SynTypeConstraint.WhereTyparIsDelegate (t, ts, _) -> walkTypar t; List.iter walkType ts
-        | SynTypeConstraint.WhereTyparSupportsMember (ts, sign, _) -> List.iter walkTypar ts; walkMemberSig sign
+        | SynTypeConstraint.WhereTyparSupportsMember (ts, sign, _) -> List.iter walkType ts; walkMemberSig sign
 
     and walkPat = function
         | SynPat.Tuple (pats, _)

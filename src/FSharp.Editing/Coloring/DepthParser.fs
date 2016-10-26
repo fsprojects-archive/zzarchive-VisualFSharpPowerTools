@@ -98,7 +98,8 @@ module internal DepthParsing =
             k (r1 @ r2)))
         | SynExpr.Const(_synConst, _range) -> k[]
         | SynExpr.Typed(synExpr, _synType, _range) -> getRangesSynExprK synExpr k
-        | SynExpr.Tuple(synExprList, _,  _range) -> synExprList |> List.collect getRangesSynExpr
+        | SynExpr.Tuple(synExprList, _,  _range)
+        | SynExpr.StructTuple(synExprList, _,  _range) -> synExprList |> List.collect getRangesSynExpr
         | SynExpr.ArrayOrList(_, synExprList, _range) -> k(synExprList |> List.collect getRangesSynExpr)
         | SynExpr.Record(_) -> k[]
         | SynExpr.New(_, _synType, synExpr, _range) -> getRangesSynExprK synExpr k

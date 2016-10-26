@@ -1,4 +1,8 @@
-#### 2.6.0 - Unreleased
+#### 2.5.4 - October 25 2016
+* Update F# Compiler Service, Fantomas and FSharpLint
+
+#### 2.5.2 - October 17 2016
+* Fix class declaration coloring if it contains any static let bindings
 
 #### 2.5.0 - May 17 2016
  * Better handling of finding projects [#1384](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1384) [#1386](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1386)

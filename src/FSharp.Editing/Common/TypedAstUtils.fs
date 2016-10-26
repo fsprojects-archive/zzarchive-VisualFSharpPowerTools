@@ -278,8 +278,9 @@ module TypedAstPatterns =
 
     /// Constructor (enclosingEntity)
     let (|Constructor|_|) (func: FSharpMemberOrFunctionOrValue) =
-        if func.CompiledName = ".ctor" then Some func.EnclosingEntity
-        else None
+        match func.CompiledName with
+        | ".ctor" | ".cctor" -> Some func.EnclosingEntity
+        | _ -> None
 
     let (|Function|_|) excluded (func: FSharpMemberOrFunctionOrValue) =
         match func.FullTypeSafe |> Option.map getAbbreviatedType with

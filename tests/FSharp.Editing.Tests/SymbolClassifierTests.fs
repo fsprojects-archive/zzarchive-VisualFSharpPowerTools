@@ -4,6 +4,7 @@ open System.IO
 open NUnit.Framework
 open FSharp.Editing
 open FSharp.Editing.Features
+open System
 
 let fileName = Path.Combine (__SOURCE_DIRECTORY__, __SOURCE_FILE__)
 let projectFileName = Path.ChangeExtension(fileName, ".fsproj")
@@ -68,7 +69,9 @@ let (=>) source (expected: (int * ((Cat * int * int) list)) list) =
     
     try actual |> Collection.assertEquiv expected
     with _ -> 
-        debug "AST: %A" checkResults.ParseTree
+        let ast = sprintf "AST: %A" checkResults.ParseTree
+        debug "%s" ast
+        Console.WriteLine ast
         for x in actual do
             debug "Actual: %A" x
         reraise()
@@ -231,6 +234,14 @@ let ``generic class declaration``() =
 type GenericClass<'T>() = class end
 """
     => [ 2, [ Cat.ReferenceType, 5, 17; Cat.Operator, 24, 25 ]]
+
+[<Test>]
+let ``class with static let``() =
+    """
+type GenericClass() =
+    static let x = 1
+"""
+    => [ 2, [ Cat.ReferenceType, 5, 17; Cat.Operator, 20, 21 ]]
 
 [<Test>]
 let ``generic class instantiation``() = 

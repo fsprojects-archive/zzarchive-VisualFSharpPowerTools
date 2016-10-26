@@ -54,15 +54,16 @@ let private clauseIsCandidateForCodeGen (cursorPos: pos) (clause: SynMatchClause
         | SynPat.LongIdent(_, _, _, ConstructorPats nestedPats, _, r) -> 
             // The cursor should not be in the nested patterns
             rangeContainsPos r cursorPos && List.forall (not << patIsCandidate) nestedPats
-        | SynPat.Tuple(_, _) -> false
-        | SynPat.ArrayOrList(_, _, _) -> false
-        | SynPat.Record(_, _) -> false
-        | SynPat.Null(_) -> false
-        | SynPat.IsInst(_, _) -> false
-        | SynPat.QuoteExpr(_, _) -> false
-        | SynPat.DeprecatedCharRange(_, _, _) -> false
-        | SynPat.InstanceMember(_, _, _, _, _) -> false
-        | SynPat.FromParseError(_, _) -> false
+        | SynPat.Tuple _
+        | SynPat.StructTuple _ -> false
+        | SynPat.ArrayOrList _
+        | SynPat.Record _
+        | SynPat.Null _
+        | SynPat.IsInst _
+        | SynPat.QuoteExpr _
+        | SynPat.DeprecatedCharRange _
+        | SynPat.InstanceMember _
+        | SynPat.FromParseError _ -> false
 
     match clause with
     | Clause(pat, _, _, _, _) -> patIsCandidate pat
@@ -357,7 +358,8 @@ let getWrittenCases (patMatchExpr: PatternMatchExpr) =
         | SynPat.DeprecatedCharRange(_, _, _)
         | SynPat.FromParseError(_, _) -> false
 
-        | SynPat.Tuple(innerPatList, _) -> List.forall checkPattern innerPatList
+        | SynPat.Tuple(innerPatList, _)
+        | SynPat.StructTuple(innerPatList, _) -> List.forall checkPattern innerPatList
             
         | SynPat.Record(recordInnerPatList, _) ->
             recordInnerPatList

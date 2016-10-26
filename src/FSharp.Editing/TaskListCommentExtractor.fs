@@ -29,7 +29,7 @@ module private Utils =
         member x.Text(lines: string[], lineNumber: int) =
             lines.[lineNumber].Substring(x.LeftColumn, x.FullMatchedLength)
 
-    let sourceTok = SourceTokenizer([], "/tmp.fsx")
+    let sourceTok = SourceTokenizer([], Some "/tmp.fsx")
 
     let createNewLineTokenizer (lines: string[]) (lineNumber: int) =
         let nextLine =
