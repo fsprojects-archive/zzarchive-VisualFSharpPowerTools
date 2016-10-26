@@ -16,7 +16,7 @@ type SymbolClassifierHelper() =
     let classifierProvider = 
         new SymbolClassifierProvider(
             serviceProvider = base.ServiceProvider, 
-            classificationColorManager = null,
+            classificationColorManager = Mocks.createClassificationColorManager(),
             projectFactory = base.ProjectFactory,
             fsharpVsLanguageService = base.VsLanguageService,
             classificationRegistry = base.ClassificationTypeRegistryService,
