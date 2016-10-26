@@ -168,7 +168,7 @@ namespace FSharpVSPowerTools
             }
         }
 
-        public void UpdateColors(bool force)
+        public virtual void UpdateColors(bool force)
         {
             var newTheme = _themeManager.GetCurrentTheme();
 

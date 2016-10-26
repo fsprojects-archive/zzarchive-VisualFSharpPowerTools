@@ -99,7 +99,7 @@ namespace FSharpVSPowerTools
             return _currentTheme == VisualStudioTheme.Dark ? DarkThemeColor : LightThemeColor;
         }
 
-        public void UpdateColors(bool force)
+        public virtual void UpdateColors(bool force)
         {
             var newTheme = _themeManager.GetCurrentTheme();
 

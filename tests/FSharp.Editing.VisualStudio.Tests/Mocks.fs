@@ -312,6 +312,12 @@ let createSVsRunningDocumentTable(dte: DTE) =
 let createClassificationColorManager() =
     Mock<ClassificationColorManager>.With (fun x -> 
         <@
-            x.GetDefaultColors(any()) --> new FontColor()
             x.UpdateColors(any())
         @>)
+
+let createPrintfColorManager() =
+    Mock<PrintfColorManager>.With (fun x ->
+        <@
+            x.UpdateColors(any())
+        @>)
+
