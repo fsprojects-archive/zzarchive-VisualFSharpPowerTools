@@ -1,3 +1,6 @@
+#### 2.5.5 - October 25 2016
+* Fixes to make sure that VFPT color scheme updates properly when VS theme is changed
+
 #### 2.5.4 - October 25 2016
 * Update F# Compiler Service, Fantomas and FSharpLint
 
