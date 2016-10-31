@@ -13,7 +13,7 @@ type UnusedSymbolClassifierHelper() =
         new UnusedSymbolClassifierProvider
             (
                 serviceProvider = base.ServiceProvider, 
-                classificationColorManager = base.ClassificationColorManager,
+                classificationColorManager = null,
                 projectFactory = base.ProjectFactory,
                 fsharpVsLanguageService = base.VsLanguageService,
                 classificationRegistry = base.ClassificationTypeRegistryService,
