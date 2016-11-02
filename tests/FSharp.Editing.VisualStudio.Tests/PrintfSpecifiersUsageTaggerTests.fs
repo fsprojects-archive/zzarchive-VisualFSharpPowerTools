@@ -14,7 +14,7 @@ type PrintfSpecifiersUsageTaggerHelper() =
                 serviceProvider = base.ServiceProvider,
                 projectFactory = base.ProjectFactory,
                 textDocumentFactoryService = base.DocumentFactoryService,
-                printfColorManager = base.PrintfColorManager)
+                printfColorManager = null)
 
     member __.GetView buffer =
         createMockTextView buffer

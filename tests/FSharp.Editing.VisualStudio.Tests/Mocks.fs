@@ -14,7 +14,6 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.TextManager.Interop
 open Microsoft.VisualStudio.OLE.Interop
 open EnvDTE
-open FSharpVSPowerTools
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem
@@ -308,16 +307,3 @@ let createSVsRunningDocumentTable(dte: DTE) =
             member __.UnlockDocument(grfRDTLockType, dwCookie) = notimpl
             member __.UnregisterDocumentLockHolder(dwLHCookie) = notimpl
     }
-
-let createClassificationColorManager() =
-    Mock<ClassificationColorManager>.With (fun x -> 
-        <@
-            x.UpdateColors(any())
-        @>)
-
-let createPrintfColorManager() =
-    Mock<PrintfColorManager>.With (fun x ->
-        <@
-            x.UpdateColors(any())
-        @>)
-

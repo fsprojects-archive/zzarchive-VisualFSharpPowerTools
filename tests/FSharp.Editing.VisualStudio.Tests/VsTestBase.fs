@@ -44,9 +44,6 @@ type VsTestBase() =
     let editorOperationsFactoryService = Mocks.createEditorOperationsFactoryService()
     let textBufferUndoManagerProvider = Mocks.createTextBufferUndoManagerProvider()
 
-    let classificationColorManager = Mocks.createClassificationColorManager()
-    let printfColorManager = Mocks.createPrintfColorManager()
-
     let fsharpLanguageService = FSharpLanguageService(serviceProvider)
     let openDocumentsTracker = Mocks.OpenDocumentTrackerStub()
     let fileSystem = FileSystem(openDocumentsTracker)
@@ -74,9 +71,6 @@ type VsTestBase() =
     member __.EditorOperationsFactoryService = editorOperationsFactoryService
     member __.TextBufferUndoManagerProvider = textBufferUndoManagerProvider
     member __.ReferenceSourceProvider = referenceSourceProvider
-    member __.ClassificationColorManager = classificationColorManager
-    member __.PrintfColorManager = printfColorManager
-
 
     member __.AddProject(project: IProjectProvider) = 
         dte.AddProject(project.Project.ProjectFile, project)
