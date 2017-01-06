@@ -48,7 +48,9 @@ If you encounter any bug, please take some time to record diagnostics informatio
 Why are object identifiers in members marked as unused?
 -----------------------
 If object identifiers (`x` in `x.Member`) aren't referred anywhere in the member bodies, they are understood as unused values.
-In order to fix it, we recommend to use `__` or any identifier with `_` prefix (`_x` for example).
+This *includes* the self-reference for class members (eg 'this').
+To suppress the warning, we recommend to use `__` (double underscore) or any identifier with `_` prefix (`_x` for example).
+For more info, see [issue 644](https://github.com/fsprojects/VisualFSharpPowerTools/issues/644)
 
 Why are my VFPT key bindings overridden by ReSharper?
 -----------------------
