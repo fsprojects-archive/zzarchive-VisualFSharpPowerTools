@@ -2,8 +2,9 @@
 
 open System.IO
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule
-open FSharp.ViewModule.Validation
+open ViewModule
+open ViewModule.FSharp
+open ViewModule.Validation.FSharp
 
 type NewFolderNameDialog = FsXaml.XAML< @"Gui/FolderNameDialog.xaml">
 

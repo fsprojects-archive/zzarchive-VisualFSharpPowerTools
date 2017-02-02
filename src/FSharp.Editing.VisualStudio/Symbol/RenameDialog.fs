@@ -7,9 +7,12 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
 open FSharp.Editing.VisualStudio.ProjectSystem
-open FSharp.ViewModule
-open FSharp.ViewModule.Progress
-open FSharp.ViewModule.Validation
+open ViewModule
+open ViewModule.FSharp
+open ViewModule.Validation
+open ViewModule.Validation.FSharp
+open ViewModule.Progress
+open ViewModule.Progress.FSharp
 open FSharp.Editing.IdentifierUtils
 open FSharp.Editing.Features
 

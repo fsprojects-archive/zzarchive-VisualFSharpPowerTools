@@ -3,7 +3,10 @@
 open System
 open Microsoft.VisualStudio.Shell.Interop
 open FSharp.Editing
-open FSharp.ViewModule.Progress
+open ViewModule
+open ViewModule.FSharp
+open ViewModule.Progress
+open ViewModule.Progress.FSharp
 
 /// Union of the available Visual Studio icons used for animation in the status bar
 type StatusIcon =

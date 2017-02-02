@@ -6,7 +6,9 @@ open FSharp.Editing
 open FSharpLint.Framework
 open Configuration
 open FParsec
-open FSharp.ViewModule
+open ViewModule
+open ViewModule.FSharp
+open ViewModule.Validation.FSharp
 
 type BoolViewModel(name, isChecked) as this =
     inherit ViewModelBase()
