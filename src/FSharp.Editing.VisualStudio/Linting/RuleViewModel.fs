@@ -2,7 +2,8 @@
 
 open System
 open System.ComponentModel
-open FSharp.ViewModule
+open ViewModule
+open ViewModule.FSharp
 
 type RuleViewModel(name:string, rules:RuleViewModel seq, settings, isChecked:bool) as this =
     inherit ViewModelBase()

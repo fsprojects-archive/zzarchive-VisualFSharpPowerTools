@@ -1,3 +1,6 @@
+#### 2.5.6 - February 3 2017
+* Updated FsXaml and FSharp.ViewModule to prevent type provider conflicts
+
 #### 2.5.5 - October 25 2016
 * Fixes to make sure that VFPT color scheme updates properly when VS theme is changed
 

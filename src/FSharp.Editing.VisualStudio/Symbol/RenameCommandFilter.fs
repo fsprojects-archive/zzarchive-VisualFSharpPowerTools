@@ -10,7 +10,8 @@ open Microsoft.VisualStudio.Shell.Interop
 open Microsoft.FSharp.Compiler.Range
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule.Progress
+open ViewModule.Progress
+open ViewModule.Progress.FSharp
 open FSharp.Editing.Infrastructure
 open FSharp.Editing.VisualStudio.ProjectSystem
 

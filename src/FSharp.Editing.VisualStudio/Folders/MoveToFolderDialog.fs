@@ -2,8 +2,10 @@
 
 open System.IO
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule
-open FSharp.ViewModule.Validation
+open ViewModule
+open ViewModule.FSharp
+open ViewModule.Validation
+open ViewModule.Validation.FSharp
 
 type MoveToFolderDialog = FsXaml.XAML< @"Gui/MoveToFolderDialog.xaml">
 

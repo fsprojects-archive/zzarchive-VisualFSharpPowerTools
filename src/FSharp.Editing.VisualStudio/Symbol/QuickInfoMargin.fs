@@ -6,7 +6,8 @@ open Microsoft.VisualStudio.Text.Editor
 open Microsoft.VisualStudio.Text
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule
+open ViewModule
+open ViewModule.FSharp
 open Microsoft.FSharp.Compiler
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open FSharp.Editing.VisualStudio.ProjectSystem

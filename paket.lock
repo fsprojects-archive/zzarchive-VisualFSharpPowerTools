@@ -13,13 +13,14 @@ NUGET
     FSharp.Data (2.3.2)
       Zlib.Portable (>= 1.11) - framework: >= netstandard11, portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81
     FSharp.Management (0.4.2)
-    FSharp.ViewModule.Core (0.9.9.3)
+    FSharp.ViewModule.Core (1.0.5)
+      FSharp.Core
     FSharpLint.Core (0.4.10)
       FParsec (>= 1.0.2)
       FSharp.Compiler.Service (>= 8.0)
       FSharp.Compiler.Service.ProjectCracker (>= 8.0)
     FsPickler (3.2)
-    FsXaml.Wpf (2.1)
+    FsXaml.Wpf (3.1.2)
     Microsoft.NETCore.Platforms (1.0.1) - framework: >= netstandard10
     Microsoft.NETCore.Targets (1.0.1) - framework: >= netstandard10
     runtime.native.System (4.0) - framework: >= netstandard13

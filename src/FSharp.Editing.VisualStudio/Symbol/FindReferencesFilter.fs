@@ -8,7 +8,8 @@ open Microsoft.VisualStudio.OLE.Interop
 open Microsoft.VisualStudio.Shell.Interop
 open FSharp.Editing
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule.Progress
+open ViewModule.Progress
+open ViewModule.Progress.FSharp
 open Microsoft.VisualStudio.Text
 open System.Diagnostics
 open Microsoft.FSharp.Compiler.AbstractIL.Internal.Library

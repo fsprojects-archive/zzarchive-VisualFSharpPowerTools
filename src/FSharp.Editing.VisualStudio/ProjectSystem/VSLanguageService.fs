@@ -1,7 +1,8 @@
 ﻿namespace FSharp.Editing.VisualStudio.ProjectSystem
 
 open FSharp.Editing.VisualStudio
-open FSharp.ViewModule.Progress
+open ViewModule.Progress
+open ViewModule.Progress.FSharp
 open Microsoft.VisualStudio.Editor
 open System.ComponentModel.Composition
 open Microsoft.VisualStudio.Text
