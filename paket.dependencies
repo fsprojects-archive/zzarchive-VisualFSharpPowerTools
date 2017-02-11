@@ -1,7 +1,7 @@
 source http://nuget.org/api/v2
 redirects: on
 strategy: max
-
+framework >= net40
 nuget Fantomas
 nuget FSharp.Compiler.Service
 nuget FSharp.Core
@@ -42,7 +42,7 @@ group vssdk
     
 group Test
     source http://nuget.org/api/v2
-
+    framework >= net40
     nuget Foq
     nuget FsCheck
     nuget FSharp.Compiler.Service.ProjectCracker
@@ -51,7 +51,7 @@ group Test
 
 group Build
     source http://nuget.org/api/v2
-    
+    framework >= net40
     nuget canopy
     nuget FAKE
     nuget FSharp.Formatting

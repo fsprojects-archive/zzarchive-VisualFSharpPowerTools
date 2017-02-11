@@ -168,8 +168,13 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                    
                    debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
                    debug "[LanguageService] Parse and typecheck source..."
-                   return! x.ParseAndCheckFileInProject (fixedFilePath, 0, source, options, 
-                                                         IsResultObsolete (fun _ -> isResultObsolete filePath), null) 
+                   return! x.ParseAndCheckFileInProject (
+                      filename           = fixedFilePath
+                      , fileversion      = 0
+                      , source           = source
+                      , options          = options
+                      , textSnapshotInfo = (*IsResultObsolete*) (fun _ -> isResultObsolete filePath)
+                      )
               finally 
                    if files.TryUpdate (filePath, Checked, BeingChecked) then
                        debug "[LanguageService] %s: BeingChecked => Checked" filePath
@@ -276,7 +281,9 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           UseScriptResolutionRules = false
           LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
           UnresolvedReferences = None
-          ReferencedProjects = referencedProjects }
+          ReferencedProjects = referencedProjects
+          OriginalLoadReferences = List.empty
+          ExtraProjectInfo = None }
     debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
                                     opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
     opts
