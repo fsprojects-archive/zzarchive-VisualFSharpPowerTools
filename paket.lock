@@ -3,10 +3,10 @@ STRATEGY: MAX
 FRAMEWORK: >= NET40
 NUGET
   remote: http://www.nuget.org/api/v2
-    Fantomas (2.4)
-      FSharp.Compiler.Service (>= 8.0)
+    Fantomas (2.5)
+      FSharp.Compiler.Service (>= 10.0.1)
     FParsec (1.0.2)
-    FSharp.Compiler.Service (10.0.1)
+    FSharp.Compiler.Service (10.0.3)
       System.Collections.Immutable (>= 1.2)
       System.Reflection.Metadata (>= 1.4.1-beta-24227-04)
     FSharp.Compiler.Service.ProjectCracker (10.0.1)
@@ -124,13 +124,59 @@ GITHUB
     modules/Octokit/Octokit.fsx (4e4428bfe931a5f720e32f9d69289d25eb16d467)
       Octokit
 GROUP Test
+FRAMEWORK: >= NET40
 NUGET
   remote: http://www.nuget.org/api/v2
     Foq (1.7.1)
     FsCheck (2.6.2)
       FSharp.Core (>= 3.1.2.5)
-    FSharp.Compiler.Service.ProjectCracker (8.0)
+    FSharp.Compiler.Service (10.0.3) - framework: >= net463
+      System.Collections.Immutable (>= 1.2)
+      System.Reflection.Metadata (>= 1.4.1-beta-24227-04)
+    FSharp.Compiler.Service.ProjectCracker (10.0.3)
+      FSharp.Compiler.Service (>= 10.0.3) - framework: >= net463
+      Microsoft.Build (>= 14.3) - framework: >= net463
+      Microsoft.Build.Framework (>= 14.3) - framework: >= net463
+      Microsoft.Build.Tasks.Core (>= 14.3) - framework: >= net463
+      Microsoft.Build.Utilities.Core (>= 14.3) - framework: >= net463
+      Microsoft.FSharp.Core.netcore (>= 1.0.0-alpha-161205) - framework: >= net463
+      System.Runtime.Serialization.Json (>= 4.0.2) - framework: >= net463
     FSharp.Core (4.0.0.1)
+    Microsoft.Build (14.3) - framework: >= net463
+      Microsoft.Build.Framework (14.3) - framework: >= net45
+    Microsoft.Build.Framework (14.3)
+      System.Collections (>= 4.0.11) - framework: >= net46
+      System.Runtime (>= 4.1) - framework: >= net46
+      System.Runtime.InteropServices (>= 4.1) - framework: >= net46
+    Microsoft.Build.Tasks.Core (14.3) - framework: >= net463
+      Microsoft.Build.Framework (14.3) - framework: >= net45
+      Microsoft.Build.Utilities.Core (14.3) - framework: >= net45
+    Microsoft.Build.Utilities.Core (14.3)
+      Microsoft.Build.Framework (14.3) - framework: >= net45
+    Microsoft.FSharp.Core.netcore (1.0.0-rc-170122) - framework: >= net463
+      System.Collections (>= 4.0.11)
+      System.Console (>= 4.0)
+      System.Diagnostics.Debug (>= 4.0.11)
+      System.Diagnostics.Tools (>= 4.0.1)
+      System.Globalization (>= 4.0.11)
+      System.IO (>= 4.1)
+      System.Linq (>= 4.1)
+      System.Linq.Expressions (>= 4.1)
+      System.Linq.Queryable (>= 4.0.1)
+      System.Net.Requests (>= 4.0.11)
+      System.Reflection (>= 4.1)
+      System.Reflection.Extensions (>= 4.0.1)
+      System.Resources.ResourceManager (>= 4.0.1)
+      System.Runtime (>= 4.1)
+      System.Runtime.Extensions (>= 4.1)
+      System.Runtime.Numerics (>= 4.0.1)
+      System.Text.RegularExpressions (>= 4.1)
+      System.Threading (>= 4.0.11)
+      System.Threading.Tasks (>= 4.0.11)
+      System.Threading.Tasks.Parallel (>= 4.0.1)
+      System.Threading.Thread (>= 4.0)
+      System.Threading.ThreadPool (>= 4.0.10)
+      System.Threading.Timer (>= 4.0.1)
     NUnit (3.5)
     NUnit.ConsoleRunner (3.5)
     NUnit.Extension.NUnitProjectLoader (3.5)
@@ -145,6 +191,35 @@ NUGET
       NUnit.Extension.NUnitV2ResultWriter (>= 3.5)
       NUnit.Extension.TeamCityEventListener (>= 1.0.2)
       NUnit.Extension.VSProjectLoader (>= 3.5)
+    System.Collections (4.3)
+    System.Collections.Immutable (1.3.1)
+    System.Console (4.3) - framework: >= net463
+    System.Diagnostics.Debug (4.3) - framework: >= net463
+    System.Diagnostics.Tools (4.3) - framework: >= net463
+    System.Globalization (4.3) - framework: >= net463
+    System.IO (4.3) - framework: >= net463
+    System.Linq (4.3) - framework: >= net463
+    System.Linq.Expressions (4.3) - framework: >= net463
+    System.Linq.Queryable (4.3) - framework: >= net463
+    System.Net.Requests (4.3) - framework: >= net463
+    System.Reflection (4.3) - framework: >= net463
+    System.Reflection.Extensions (4.3) - framework: >= net463
+    System.Reflection.Metadata (1.4.2) - framework: >= net463
+      System.Collections.Immutable (>= 1.3.1) - framework: >= net45
+    System.Resources.ResourceManager (4.3) - framework: >= net463
+    System.Runtime (4.3)
+    System.Runtime.Extensions (4.3) - framework: >= net463
+    System.Runtime.InteropServices (4.3)
+      System.Runtime (>= 4.3) - framework: >= net462
+    System.Runtime.Numerics (4.3) - framework: >= net463
+    System.Runtime.Serialization.Json (4.3) - framework: >= net463
+    System.Text.RegularExpressions (4.3) - framework: >= net463
+    System.Threading (4.3) - framework: >= net463
+    System.Threading.Tasks (4.3) - framework: >= net463
+    System.Threading.Tasks.Parallel (4.3) - framework: >= net463
+    System.Threading.Thread (4.3) - framework: >= net463
+    System.Threading.ThreadPool (4.3) - framework: >= net463
+    System.Threading.Timer (4.3) - framework: >= net463
 
 GROUP vssdk
 FRAMEWORK: >= NET45

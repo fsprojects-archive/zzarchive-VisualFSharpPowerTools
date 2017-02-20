@@ -1,3 +1,7 @@
+#### 2.5.7 - February 20 2017
+
+* Updated FSharp.Compiler.Services, Fantomas and FSharpLint [#1496](https://github.com/fsprojects/VisualFSharpPowerTools/pull/1496)
+
 #### 2.5.6 - February 3 2017
 * Updated FsXaml and FSharp.ViewModule to prevent type provider conflicts
 
