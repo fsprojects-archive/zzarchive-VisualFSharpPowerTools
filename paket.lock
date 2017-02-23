@@ -6,7 +6,7 @@ NUGET
     Fantomas (2.5)
       FSharp.Compiler.Service (>= 10.0.1)
     FParsec (1.0.2)
-    FSharp.Compiler.Service (10.0.3)
+    FSharp.Compiler.Service (11.0.2)
       System.Collections.Immutable (>= 1.2)
       System.Reflection.Metadata (>= 1.4.1-beta-24227-04)
     FSharp.Compiler.Service.ProjectCracker (10.0.1)
@@ -130,11 +130,11 @@ NUGET
     Foq (1.7.1)
     FsCheck (2.6.2)
       FSharp.Core (>= 3.1.2.5)
-    FSharp.Compiler.Service (10.0.3) - framework: >= net463
+    FSharp.Compiler.Service (11.0.2) - framework: >= net463
       System.Collections.Immutable (>= 1.2)
       System.Reflection.Metadata (>= 1.4.1-beta-24227-04)
-    FSharp.Compiler.Service.ProjectCracker (10.0.3)
-      FSharp.Compiler.Service (>= 10.0.3) - framework: >= net463
+    FSharp.Compiler.Service.ProjectCracker (11.0.2)
+      FSharp.Compiler.Service (>= 11.0.2) - framework: >= net463
       Microsoft.Build (>= 14.3) - framework: >= net463
       Microsoft.Build.Framework (>= 14.3) - framework: >= net463
       Microsoft.Build.Tasks.Core (>= 14.3) - framework: >= net463
