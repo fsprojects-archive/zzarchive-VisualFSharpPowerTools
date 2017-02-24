@@ -345,7 +345,7 @@ module SourceCodeClassifier =
                         { SymbolKind = SymbolKind.Other
                           Line = r.StartLine
                           StartCol = r.StartColumn
-                          EndCol = r.EndColumn + 1 }}))
+                          EndCol = r.EndColumn }}))
             |> Option.getOrElse [||]
 
         spansBasedOnSymbolsUses

@@ -890,8 +890,8 @@ let _ = printfn "%s %s"
 do printfn "%6d %%  % 06d" 1 2
 """
     => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15 ]
-         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 20; Cat.Printf, 20, 23 ]
-         4, [ Cat.Function, 3, 10; Cat.Printf, 12, 16; Cat.Printf, 16, 19; Cat.Printf, 20, 26 ]]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 19; Cat.Printf, 20, 22 ]
+         4, [ Cat.Function, 3, 10; Cat.Printf, 12, 15; Cat.Printf, 16, 18; Cat.Printf, 20, 25 ]]
 
 [<Test>]
 let ``printf formatters in try / with / finally``() =
@@ -905,10 +905,10 @@ try
 with _ ->
     failwithf "foo %d bar" 0
 """
-    =>  [ 3, [ Cat.Operator, 10, 11; Cat.Function, 12, 19; Cat.Printf, 25, 28 ]
-          5, [ Cat.Function, 8, 15; Cat.Printf, 21, 24 ]
-          7, [ Cat.Function, 8, 14; Cat.Printf, 20, 23 ]
-          9, [ Cat.Function, 4, 13; Cat.Printf, 19, 22 ]]
+    =>  [ 3, [ Cat.Operator, 10, 11; Cat.Function, 12, 19; Cat.Printf, 25, 27 ]
+          5, [ Cat.Function, 8, 15; Cat.Printf, 21, 23 ]
+          7, [ Cat.Function, 8, 14; Cat.Printf, 20, 22 ]
+          9, [ Cat.Function, 4, 13; Cat.Printf, 19, 21 ]]
 
 [<Test>]
 let ``printf formatters in record / DU members``() =
@@ -926,10 +926,10 @@ type DU = DU
         override __.ToString() = 
             sprintf "%d" 1
 """
-    => [ 5, [ Cat.Function, 12, 19; Cat.Printf, 21, 24 ]
-         7, [ Cat.Function, 12, 19; Cat.Printf, 21, 24 ]
-         11, [ Cat.Function, 12, 19; Cat.Printf, 21, 24 ]
-         13, [ Cat.Function, 12, 19; Cat.Printf, 21, 24 ]]
+    => [ 5, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         7, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         11, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]
+         13, [ Cat.Function, 12, 19; Cat.Printf, 21, 23 ]]
 
 [<Test>]
 let ``printf formatters in extension members``() =
@@ -938,19 +938,19 @@ type System.Object with
     member __.M1 = 
         sprintf "%A" 
 """
-    => [ 4, [ Cat.Function, 8, 15; Cat.Printf, 17, 20 ]]
+    => [ 4, [ Cat.Function, 8, 15; Cat.Printf, 17, 19 ]]
 
 [<Test>]
 let ``printf formatters in escaped string``() =
     """
 let _ = sprintf @"%A"
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 18, 21 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 18, 20 ]]
 
 [<Test>]
 let ``printf formatters in triple-quoted string``() =
     "let _ = sprintf \"\"\"%A\"\"\""
-    => [ 1, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 19, 22 ]]
+    => [ 1, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 19, 21 ]]
 
 [<Test>]
 let ``multi-line printf formatters``() =
@@ -959,9 +959,9 @@ let _ = printfn "foo %s %d
                  %A bar
 %i"
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 21, 24; Cat.Printf, 24, 27 ]
-         3, [ Cat.Printf, 17, 20 ]
-         4, [ Cat.Printf, 0, 3 ] ]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 21, 23; Cat.Printf, 24, 26 ] 
+         3, [ Cat.Printf, 17, 19 ]
+         4, [ Cat.Printf, 0, 2 ] ]
 
 [<Test>]
 let ``printf formatters in for expressions``() =
@@ -974,10 +974,10 @@ for _ in (sprintf "%d" 1).ToCharArray() do
 |> ignore
 
     """
-    => [ 2, [ Cat.Function, 10, 17; Cat.Printf, 19, 22; Cat.Function, 26, 37 ]
-         3, [ Cat.Function, 4, 11; Cat.Printf, 13, 16]
-         5, [ Cat.Function, 12, 19; Cat.Printf, 21, 24; Cat.Function, 28, 39 ]
-         6, [ Cat.Function, 10, 17; Cat.Printf, 19, 22]
+    => [ 2, [ Cat.Function, 10, 17; Cat.Printf, 19, 21; Cat.Function, 26, 37 ]
+         3, [ Cat.Function, 4, 11; Cat.Printf, 13, 15]
+         5, [ Cat.Function, 12, 19; Cat.Printf, 21, 23; Cat.Function, 28, 39 ]
+         6, [ Cat.Function, 10, 17; Cat.Printf, 19, 21]
     ]
 
 [<Test>]
@@ -985,7 +985,7 @@ let ``printf formatters in quoted expressions``() =
     """
 let _ = <@ sprintf "%A" @>
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 11, 18; Cat.Printf, 20, 23; Cat.Quotation, 8, 26 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 11, 18; Cat.Printf, 20, 22; Cat.Quotation, 8, 26 ]]
 
 [<Test>]
 let ``printf formatters if printf function is namespace qualified``() =
@@ -994,8 +994,8 @@ let _ = Microsoft.FSharp.Core.Printf.printf "%A" 0
 open Microsoft.FSharp.Core
 let _ = Printf.printf "%A" 0
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 43; Cat.Printf, 45, 48 ]
-         4, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 21; Cat.Printf, 23, 26 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 43; Cat.Printf, 45, 47 ]
+         4, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 21; Cat.Printf, 23, 25 ]]
 
 [<Test>]
 let ``printf formatters are not colorized in plane strings``() =
@@ -1011,9 +1011,9 @@ let _ = fprintf null "%A" 0
 let _ = Microsoft.FSharp.Core.Printf.fprintf null "%A" 0
 let _ = fprintfn null "%A" 0
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 22, 25 ]
-         3, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 44; Cat.Printf, 51, 54 ]
-         4, [ Cat.Operator, 6, 7; Cat.Function, 8, 16; Cat.Printf, 23, 26 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 22, 24 ]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 30, 36; Cat.Function, 37, 44; Cat.Printf, 51, 53 ]
+         4, [ Cat.Operator, 6, 7; Cat.Function, 8, 16; Cat.Printf, 23, 25 ]]
 
 [<Test>]
 let ``kprintf and bprintf formatters``() =
@@ -1021,15 +1021,15 @@ let ``kprintf and bprintf formatters``() =
 let _ = Printf.kprintf (fun _ -> ()) "%A" 1
 let _ = Printf.bprintf null "%A" 1
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 38, 41]
-         3, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 29, 32]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 38, 40]
+         3, [ Cat.Operator, 6, 7; Cat.Module, 8, 14; Cat.Function, 15, 22; Cat.Printf, 29, 31]]
 
 [<Test>]
 let ``wildcards in printf formatters``() =
     """
 let _ = sprintf "%*d" 1
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 21 ]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 20 ]]
 
 [<Test>]
 let ``float printf formatters``() =
@@ -1037,8 +1037,8 @@ let ``float printf formatters``() =
 let _ = sprintf "%7.1f" 1.0
 let _ = sprintf "%-8.1e+567" 1.0
 """
-    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 23]
-         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 24]]
+    => [ 2, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 22]
+         3, [ Cat.Operator, 6, 7; Cat.Function, 8, 15; Cat.Printf, 17, 23]]
 
 [<Test>]
 let ``malformed printf formatters``() =
