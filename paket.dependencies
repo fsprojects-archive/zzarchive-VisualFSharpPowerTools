@@ -4,7 +4,8 @@ strategy: max
 framework >= net40
 nuget Fantomas
 nuget FSharp.Compiler.Service
-nuget FSharp.Core
+nuget FSharp.Compiler.Service.ProjectCracker # fslint also depends on it, and conflicted with standalone dependency in Test group which is now removed
+nuget FSharp.Core = 4.0.0.1
 nuget FSharp.Data
 nuget FSharp.Management
 nuget FSharp.ViewModule.Core
@@ -45,7 +46,7 @@ group Test
     framework >= net40
     nuget Foq
     nuget FsCheck
-    nuget FSharp.Compiler.Service.ProjectCracker
+    nuget FSharp.Core = 4.0.0.1
     nuget NUnit
     nuget NUnit.Runners
 
@@ -54,6 +55,7 @@ group Build
     framework >= net40
     nuget canopy
     nuget FAKE
+    nuget FSharp.Core = 4.0.0.1
     nuget FSharp.Formatting
     nuget Nuget.CommandLine
     nuget Selenium.WebDriver.ChromeDriver

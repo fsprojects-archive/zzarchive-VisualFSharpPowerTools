@@ -1,4 +1,5 @@
 FSharp.Compiler.Service
+FSharp.Compiler.Service.ProjectCracker
 FSharp.ViewModule.Core
 FSharpLint.Core
 FSharp.Core
@@ -7,4 +8,3 @@ group Test
 
     Foq
     NUnit
-    FSharp.Compiler.Service.ProjectCracker
