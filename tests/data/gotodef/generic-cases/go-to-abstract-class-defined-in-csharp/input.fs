@@ -1,0 +1,1 @@
+let x: System.ValueType = Unchecked.defaultof<System.ValueType>
