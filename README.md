@@ -2,7 +2,7 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools/badge/pr)](http://issuestats.com/github/fsprojects/VisualFSharpPowerTools)
 [![NuGet](https://buildstats.info/nuget/FSharpVSPowerTools.Core)](https://www.nuget.org/packages/FSharpVSPowerTools.Core)
 
-## This project is deprecated. All the functionality is being ported to Visual F# Tools, Visual Studio 2017 only. ##
+## This project is deprecated. All the functionality is being ported to [Visual F# Tools](https://github.com/dotnet/fsharp), Visual Studio 2017 and newer. ##
 
 [Visual F# Power Tools](https://visualstudiogallery.msdn.microsoft.com/136b942e-9f2c-4c0b-8bac-86d774189cff)
 =====================
