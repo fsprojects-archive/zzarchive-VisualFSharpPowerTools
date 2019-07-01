@@ -97,9 +97,8 @@ module LintUtils =
 
     let private settingFromObject (settingObj:obj) = 
         match settingObj with
-        | :? BoolViewModel as x -> 
+        | :? BoolViewModel as x ->
             match x.Name with
-            | "IncludeMatchStatements" -> Some(x.Name, IncludeMatchStatements(x.IsChecked))
             | "OneSpaceAllowedAfterOperator" -> Some(x.Name, OneSpaceAllowedAfterOperator(x.IsChecked))
             | "IgnoreBlankLines" -> Some(x.Name, IgnoreBlankLines(x.IsChecked))
             | _ -> None
@@ -109,7 +108,6 @@ module LintUtils =
             | "Depth" -> Some(x.Name, Depth(x.Value))
             | "MaxItems" -> Some(x.Name, MaxItems(x.Value))
             | "Length" -> Some(x.Name, Length(x.Value))
-            | "MaxCyclomaticComplexity" -> Some(x.Name, MaxCyclomaticComplexity(x.Value))
             | "NumberOfSpacesAllowed" -> Some(x.Name, NumberOfSpacesAllowed(x.Value))
             | _ -> None
         | :? AccessViewModel as x -> Some(x.Name, Access(x.Value))
@@ -145,8 +143,7 @@ module LintUtils =
         ("Hints", analyser)
 
     let viewModelToConfig (viewModel:OptionsViewModel) =
-        { UseTypeChecker = None
-          IgnoreFiles = 
+        { IgnoreFiles = 
             { Update = IgnoreFilesUpdate.Overwrite
               Files = []
               Content = viewModel.IgnoreFiles.IgnoreFiles 
@@ -168,8 +165,7 @@ module LintUtils =
         let existingPartial = 
             getPartialConfig loadedConfigs normalisedDir
             |> Option.getOrTry (fun _ ->
-                { UseTypeChecker = None
-                  IgnoreFiles = None
+                { IgnoreFiles = None
                   Analysers = Map.ofList [] })
 
         let updatedPartial = updateConfigMap config existing existingPartial

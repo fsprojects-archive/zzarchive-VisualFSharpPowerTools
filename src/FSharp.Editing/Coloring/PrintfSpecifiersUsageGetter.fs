@@ -22,7 +22,7 @@ let getAll (input: ParseAndCheckResults) (onError: string -> unit): PrintfSpecif
         let specRangesAndArities = 
             specRangesAndArities 
             |> Array.map (fun (x, ar) -> 
-                (Range.mkRange x.FileName x.Start (Range.mkPos x.EndLine (x.EndColumn + 1))), ar)
+                (Range.mkRange x.FileName x.Start (Range.mkPos x.EndLine (x.EndColumn))), ar)
 
         let printfFunctions = Printf.getAll input.ParseTree
 

@@ -110,6 +110,7 @@ type AccessViewModel(name, initialValue) as this =
     member __.AccessValues = Enum.GetValues(typeof<Access>) |> Seq.cast<Access>
                 
 module SetupViewModels =
+
     let getSettingsViewModelsFromRule (settings:Map<_, _>) =
         [ for setting in settings do
             match setting.Value with
@@ -121,10 +122,6 @@ module SetupViewModels =
                 yield IntViewModel("MaxItems", value) :> obj
             | Length(value) -> 
                 yield IntViewModel("Length", value) :> obj
-            | MaxCyclomaticComplexity(value) -> 
-                yield IntViewModel("MaxCyclomaticComplexity", value) :> obj
-            | IncludeMatchStatements(value) -> 
-                yield BoolViewModel("IncludeMatchStatements", value) :> obj
             | OneSpaceAllowedAfterOperator(value) -> 
                 yield BoolViewModel("OneSpaceAllowedAfterOperator", value) :> obj
             | NumberOfSpacesAllowed(value) -> 
@@ -133,8 +130,15 @@ module SetupViewModels =
                 yield BoolViewModel("IgnoreBlankLines", value) :> obj
             | Access(value) -> 
                 yield AccessViewModel("Access", value) :> obj
+            | Prefix(_)
+            | Suffix(_)
+            | Underscores(_)
+            | Naming(_)
             | Hints(_)
-            | Enabled(_) -> () ]
+            | Enabled(_) -> 
+                // those are unhandled settings
+                // up-for-grabs
+                () ]
 
     let isRuleEnabled settings = Map.tryFind "Enabled" settings = Some(Enabled(true))
 

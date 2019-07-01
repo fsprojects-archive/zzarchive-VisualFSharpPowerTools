@@ -256,7 +256,7 @@ type UnusedSymbolClassifier
     let projectCheckedSubscription =
         // project check results needed for Unused Declarations only.
         if includeUnusedReferences() then
-            Some (vsLanguageService.RawChecker.ProjectChecked.Subscribe (fun projectFileName ->
+            Some (vsLanguageService.RawChecker.ProjectChecked.Subscribe (fun (projectFileName, _extraProjectInfo) ->
                 let projects = singleSymbolsProjects.Value
                 let projects =
                     match projects |> List.partition (fun p -> p.Options.ProjectFileName = projectFileName) with

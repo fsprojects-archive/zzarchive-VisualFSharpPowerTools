@@ -107,7 +107,9 @@ let validateSignature source signature =
           IsIncompleteTypeCheckEnvironment = false
           UseScriptResolutionRules = true
           LoadTime = DateTime.UtcNow
-          UnresolvedReferences = None }
+          UnresolvedReferences = None
+          OriginalLoadReferences = List.empty
+          ExtraProjectInfo = None }
     let results =
         languageService.ParseAndCheckFileInProject(opts, signatureFile, signature, AllowStaleResults.No)
         |> Async.RunSynchronously

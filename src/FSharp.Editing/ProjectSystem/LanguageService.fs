@@ -147,34 +147,19 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
         | _ -> Environment.ExpandEnvironmentVariables "%HOMEDRIVE%%HOMEPATH%"
         </> Path.GetFileName path
 
-  let files = ConcurrentDictionary<string, FileState>()
-  
-  let isResultObsolete fileName = 
-      match files.TryGetValue fileName with
-      | true, Cancelled -> true
-      | _ -> false
-  
   let parseAndCheckFileInProject(filePath, source, options) =
       async { 
           debug "[LanguageService] ParseAndCheckFileInProject - enter"
           let fixedFilePath = fixFileName filePath
           let! res = Async.Catch (checkerAsync <| fun x -> async {
-              try
-                   // wait until the previous checking completed
-                   while files.ContainsKey filePath &&
-                         (not (files.TryUpdate (filePath, BeingChecked, Checked)
-                               || files.TryUpdate (filePath, BeingChecked, NeedChecking))) do
-                       do! Async.Sleep 20
-                   
                    debug "[LanguageService] Change state for %s to `BeingChecked`" filePath
                    debug "[LanguageService] Parse and typecheck source..."
-                   return! x.ParseAndCheckFileInProject (fixedFilePath, 0, source, options, 
-                                                         IsResultObsolete (fun _ -> isResultObsolete filePath), null) 
-              finally 
-                   if files.TryUpdate (filePath, Checked, BeingChecked) then
-                       debug "[LanguageService] %s: BeingChecked => Checked" filePath
-                   elif files.TryUpdate (filePath, Checked, Cancelled) then
-                       debug "[LanguageService] %s: Cancelled => Checked" filePath })
+                   return! x.ParseAndCheckFileInProject (
+                      filename           = fixedFilePath
+                      , fileversion      = 0
+                      , source           = source
+                      , options          = options
+                      ) })
 
           debug "[LanguageService]: Parse completed"
           // Construct new typed parse result if the task succeeded
@@ -196,20 +181,6 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
                   ParseAndCheckResults.Empty
           return results
       }
-
-  member __.OnFileChanged filePath = 
-    files.AddOrUpdate (filePath, NeedChecking, (fun _ oldState -> 
-        match oldState with
-        | BeingChecked -> Cancelled
-        | Cancelled -> Cancelled
-        | NeedChecking -> NeedChecking
-        | Checked -> NeedChecking))
-    |> debug "[LanguageService] %s changed: set status to %A" filePath
-
-  member __.OnFileClosed filePath = 
-    match files.TryRemove filePath with
-    | true, _ -> debug "[LanguageService] %s was removed from `files` dictionary" filePath
-    | _ -> ()
 
   /// Constructs options for the interactive checker for the given file in the project under the given configuration.
   member x.GetCheckerOptions(fileName, projFilename, source, files, args, referencedProjects, fscVersion) =
@@ -276,7 +247,9 @@ type LanguageService (?backgroundCompilation: bool, ?projectCacheSize: int, ?fil
           UseScriptResolutionRules = false
           LoadTime = fakeDateTimeRepresentingTimeLoaded projFilename
           UnresolvedReferences = None
-          ReferencedProjects = referencedProjects }
+          ReferencedProjects = referencedProjects
+          OriginalLoadReferences = List.empty
+          ExtraProjectInfo = None }
     debug "GetProjectCheckerOptions: ProjectFileName: %s, ProjectFileNames: %A, FSharpProjectOptions: %A, IsIncompleteTypeCheckEnvironment: %A, UseScriptResolutionRules: %A, ReferencedProjects: %A" 
                                     opts.ProjectFileName opts.ProjectFileNames opts.OtherOptions opts.IsIncompleteTypeCheckEnvironment opts.UseScriptResolutionRules opts.ReferencedProjects
     opts

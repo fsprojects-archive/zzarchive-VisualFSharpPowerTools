@@ -1,14 +1,15 @@
 source http://nuget.org/api/v2
 redirects: on
 strategy: max
-
+framework >= net40
 nuget Fantomas
 nuget FSharp.Compiler.Service
-nuget FSharp.Core
+nuget FSharp.Compiler.Service.ProjectCracker # fslint also depends on it, and conflicted with standalone dependency in Test group which is now removed
+nuget FSharp.Core = 4.0.0.1
 nuget FSharp.Data
 nuget FSharp.Management
 nuget FSharp.ViewModule.Core
-nuget FSharpLint.Core
+nuget FSharpLint.Core prerelease
 nuget FsPickler
 nuget FsXaml.Wpf
 nuget SourceLink.SymbolStore 0.5.0
@@ -42,18 +43,19 @@ group vssdk
     
 group Test
     source http://nuget.org/api/v2
-
+    framework >= net40
     nuget Foq
     nuget FsCheck
-    nuget FSharp.Compiler.Service.ProjectCracker
+    nuget FSharp.Core = 4.0.0.1
     nuget NUnit
     nuget NUnit.Runners
 
 group Build
     source http://nuget.org/api/v2
-    
+    framework >= net40
     nuget canopy
     nuget FAKE
+    nuget FSharp.Core = 4.0.0.1
     nuget FSharp.Formatting
     nuget Nuget.CommandLine
     nuget Selenium.WebDriver.ChromeDriver
